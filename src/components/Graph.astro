@@ -1,0 +1,35 @@
+---
+// The graph view, drawn by isaacchacko/graph's renderer: the notes around this
+// one, in the margin, and every note when it's opened up (src/client/graph.ts).
+import "../styles/graph.scss"
+
+interface Props {
+  /** this note's slug */
+  here: string
+  /** every published note: its slug, title and the slugs it links to */
+  notes: { id: string; title: string; links: string[] }[]
+  /** how many links out from this note the graph reaches */
+  depth?: number
+  label?: string
+}
+const { here, notes, depth = 1, label = "Graph" } = Astro.props
+---
+
+<section class="graph-view margin-part" data-here={here} data-depth={depth} data-notes={JSON.stringify(notes)}>
+  <p class="margin-label">{label}</p>
+  <div class="graph-view-outer">
+    <div class="graph-view-local"></div>
+    <button class="graph-view-expand" type="button" aria-label="every note">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+      </svg>
+    </button>
+  </div>
+  <dialog class="graph-view-global" aria-label="every note">
+    <div class="graph-view-global-canvas"></div>
+  </dialog>
+</section>
+
+<script>
+  import "../client/graph"
+</script>
