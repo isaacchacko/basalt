@@ -29,60 +29,194 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
   }
 }
 
-// a code file, embedded with ![[file.py]]: its name, then what you can do
-// with it: see the raw file, copy the code, and (if it asked) go full screen
+// a code file, embedded with ![[file.py]]: its name in the bar, its controls after it
 figure.code-file {
   margin: 1.5rem 0;
-
-  & > figcaption[data-rehype-pretty-code-title] {
-    align-items: center;
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
-  }
 
   .code-file-name {
     font-family: var(--codeFont);
     font-weight: 600;
   }
+}
 
-  .code-file-actions {
-    display: flex;
-    gap: 0.15rem;
-    margin-left: auto;
+// ---------- every code block's controls, inside it (codefile.ts) ----------
+
+$narrow: "(max-width: 1055.98px)";
+// the phone's navbar, a bar across the top (nav.scss)
+$phone-navbar: 3.75rem;
+
+// a long block's controls stay in view while it is
+@mixin sticks-to-the-top {
+  position: sticky;
+  top: 0;
+
+  @media all and ($narrow) {
+    top: $phone-navbar;
+  }
+}
+
+// opaque, since code scrolls under it while it sticks (basalt.scss's tint is see-through)
+figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-title]:has(> .code-actions) {
+  @include sticks-to-the-top;
+  z-index: 3;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  background: color-mix(in srgb, var(--lightgray) 45%, var(--light));
+}
+
+// a title too long for its bar loses its start, keeping the file's name:
+// laid out right to left, it's cut on the left, while the words inside read left to right
+.code-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+
+  & > span {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+}
+
+// over the code, so it gives its height back: the code starts where it would
+.code-corner {
+  @include sticks-to-the-top;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  height: 2.25rem;
+  margin-bottom: -2.25rem;
+  pointer-events: none;
+
+  & > .code-actions {
+    height: max-content;
+    margin: 1px 1px 0 0;
+    padding: 0.2rem 0.25rem 0.2rem 1.5rem;
+    border-radius: 0 5px 0 8px;
+    background: linear-gradient(to right, transparent, var(--light) 1.25rem);
+    pointer-events: auto;
+  }
+}
+
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: auto;
+}
+
+.code-action-label {
+  margin-right: 0.35rem;
+  font-family: var(--bodyFont);
+  font-style: italic;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  color: var(--darkgray);
+
+  &::before {
+    content: attr(data-text);
   }
 
-  .code-file-action {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--gray);
-    cursor: pointer;
-    transition:
-      color 0.2s ease,
-      background 0.2s ease;
-
-    &:hover,
-    &:focus-visible {
-      color: var(--dark);
-      background: var(--light);
-    }
-
-    &[data-done] {
-      color: var(--tertiary);
-    }
-  }
-
-  // the copy button lives in the bar; Quartz's own floats over the code
-  pre > .clipboard-button {
+  &:not([data-text]) {
     display: none;
   }
 }
 
+.code-action {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--dark);
+    background: var(--highlight);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+    outline-offset: 1px;
+  }
+
+  &[data-done],
+  &[aria-pressed="true"] {
+    color: var(--tertiary);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// quiet until pointed at or focused from the keyboard; a touch screen can't
+// point, so there they stay, the corner in a row of its own at the code's top.
+// A compare block's own controls are quiet the same way with [data-quiet-controls]
+@media (hover: hover) {
+  :is([data-viewer-code], [data-quiet-controls]) .code-actions > * {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  :is([data-viewer-code], [data-quiet-controls]):is(:hover, :has(:focus-visible)) .code-actions > * {
+    opacity: 1;
+  }
+
+  [data-viewer-code]:not(:hover, :has(:focus-visible)) > .code-corner > .code-actions {
+    background: none;
+  }
+}
+
+@media (hover: none) {
+  :has(> .code-corner) > pre > code {
+    padding-top: 2rem;
+  }
+}
+
+// wrapped lines hang clear of their number, or of a diff's wider --code-gutter
+[data-wrap] pre > code {
+  --line-gutter: 2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  &[data-line-numbers-max-digits="2"] {
+    --line-gutter: 3rem;
+  }
+
+  &[data-line-numbers-max-digits="3"] {
+    --line-gutter: 4rem;
+  }
+
+  & > [data-line] {
+    padding-left: calc(0.25rem + var(--code-gutter, var(--line-gutter)));
+    text-indent: calc(-1 * var(--code-gutter, var(--line-gutter)));
+
+    &::before {
+      text-indent: 0;
+      white-space: nowrap;
+    }
+  }
+}
+
+// Quartz's own copy button, which floated over the code
+pre > .clipboard-button {
+  display: none;
+}
 
 // ---------- code wider than the text reaches into the side content (codereach.ts) ----------
 
