@@ -1,17 +1,21 @@
 // Basalt's navbar (Nav.astro), its explorer and its theme toggle, ported
 // from quartz/components/styles/{nav,explorer,darkmode}.scss.
 //
-// On a wide screen the navbar folds away to its 56px margin, leaving one
-// chevron halfway down it. Reach into the margin, or tab into it, and after a
-// beat it opens to 300px, taking room from the note instead of covering it.
+// On a wide screen the navbar is a drawer over the page's left edge, taking
+// no room: the main and side content are laid out as if it weren't there.
+// Folded, it's one chevron halfway down a strip along the window's left edge.
+// Reach into the strip (or tab into it, or tap it) and after a beat the
+// drawer slides out over the page; it folds back when the pointer leaves.
 // Below desktop width it's a bar across the top: the menu (the explorer, as
-// a drawer), the site's title, and the theme toggle.
+// a drawer), the site's title, search and the theme toggle.
 
-$margin: 56px;
+// the folded hover zone: a strip from the window's left edge, inside the
+// page's left gutter (--gutter-left, base.scss)
+$zone: 5.5rem;
 $open: 300px;
 $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
-$narrow: "(max-width: 1199.98px)";
-$desktop: "(min-width: 1200px)";
+$narrow: "(max-width: 999.98px)";
+$desktop: "(min-width: 1000px)";
 $semiBoldWeight: 600;
 
 @keyframes nav-beckon {
@@ -37,54 +41,48 @@ $semiBoldWeight: 600;
   }
 }
 
-// ---------- wide: folded to the margin ----------
+// ---------- wide: a drawer over the page ----------
 
 @media all and ($desktop) {
-  html .page > #quartz-body {
-    transition: grid-template-columns 0.45s $ease;
-  }
-
-  html .page > #quartz-body:has(> .sidebar.left:hover),
-  html .page > #quartz-body:has(> .sidebar.left:focus-within) {
-    --nav-width: #{$open};
-  }
-
-  // a pointer passing through the margin on its way somewhere doesn't move the page
-  html .page > #quartz-body:has(> .sidebar.left:hover) {
-    transition-delay: 0.15s;
-  }
-
-  .sidebar.left {
-    width: 100%;
-    min-width: 0;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    overflow: hidden;
+  html .page > #quartz-body > .sidebar.left {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: $open;
+    height: 100vh;
+    // folded, only its last $zone shows: the hover zone, transparent
+    transform: translateX(calc(#{$zone} - #{$open}));
+    background-color: transparent;
     border-right: 1px solid transparent;
+    box-shadow: none;
     transition:
-      border-color 0.4s ease,
-      padding 0.45s $ease;
+      transform 0.45s $ease,
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.45s ease;
 
-    // folded, the column is only its margin: everything waits for it to open
+    // folded, everything but the chevron waits for it to open; it stays
+    // focusable (not visibility: hidden), so tabbing into it opens it
     & > :not(.nav-rail) {
-      min-width: calc(#{$open} - 4rem);
       opacity: 0;
-      visibility: hidden;
+      pointer-events: none;
       transform: translateX(-10px);
       transition:
         opacity 0.25s ease,
-        transform 0.35s $ease,
-        visibility 0.25s;
+        transform 0.35s $ease;
     }
   }
 
-  // the one thing a folded navbar shows: a chevron, halfway down the margin
+  // the one thing a folded navbar shows: a chevron, halfway down its strip
   .nav-rail {
     display: grid;
     place-items: center;
     position: absolute;
-    inset: 0;
-    width: $margin;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: $zone;
     color: var(--gray);
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -95,16 +93,21 @@ $semiBoldWeight: 600;
     }
   }
 
-  // open: hovered, or focused into
-  .sidebar.left:hover,
-  .sidebar.left:focus-within {
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
+  // open: hovered, focused into from the keyboard, tapped, or held open
+  // through a page transition (nav.ts)
+  html .page > #quartz-body > .sidebar.left:is(:hover, :has(:focus-visible), .is-open, .is-held) {
+    transform: none;
+    background-color: var(--light);
     border-right-color: var(--lightgray);
+    box-shadow: 14px 0 44px -16px rgb(0 0 0 / 0.2);
+
+    :root[saved-theme="dark"] & {
+      box-shadow: 18px 0 48px -12px rgb(0 0 0 / 0.65);
+    }
 
     & > :not(.nav-rail) {
       opacity: 1;
-      visibility: visible;
+      pointer-events: auto;
       transform: none;
       transition-delay: 0.15s;
     }
@@ -112,6 +115,11 @@ $semiBoldWeight: 600;
     .nav-rail {
       opacity: 0;
     }
+  }
+
+  // a pointer passing through the strip on its way somewhere doesn't open it
+  html .page > #quartz-body > .sidebar.left:hover {
+    transition-delay: 0.15s;
   }
 
   .nav-head {
@@ -127,6 +135,14 @@ $semiBoldWeight: 600;
     margin-top: auto;
     padding-top: 0.8rem;
     border-top: 1px solid var(--lightgray);
+  }
+}
+
+// search has ⌘F where there's a keyboard and a pointer; its glyph is for
+// screens without one (a phone's bar, a tablet's drawer)
+@media (hover: hover) and (pointer: fine) and ($desktop) {
+  .nav-search {
+    display: none !important;
   }
 }
 
@@ -172,19 +188,20 @@ $semiBoldWeight: 600;
   }
 }
 
-// ---------- the theme toggle: a ghost icon button (shadcn's size="icon" variant="ghost") ----------
+// ---------- the tray's buttons: ghost icon buttons (shadcn's size="icon" variant="ghost") ----------
 
-.darkmode {
+.darkmode,
+.nav-search {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   margin: 0;
   padding: 0;
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--gray);
+  color: var(--darkgray);
   cursor: pointer;
   flex-shrink: 0;
   transition:
@@ -200,10 +217,10 @@ $semiBoldWeight: 600;
     outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
     outline-offset: 2px;
   }
+}
 
-  & > .nightIcon {
-    display: none;
-  }
+.darkmode > .nightIcon {
+  display: none;
 }
 
 :root[saved-theme="dark"] .darkmode {
@@ -479,7 +496,6 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html .page > #quartz-body,
   .sidebar.left,
   .sidebar.left > *,
   .nav-chevron {

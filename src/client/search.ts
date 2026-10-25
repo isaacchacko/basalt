@@ -371,6 +371,16 @@ function setup() {
 
   document.addEventListener("keydown", onKey, { signal })
   button.addEventListener("click", () => show("basic"), { signal })
+  // the search glyph in the navbar's tray (it persists across pages, so delegated)
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (!(e.target as Element).closest?.(".nav-search")) return
+      ;(document.activeElement as HTMLElement | null)?.blur()
+      show("basic")
+    },
+    { signal },
+  )
   bar.addEventListener("input", onType, { signal })
   container.addEventListener("click", (e) => e.target === container && hide(), { signal })
 }

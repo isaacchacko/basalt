@@ -1,12 +1,12 @@
 // The page under everything: Quartz's base styles (quartz/styles/base.scss),
-// on Basalt's grid. On a wide screen a page is three parts: the navbar folded
-// to its margin, the note, and the margin column right beside it, Tufte's
-// way (the note and its margin centred in what's left). Below that it's one
-// column under a bar across the top.
+// on Basalt's grid. On a wide screen a page is three parts: the navbar, a
+// drawer over the page's left edge that takes no room of its own; the main
+// content; and the side content right beside it, Tufte's way, the two
+// centred in the window. Below that it's one column under a bar across the top.
 
 $mobile: "(max-width: 800px)";
-$narrow: "(max-width: 1199.98px)";
-$desktop: "(min-width: 1200px)";
+$narrow: "(max-width: 999.98px)";
+$desktop: "(min-width: 1000px)";
 $topSpacing: 6rem;
 $semiBoldWeight: 600;
 $boldWeight: 700;
@@ -14,8 +14,12 @@ $boldWeight: 700;
 :root {
   // the note: a measure of prose (34em) with a little room for figures
   --text-width: 36rem;
-  // the margin beside it
+  // the side content beside it: it gives way first, down to 15rem
   --margin-width: 22rem;
+  // the room kept left of the main content: the folded navbar's hover zone
+  // (5.5rem, nav.scss) and a gap, so the zone never sits over the text
+  --gutter-left: 7rem;
+  --gutter-right: 2rem;
 }
 
 html {
@@ -172,27 +176,22 @@ a {
   & > #quartz-body {
     position: relative;
     display: grid;
-    // navbar | room | the note | its margin | room
-    grid-template-columns: var(--nav-width, 56px) minmax(0, 1fr) minmax(0, var(--text-width)) minmax(
-        15rem,
-        var(--margin-width)
-      ) minmax(0, 1fr);
+    // room | the main content | the side content | room. The navbar is a
+    // drawer over the page (nav.scss), so it takes no column.
+    grid-template-columns:
+      minmax(var(--gutter-left), 1fr) var(--text-width) minmax(15rem, var(--margin-width))
+      minmax(var(--gutter-right), 1fr);
     grid-template-rows: auto 1fr;
 
-    & > .sidebar.left {
-      grid-column: 1;
-      grid-row: 1 / span 2;
-    }
-
     & > .center {
-      grid-column: 3;
+      grid-column: 2;
       grid-row: 1;
       min-width: 0;
     }
 
     // the margin: it scrolls with the note, its notes beside their lines
     & > .sidebar.right {
-      grid-column: 4;
+      grid-column: 3;
       grid-row: 1 / span 2;
       position: relative;
       min-width: 0;
@@ -201,7 +200,7 @@ a {
     }
 
     & > footer {
-      grid-column: 3;
+      grid-column: 2;
       grid-row: 2;
     }
 

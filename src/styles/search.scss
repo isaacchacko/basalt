@@ -3,7 +3,7 @@
 // button only shows below desktop width.
 
 $mobile: "(max-width: 800px)";
-$desktop: "(min-width: 1200px)";
+$desktop: "(min-width: 1000px)";
 $pageWidth: 800px;
 $boldWeight: 700;
 $normalWeight: 400;
@@ -260,14 +260,13 @@ $normalWeight: 400;
   }
 }
 
-// Basalt: a site searched by shortcut keeps its button for phones only
-@media all and ($desktop) {
-  .search[data-button="mobile"] > .search-button {
-    display: none;
-  }
+// Basalt: search opens on ⌘F, or from the glyph in the navbar's tray (on a
+// phone, in its bar), never from a field at the top of the page
+.search[data-button="mobile"] > .search-button {
+  display: none;
+}
 
-  // a header holding only that hidden button takes no room
-  .page-header header:has(> .search[data-button="mobile"]:only-child) {
-    margin: 0;
-  }
+// a header holding only that hidden button takes no room
+.page-header header:has(> .search[data-button="mobile"]:only-child) {
+  margin: 0;
 }

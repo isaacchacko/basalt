@@ -2,7 +2,8 @@
 // this marks the note you're on and opens the folders it's in on each page,
 // keeps each folder the way the reader left it (localStorage, in Quartz's
 // "fileTree" format), and runs the phone's drawer. Opening and folding the
-// navbar itself is css (nav.scss).
+// navbar by pointer and keyboard is css (nav.scss); a touch screen wide
+// enough for the desktop drawer opens it with a tap, here.
 
 type FolderState = { path: string; collapsed: boolean }
 const KEY = "fileTree"
@@ -89,9 +90,29 @@ function shutDrawer() {
   }
 }
 
+// a tap on the folded navbar's strip opens it; a tap anywhere else, or a page
+// it took you to, folds it again
+const navbar = () => document.querySelector<HTMLElement>(".sidebar.left")
+document.addEventListener("pointerdown", (e) => {
+  const nav = navbar()
+  if (!nav || e.pointerType === "mouse" || !matchMedia("(min-width: 1000px)").matches) return
+  nav.classList.toggle("is-open", nav.contains(e.target as Node))
+})
+
 document.addEventListener("astro:page-load", () => {
   sync()
   shutDrawer()
+  navbar()?.classList.remove("is-open")
+})
+
+// the browser forgets what's hovered while a page is swapped in, for about
+// 300ms: a navbar open under the pointer stays open through it, until the
+// pointer next moves (and :hover, or its absence, takes over)
+document.addEventListener("astro:before-swap", () => {
+  const nav = navbar()
+  if (!nav?.matches(":hover")) return
+  nav.classList.add("is-held")
+  document.addEventListener("pointermove", () => nav.classList.remove("is-held"), { once: true })
 })
 // before the swapped-in page paints, so the explorer never shows the last page's state
 document.addEventListener("astro:after-swap", sync)

@@ -1,9 +1,11 @@
 ---
-// Basalt's navbar. On a wide screen it folds away to its margin, leaving one
-// chevron halfway down it; reach into the margin (or tab into it) and after a
-// beat it opens, taking room from the note rather than covering it. Open, it
-// has the mark and the site's title, the explorer, and a bottom tray with the
-// theme toggle. Below desktop width it's a bar across the top instead.
+// Basalt's navbar. On a wide screen it's a drawer over the page's left edge
+// that takes no room: folded, one chevron halfway down a strip along the
+// window's edge; reach into the strip (or tab into it, or tap it) and after a
+// beat it slides out over the page. Open, it has the mark and the site's
+// title, the explorer, and a bottom tray with the theme toggle (and, on a
+// screen without a keyboard, search). Below desktop width it's a bar across
+// the top instead.
 //
 // It persists across page transitions, so what's open in it stays open.
 import Mark from "basalt:components/Mark"
@@ -37,9 +39,17 @@ for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.ch
   <h2 class="page-title"><a href="/">{title}</a></h2>
   {layout.components.explorer && <Explorer root={root} current={current} open={layout.explorer.folderDefaultState} />}
   {
-    layout.components.darkmode && (
+    (layout.components.darkmode || layout.components.search) && (
       <div class="nav-tray">
-        <Darkmode />
+        {layout.components.search && (
+          <button class="nav-search" type="button" aria-label="Search">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M20 20l-3.8-3.8"></path>
+            </svg>
+          </button>
+        )}
+        {layout.components.darkmode && <Darkmode />}
       </div>
     )
   }
