@@ -189,17 +189,19 @@ export function strayAnchors(figure) {
     if ([node.properties?.className ?? []].flat().includes("compare-column")) columns.push(node)
   })
   const anchorsOf = (column) => {
+    // each name where it first lands in the column, as the page finds it
     const found = new Map()
+    const put = (name, at) => (found.get(name) ?? Infinity) > at && found.set(name, at)
     visit(column, "element", (node) => {
       const name = node.properties?.dataCompareAnchor
-      if (typeof name === "string" && !found.has(name)) found.set(name, order.get(node))
+      if (typeof name === "string") put(name, order.get(node))
       if (typeof node.properties?.dataCompareLines !== "string") return
       const lines = []
       visit(node, "element", (line) => void (line.properties?.dataLine !== undefined && lines.push(line)))
       for (const [name, at] of JSON.parse(node.properties.dataCompareLines)) {
         const text = at.startsWith("/") ? at.slice(1, -1).replace(/\\(.)/g, "$1") : null
         const line = text === null ? lines[Number(at) - 1] : lines.find((l) => toString(l).includes(text))
-        if (line && !found.has(name)) found.set(name, order.get(line))
+        if (line) put(name, order.get(line))
       }
     })
     return found
@@ -207,7 +209,8 @@ export function strayAnchors(figure) {
   const found = columns.map(anchorsOf)
   const stray = []
   const kept = []
-  for (const name of new Set(found.flatMap((f) => [...f.keys()]))) {
+  const down = (f) => [...f].sort((a, b) => a[1] - b[1]).map(([name]) => name)
+  for (const name of new Set(found.flatMap(down))) {
     const row = found.map((f) => f.get(name))
     if (row.some((at) => at === undefined)) {
       stray.push([name, "has no partner in another column"])

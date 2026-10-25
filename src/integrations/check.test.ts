@@ -79,4 +79,17 @@ test("a compare anchor that crosses another, or has no partner, is a warning at 
     { kind: "compare anchor", note: "notes/porting.md", line: 2, detail: "^move crosses ^tiles, ignored", warning: true },
     { kind: "compare anchor", note: "notes/porting.md", line: 4, detail: "^solo has no partner in another column, ignored", warning: true },
   ])
+
+  // the page goes by the lines a fence's anchors land on, not the order they're written in
+  const landed = site({
+    "porting.html":
+      `<figure class="compare"><div class="compare-columns">` +
+      `<div class="compare-column"><div class="compare-lines" data-compare-lines='[["tiles","/map/"],["move","/onPointerMove/"]]'><pre><code>${lines("onPointerMove={lean}", "albums.map(a =>")}</code></pre></div></div>` +
+      `<div class="compare-column"><div class="compare-lines" data-compare-lines='[["tiles","1"],["move","2"]]'><pre><code>${lines("tiles.map(t =>", "addEventListener(\"pointermove\")")}</code></pre></div></div>` +
+      `</div></figure>`,
+  })
+  assert.deepEqual(
+    check(landed, new Map([["porting", { file: "notes/porting.md", abs }]])).filter((p) => p.kind === "compare anchor").map((p) => p.detail),
+    ["^tiles crosses ^move, ignored"],
+  )
 })
