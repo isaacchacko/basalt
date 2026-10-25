@@ -1,0 +1,20 @@
+---
+import { getCollection, render } from "astro:content"
+import Page from "../layouts/Page.astro"
+
+export async function getStaticPaths() {
+  const notes = await getCollection("notes")
+  return notes.map((note) => ({
+    // index notes are their folder's page: "blog/index" is /blog
+    params: { slug: note.id === "index" ? undefined : note.id.replace(/\/index$/, "") },
+    props: { note },
+  }))
+}
+
+const { note } = Astro.props
+const { Content, headings } = await render(note)
+---
+
+<Page note={note} headings={headings}>
+  <Content />
+</Page>
