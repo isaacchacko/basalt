@@ -83,23 +83,32 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
   }
 }
 
-// over the code, so it gives its height back: the code starts where it would
+// over the code, so it gives its height back: the code starts where it would.
+// It takes the code's top margin, so it starts at the code's border, not above it
 .code-corner {
   @include sticks-to-the-top;
   z-index: 2;
   display: flex;
   justify-content: flex-end;
-  height: 2.25rem;
-  margin-bottom: -2.25rem;
+  height: 2.6rem;
+  margin-top: 1rem;
+  margin-bottom: -2.6rem;
   pointer-events: none;
 
+  & + pre {
+    margin-top: 0;
+  }
+
+  // on its own paper, so code scrolling under it while it sticks doesn't show through
   & > .code-actions {
     height: max-content;
-    margin: 1px 1px 0 0;
-    padding: 0.2rem 0.25rem 0.2rem 1.5rem;
-    border-radius: 0 5px 0 8px;
-    background: linear-gradient(to right, transparent, var(--light) 1.25rem);
+    margin: 0.35rem 0.35rem 0 0;
+    padding: 0.1rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    background: var(--light);
     pointer-events: auto;
+    transition: opacity 0.2s ease;
   }
 }
 
@@ -178,13 +187,13 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
   }
 
   [data-viewer-code]:not(:hover, :has(:focus-visible)) > .code-corner > .code-actions {
-    background: none;
+    opacity: 0;
   }
 }
 
 @media (hover: none) {
   :has(> .code-corner) > pre > code {
-    padding-top: 2rem;
+    padding-top: 2.6rem;
   }
 }
 
