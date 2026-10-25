@@ -3,6 +3,8 @@ title: Basalt
 description: Publish your notes as a site that reads like a good textbook.
 ---
 
+**TL;DR:** Basalt turns plain markdown into a published website. It's an alternative to [Quartz](https://quartz.jzhao.xyz), set like a good math textbook, the Tufte way. It's better than Quartz at embedded media and hot reloading. It keeps remarks beside the text instead of at the bottom of the page. It lets an agent build pages and know when they're live. Its pages are a quarter of the weight.
+
 Basalt turns a folder of markdown notes into a website that reads like a well-made book. Notes link to one another, and every remark sits in the side content, beside the line it's about. That's how [Edward Tufte](https://www.edwardtufte.com/) sets his books, and how a good math textbook keeps its asides.[^tufte]
 
 > [!aside]
