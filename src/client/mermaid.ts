@@ -10,8 +10,21 @@ const load = () => (mermaid ??= import("mermaid").then((m) => m.default))
 
 const SOURCES = "pre:has(> code.mermaid), pre:has(> code.language-mermaid), pre[data-language='mermaid']"
 
+// a page without Basalt's colours still gets a drawing (mermaid throws on an empty colour)
+const FALLBACK: Record<string, [light: string, dark: string]> = {
+  "--light": ["#f4f1ec", "#141413"],
+  "--lightgray": ["#e2ddd4", "#2a2926"],
+  "--gray": ["#9a948a", "#6f6b64"],
+  "--darkgray": ["#3a3835", "#d6d2ca"],
+  "--dark": ["#1d1c1a", "#f0ece4"],
+  "--secondary": ["#2f4a5a", "#8fb0c2"],
+}
+
 function css(name: string) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  if (value) return value
+  const fallback = FALLBACK[name]
+  return fallback ? fallback[isDark() ? 1 : 0] : ""
 }
 
 function sourceOf(pre: HTMLElement): string {
