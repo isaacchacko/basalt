@@ -125,7 +125,6 @@ describe("renderDiff", () => {
     assert.strictEqual(html.match(/data-line=""/g)?.length, 11)
     assert.match(html, /data-diff="del"><span class="diff-gutter" aria-hidden="true" data-old="2" data-new="" data-n="2"><\/span><span class="diff-sign">-<\/span>/)
     // highlighted as typescript, both themes
-    assert.match(html, /data-diff-language="ts"/)
     assert.match(html, /<span style="--shiki-light:#D73A49;--shiki-dark:#F97583">const<\/span>/)
     // 1 became 2
     assert.match(html, /<span class="diff-word"><span[^>]*>2<\/span><\/span>/)
@@ -135,7 +134,13 @@ describe("renderDiff", () => {
     const html = toHtml(await renderDiff("-let a = 1\n+let a = 2", { lang: "js", title: "t" }))
     assert.match(html, /<figcaption[^>]*>t</)
     assert.match(html, /--shiki-light/)
+    assert.match(html, /<span class="diff-stat-added">\+1<\/span><span class="diff-stat-removed">−1<\/span>/)
     assert.doesNotMatch(html, /data-numbered/)
+  })
+
+  test("the stat leaves out a side with nothing on it", async () => {
+    const html = toHtml(await renderDiff("+a\n+b", { title: "t" }))
+    assert.match(html, /<span class="diff-stat" aria-label="2 added, 0 removed"><span class="diff-stat-added">\+2<\/span><\/span>/)
   })
 
   test("several files: each has its row", async () => {

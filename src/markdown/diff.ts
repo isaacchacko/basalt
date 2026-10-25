@@ -1,20 +1,9 @@
-// A ```diff fence, or an embedded .diff / .patch file, drawn the way a code
-// review shows a change: removed lines on red, added on green, each with its
-// old and new line number and its sign, hunks (@@ … @@) as quiet rules
-// between the parts, the file's name as the block's title, and the code
-// inside highlighted in its own language, with what changed inside a changed
-// line marked word by word.
-//
-// It runs before rehype-pretty-code and draws the same markup that does
+// ```diff fences and embedded .diff / .patch files, drawn as a code review
+// draws a change. This runs before rehype-pretty-code and emits its markup
 // (figure > figcaption + pre > code > [data-line]), so code blocks' bars,
-// themes and reach work on a diff as on any code.
-//
-//   ```diff                    a git diff: the language comes from the file
-//   ```diff lang=ts            or is given; plain +/- lines work too
-//   ```diff title="the fix"    a title of its own (else the file's path)
-//
-// Each side of a hunk is highlighted on its own (the old file's lines, then
-// the new's), so a removed line is coloured as the code it was in.
+// themes, reach and compare anchors work on a diff unchanged. Each side of a
+// hunk is highlighted on its own, so a removed line is coloured as the code
+// it was in.
 
 import type { Element, ElementContent, Properties, Root } from "hast"
 import { visit } from "unist-util-visit"
@@ -32,19 +21,17 @@ export interface DiffLine {
 export interface DiffFile {
   from?: string
   to?: string
-  /** "new file", "deleted", "renamed", "binary": what the header said, if anything */
-  status?: string
-  /** the hunks' lines, hunk headers among them */
+  status?: "new file" | "deleted" | "renamed" | "binary"
   lines: DiffLine[]
 }
 
 const HUNK = /^@@+ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@+(.*)$/
 const GIT = /^diff --git (?:"?a\/)?(.+?)"? (?:"?b\/)?(.+?)"?$/
-// header lines git writes between `diff --git` and the first hunk
-const META = /^(index |old mode |new mode |similarity index |dissimilarity index |copy from |copy to )/
+const GIT_HEADER =
+  /^(index |old mode |new mode |similarity index |dissimilarity index |copy from |copy to |new file mode|deleted file mode|rename |Binary files |GIT binary patch)/
 
 /** `--- a/x.ts` -> x.ts; `/dev/null` -> undefined */
-function headerPath(line: string): string | undefined {
+function pathOf(line: string): string | undefined {
   const p = line.slice(4).replace(/\t.*$/, "").replace(/^"|"$/g, "")
   return p === "/dev/null" ? undefined : p.replace(/^[ab]\//, "")
 }
@@ -52,10 +39,10 @@ function headerPath(line: string): string | undefined {
 /** A unified diff's files: git's output, `diff -u`'s, or bare +/- lines. */
 export function parseDiff(src: string): DiffFile[] {
   const rows = src.replace(/\r\n?/g, "\n").replace(/\n$/, "").split("\n")
-  const headed = rows.some((r, i) => GIT.test(r) || HUNK.test(r) || (r.startsWith("--- ") && rows[i + 1]?.startsWith("+++ ")))
+  const hasHeaders = rows.some((r, i) => GIT.test(r) || HUNK.test(r) || (r.startsWith("--- ") && rows[i + 1]?.startsWith("+++ ")))
   const files: DiffFile[] = []
   let file: DiffFile | undefined
-  // what's left of the open hunk, by its header's counts (Infinity: it didn't say)
+  // what's left of the open hunk, by its header's counts
   let oldLeft = 0
   let newLeft = 0
   let oldNo: number | undefined
@@ -81,8 +68,8 @@ export function parseDiff(src: string): DiffFile[] {
       if (row.startsWith("--- ") && rows[i + 1]?.startsWith("+++ ")) {
         // a --- after `diff --git` belongs to it; otherwise it starts a file
         const f = file && !file.lines.length && file.from !== undefined ? file : open()
-        f.from = headerPath(row)
-        f.to = headerPath(rows[++i])
+        f.from = pathOf(row)
+        f.to = pathOf(rows[++i])
         if (!f.from) f.status = "new file"
         else if (!f.to) f.status = "deleted"
         continue
@@ -93,7 +80,7 @@ export function parseDiff(src: string): DiffFile[] {
         else if (row.startsWith("rename from ")) (file.from = row.slice(12)), (file.status = "renamed")
         else if (row.startsWith("rename to ")) file.to = row.slice(10)
         else if (row.startsWith("Binary files ")) file.status = "binary"
-        if (/^(new file mode|deleted file mode|rename |Binary files |GIT binary patch)/.test(row) || META.test(row)) continue
+        if (GIT_HEADER.test(row)) continue
       }
       const hunk = HUNK.exec(row)
       if (hunk || row.startsWith("@@")) {
@@ -106,7 +93,7 @@ export function parseDiff(src: string): DiffFile[] {
         continue
       }
       // a commit's message, a patch's stat: what comes before the first file
-      if (headed && !file) continue
+      if (hasHeaders && !file) continue
     }
 
     const f = file ?? open()
@@ -151,8 +138,7 @@ export function wordDiff(a: string, b: string): [Array<[number, number]>, Array<
     for (let j = y.length - 1; j >= 0; j--)
       lcs[i][j] = x[i] === y[j] ? lcs[i + 1][j + 1] + x[i].length : Math.max(lcs[i + 1][j], lcs[i][j + 1])
   const shared = lcs[0][0]
-  const trimmed = (s: string) => s.trim().length
-  if (shared === 0 || shared < 0.4 * Math.max(trimmed(a), trimmed(b))) return null
+  if (shared === 0 || shared < 0.4 * Math.max(a.trim().length, b.trim().length)) return null
 
   const kept = [new Set<number>(), new Set<number>()]
   for (let i = 0, j = 0; i < x.length && j < y.length; ) {
@@ -213,13 +199,12 @@ const text = (value: string): ElementContent => ({ type: "text", value })
 const styleOf = (t: ThemedToken) =>
   t.htmlStyle ? Object.entries(t.htmlStyle).map(([k, v]) => `${k}:${v}`).join(";") : undefined
 
-/** A line's tokens, with its changed ranges wrapped in marks. */
+/** A line's tokens, cut and wrapped where its changed words start and end. */
 function tokens(line: ThemedToken[], marks: Array<[number, number]> = []): ElementContent[] {
   const out: ElementContent[] = []
   let mark: { range: number; el: Element } | undefined
   let at = 0
   for (const t of line) {
-    // cut the token where a mark starts or ends
     const cuts = new Set([0, t.content.length])
     for (const [s, e] of marks) for (const c of [s - at, e - at]) if (c > 0 && c < t.content.length) cuts.add(c)
     const points = [...cuts].sort((p, q) => p - q)
@@ -241,7 +226,30 @@ function tokens(line: ThemedToken[], marks: Array<[number, number]> = []): Eleme
   return out
 }
 
-/** what a file's row and a block's title say: its path, or old → new */
+/**
+ * In a run of removed lines then added ones, the i-th of each are taken to be
+ * one line, changed: the words that differ, for each.
+ */
+function changedWords(hunk: DiffLine[]): Map<DiffLine, Array<[number, number]>> {
+  const marks = new Map<DiffLine, Array<[number, number]>>()
+  for (let i = 0; i < hunk.length; ) {
+    if (hunk[i].kind !== "del") {
+      i++
+      continue
+    }
+    const dels: DiffLine[] = []
+    const adds: DiffLine[] = []
+    while (hunk[i]?.kind === "del") dels.push(hunk[i++])
+    while (hunk[i]?.kind === "add") adds.push(hunk[i++])
+    for (let k = 0; k < Math.min(dels.length, adds.length); k++) {
+      const d = wordDiff(dels[k].text, adds[k].text)
+      if (d) marks.set(dels[k], d[0]).set(adds[k], d[1])
+    }
+  }
+  return marks
+}
+
+/** a file's path, or old → new */
 function nameOf(f: DiffFile): string {
   if (f.from && f.to && f.from !== f.to) return `${f.from} → ${f.to}`
   return f.to ?? f.from ?? ""
@@ -266,17 +274,13 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
   const rows: ElementContent[] = []
   let added = 0
   let removed = 0
-  // the widest line number, for the gutter's width
-  let digits = 0
+  let gutterDigits = 0
   const title = opts.title ?? (files.length === 1 ? nameOf(files[0]) || undefined : files.length > 1 ? `${files.length} files` : undefined)
-  const langs = new Set<string>()
 
   for (const f of files) {
     const lang = opts.lang ?? languageOf(f.to ?? f.from)
-    if (lang) langs.add(lang)
-    // a file's own row, unless the title already says which file it is
     const name = nameOf(f)
-    if ((name && name !== title) || (f.status && files.length > 1)) {
+    if (name && name !== title) {
       const status = f.status && f.status !== "renamed" ? f.status : undefined
       rows.push(
         el("span", { dataLine: "", dataDiff: "file" }, [
@@ -290,7 +294,6 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
       continue
     }
 
-    // each hunk's two sides, highlighted apart
     const hunks: DiffLine[][] = [[]]
     for (const l of f.lines) {
       if (l.kind === "hunk") hunks.push([l])
@@ -308,22 +311,7 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
       before.forEach((l, i) => l.kind === "del" && tokensOf.set(l, oldTokens[i] ?? []))
       after.forEach((l, i) => tokensOf.set(l, newTokens[i] ?? []))
 
-      // a run of removed lines then added ones: the i-th of each are one line, changed
-      const marks = new Map<DiffLine, Array<[number, number]>>()
-      for (let i = 0; i < hunk.length; ) {
-        if (hunk[i].kind !== "del") {
-          i++
-          continue
-        }
-        const dels: DiffLine[] = []
-        const adds: DiffLine[] = []
-        while (hunk[i]?.kind === "del") dels.push(hunk[i++])
-        while (hunk[i]?.kind === "add") adds.push(hunk[i++])
-        for (let k = 0; k < Math.min(dels.length, adds.length); k++) {
-          const d = wordDiff(dels[k].text, adds[k].text)
-          if (d) marks.set(dels[k], d[0]).set(adds[k], d[1])
-        }
-      }
+      const marks = changedWords(hunk)
 
       for (const l of hunk) {
         if (l.kind === "hunk") {
@@ -343,7 +331,7 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
         }
         if (l.kind === "add") added++
         if (l.kind === "del") removed++
-        digits = Math.max(digits, String(l.old ?? "").length, String(l.new ?? "").length)
+        gutterDigits = Math.max(gutterDigits, String(l.old ?? "").length, String(l.new ?? "").length)
         const n = l.kind === "del" ? l.old : l.new
         rows.push(
           el("span", { dataLine: "", dataDiff: l.kind }, [
@@ -364,8 +352,7 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
 
   const lines: ElementContent[] = []
   rows.forEach((r, i) => lines.push(...(i ? [text("\n")] : []), r))
-  const language = langs.size === 1 ? [...langs][0] : undefined
-  const shared = { dataLanguage: "diff", dataTheme: theme, ...(language ? { dataDiffLanguage: language } : {}) }
+  const shared = { dataLanguage: "diff", dataTheme: theme }
   const code = el("code", { ...shared, style: "display: grid;" }, lines)
   const pre = el("pre", { tabIndex: 0, ...shared }, [code])
   const caption = title
@@ -374,8 +361,8 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
         ...(added || removed
           ? [
               el("span", { className: ["diff-stat"], ariaLabel: `${added} added, ${removed} removed` }, [
-                el("span", { className: ["diff-stat-added"] }, [text(`+${added}`)]),
-                el("span", { className: ["diff-stat-removed"] }, [text(`−${removed}`)]),
+                ...(added ? [el("span", { className: ["diff-stat-added"] }, [text(`+${added}`)])] : []),
+                ...(removed ? [el("span", { className: ["diff-stat-removed"] }, [text(`−${removed}`)])] : []),
               ]),
             ]
           : []),
@@ -386,8 +373,7 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
     {
       dataRehypePrettyCodeFigure: "",
       className: ["diff"],
-      ...(digits ? { dataNumbered: "", style: `--diff-digits: ${digits}` } : {}),
-      // what copy and raw give: the patch, as written
+      ...(gutterDigits ? { dataNumbered: "", style: `--diff-digits: ${gutterDigits}` } : {}),
       dataCopy: src.replace(/\n$/, ""),
     },
     caption ? [caption, pre] : [pre],
@@ -397,9 +383,8 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
 const isDiff = (node: Element) =>
   node.tagName === "code" &&
   Array.isArray(node.properties.className) &&
-  node.properties.className.some((c) => c === "language-diff" || c === "language-patch")
+  node.properties.className.includes("language-diff")
 
-/** ```diff fences (and embedded .diff / .patch files) as diffs. Runs before rehype-pretty-code. */
 export function rehypeDiff() {
   return async (tree: Root) => {
     const found: Array<{ pre: Element; code: Element; parent: Element | Root }> = []
