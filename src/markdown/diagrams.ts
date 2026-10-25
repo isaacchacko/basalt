@@ -61,11 +61,25 @@ export function themeSvg(svg: string): string {
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/(fill|stroke)="(black|#000000)"/g, '$1="currentColor"')
     .replace(/fill="(white|#ffffff)"/g, 'fill="none"')
-    .replace(/font-family="Times,serif"/g, 'font-family="inherit"')
+    .replace(/font-family="(Times,serif|Helvetica,sans-Serif)"/g, 'font-family="inherit"')
+}
+
+/**
+ * Graphviz sizes each box to its label as Times would set it, but the page
+ * draws labels in its own sans, which is wider, so text ran over its box.
+ * Unless the diagram names a font, it's measured as Helvetica (close to the
+ * page's sans) and drawn in the page's font.
+ */
+export function sansDefaults(source: string): string {
+  if (/fontname\s*=/.test(source)) return source
+  return source.replace(
+    /^(\s*(?:strict\s+)?(?:di)?graph\b[^{]*\{)/,
+    '$1 fontname="Helvetica"; node [fontname="Helvetica"]; edge [fontname="Helvetica"];',
+  )
 }
 
 export async function renderGraphviz(source: string, engine?: string): Promise<string> {
-  return themeSvg((await graphviz()).renderString(source, { format: "svg", engine }))
+  return themeSvg((await graphviz()).renderString(sansDefaults(source), { format: "svg", engine }))
 }
 
 /**

@@ -6,13 +6,13 @@ Put a file in your notes folder and embed it with `![[name]]`. Basalt works out 
 
 ## pictures
 
-`![[dark.png]]` shows a picture at the width of the text:
+`![[phone.png|240]]` shows a picture, here 240 pixels wide:
 
-![[dark.png]]
+![[phone.png|240]]
 
-`![[phone.png|240]]` sets its width, and a title in the markdown, `![a page on a phone](phone.png "the same page, on a phone")`, becomes its caption:
+A title in the markdown becomes its caption, `![the margin page](dark.png "the margin page, in the dark")`:
 
-![a page on a phone](assets/phone.png "the same page, on a phone")
+![the margin page](assets/dark.png "the margin page, in the dark")
 
 ## video
 

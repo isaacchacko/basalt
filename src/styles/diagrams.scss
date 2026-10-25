@@ -109,6 +109,11 @@ figure.diagram-mermaid {
   .mermaid-drawing svg :is(rect, polygon, circle, path) {
     filter: none !important;
   }
+  // the drawing takes the figure's width (it's in a centred flex column,
+  // where it would shrink to the svg's 300px default)
+  .mermaid-drawing {
+    align-self: stretch;
+  }
   .mermaid-drawing svg {
     display: block;
     margin: 0 auto;

@@ -28,7 +28,7 @@ Write a footnote,
 ```md
 Euclid proved there are infinitely many primes.[^elements]
 
-[^elements]: In the _Elements_, Book IX, Proposition 20, around 300 BC.
+[^elements]: In the _Elements_, Book IX, around 300 BC.
 ```
 
 and it becomes a sentence with its note beside it:
@@ -65,4 +65,4 @@ Basalt began as a fork of [Quartz](https://quartz.jzhao.xyz) by Jacky Zhao, and 
 
 [^tufte]: In _The Visual Display of Quantitative Information_ and the books after it, Tufte puts the notes beside the text, where the eye already is, instead of at the foot of the page.
 
-[^elements]: In the _Elements_, Book IX, Proposition 20, around 300 BC.
+[^elements]: In the _Elements_, Book IX, around 300 BC.
