@@ -22,9 +22,23 @@ function control(cls: string, label: string, glyph: string) {
   return button
 }
 
+/** the title in a span of its own, so a long one gives way to the controls (code.scss) */
+function setTitleApart(titleBar: HTMLElement) {
+  const words = [...titleBar.childNodes].filter((n) => !(n instanceof Element && n.matches(".code-file-actions")))
+  const title = document.createElement("span")
+  title.className = "code-title"
+  const text = document.createElement("span")
+  text.append(...words)
+  title.append(text)
+  titleBar.prepend(title)
+}
+
 function titleBarOrCorner(block: HTMLElement): HTMLElement {
   const titleBar = block.querySelector<HTMLElement>(":scope > figcaption[data-rehype-pretty-code-title]")
-  if (titleBar) return titleBar
+  if (titleBar) {
+    setTitleApart(titleBar)
+    return titleBar
+  }
   const corner = document.createElement("div")
   corner.className = "code-corner"
   block.prepend(corner)

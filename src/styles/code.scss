@@ -55,12 +55,32 @@ $phone-navbar: 3.75rem;
   }
 }
 
+// opaque, since code scrolls under it while it sticks (basalt.scss's tint is see-through)
 figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-title]:has(> .code-actions) {
   @include sticks-to-the-top;
   z-index: 3;
+  flex-wrap: nowrap;
   align-items: center;
   padding-top: 0.2rem;
   padding-bottom: 0.2rem;
+  background: color-mix(in srgb, var(--lightgray) 45%, var(--light));
+}
+
+// a title too long for its bar loses its start, keeping the file's name:
+// laid out right to left, it's cut on the left, while the words inside read left to right
+.code-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+
+  & > span {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
 }
 
 // over the code, so it gives its height back: the code starts where it would
