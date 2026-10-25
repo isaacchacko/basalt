@@ -1,5 +1,4 @@
-// A diff (src/markdown/diff.ts). A narrow block (a phone, a compare column)
-// keeps one number per line: the new file's, or the old one's for a removed line.
+// A diff (src/markdown/diff.ts).
 
 // shared with trees' marks
 :root {
@@ -36,12 +35,6 @@ figure.diff {
     .diff-gutter::after {
       content: none;
     }
-  }
-
-  // on the pre, not the figure: a container keeps its children's margins,
-  // and the pre's must collapse through the figure as a code block's does
-  & > pre {
-    container-type: inline-size;
   }
 
   & > pre > code {
@@ -229,23 +222,5 @@ figure.diff {
       content: attr(data-removed);
       color: var(--basalt-removed);
     }
-  }
-}
-
-@container (max-width: 30rem) {
-  figure.diff[data-numbered] > pre > code {
-    --diff-numbers: calc(0.6ch + var(--diff-num));
-    --code-gutter: calc(var(--diff-numbers) + 2.5ch);
-
-    .diff-gutter {
-      &::before {
-        content: none;
-      }
-
-      &::after {
-        content: attr(data-n);
-      }
-    }
-
   }
 }

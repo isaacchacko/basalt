@@ -346,7 +346,6 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
           continue
         }
         gutterDigits = Math.max(gutterDigits, String(l.old ?? "").length, String(l.new ?? "").length)
-        const n = l.kind === "del" ? l.old : l.new
         rows.push(
           el("span", { dataLine: "", dataDiff: l.kind }, [
             el("span", {
@@ -354,7 +353,6 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
               ariaHidden: "true",
               dataOld: l.old ?? "",
               dataNew: l.new ?? "",
-              dataN: n ?? "",
             }),
             el("span", { className: ["diff-sign"] }, [text(l.kind === "add" ? "+" : l.kind === "del" ? "-" : " ")]),
             ...tokens(tokensOf.get(l) ?? [], marks.get(l)),

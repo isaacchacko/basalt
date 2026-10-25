@@ -123,7 +123,7 @@ describe("renderDiff", () => {
     assert.match(html, /^<figure data-rehype-pretty-code-figure="" class="diff" data-numbered="" style="--diff-digits: 2" data-copy="diff --git/)
     assert.match(html, /<figcaption data-rehype-pretty-code-title=""[^>]*>src\/add.ts<span class="diff-stat" role="img" aria-label="3 added, 2 removed" data-added="\+3" data-removed="−2"><\/span><\/figcaption>/)
     assert.strictEqual(html.match(/data-line=""/g)?.length, 11)
-    assert.match(html, /data-diff="del"><span class="diff-gutter" aria-hidden="true" data-old="2" data-new="" data-n="2"><\/span><span class="diff-sign">-<\/span>/)
+    assert.match(html, /data-diff="del"><span class="diff-gutter" aria-hidden="true" data-old="2" data-new=""><\/span><span class="diff-sign">-<\/span>/)
     // highlighted as typescript, both themes
     assert.match(html, /<span style="--shiki-light:#D73A49;--shiki-dark:#F97583">const<\/span>/)
     // 1 became 2
