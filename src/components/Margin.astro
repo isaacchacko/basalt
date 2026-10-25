@@ -34,7 +34,13 @@ const on = (part: keyof Parts) =>
   typeof data[part] === "boolean" ? (data[part] as boolean) : Boolean(defaults[part])
 
 const showGraph = on("graph")
-const showToc = on("toc") && headings.some((h) => h.depth > 1)
+// a note's sections: a # heading too, unless it only repeats the title; not
+// the footnotes' heading, which is there for screen readers
+const title = ((data.title as string | undefined) ?? "").trim()
+const contents = headings.filter(
+  (h) => h.depth <= 4 && h.slug !== "footnote-label" && !(h.depth === 1 && h.text.trim() === title),
+)
+const showToc = on("toc") && contents.length > 0
 const wantBacklinks = on("backlinks")
 
 // what each note links to: the md plugins' `links`, else the internal links in its html
@@ -71,7 +77,7 @@ const resting = showGraph || showToc || showBacklinks
     resting && (
       <div class="margin-resting">
         {showGraph && <Graph here={note.id} notes={all} />}
-        {showToc && <Toc headings={headings} />}
+        {showToc && <Toc headings={contents} />}
         {showBacklinks && <Backlinks backlinks={backlinks} />}
       </div>
     )
