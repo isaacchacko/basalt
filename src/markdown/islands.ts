@@ -18,7 +18,7 @@
 //     takes the page's colours and grows to fit what's in it
 //
 // An island's module exports a preact component (default) or
-// `mount(el, props)`. The browser loads it from ISLANDS/<name>.js; `ssr`
+// `mount(el, props)`. The browser finds it by name (src/client/islands.ts); `ssr`
 // islands are rendered here, from a node bundle of the module.
 
 import fs from "node:fs"
@@ -35,7 +35,8 @@ import { reg, slugOf } from "./context.ts"
 import { nativeImport } from "./siteconfig.ts"
 
 /** where the browser finds each island's module and its frame page */
-export const ISLANDS = "/static/islands"
+/** where an island in a frame is served alone (src/pages/basalt/island/[name].astro) */
+export const ISLANDS = "/basalt/island"
 
 const PHRASING = new Set([
   "p",
@@ -213,10 +214,8 @@ export function rehypeIslands() {
         if (!found) throw new Error(`island "${name}" in ${slugOf(file)}: no file ${p.data}`)
         props.data = JSON.parse(fs.readFileSync(files.find((f) => f.rel === found)!.abs, "utf8"))
       }
-      const src = `${ISLANDS}/${name}.js`
-
       if (p.frame !== undefined) {
-        const page = `${ISLANDS}/${name}.html#${encodeURIComponent(JSON.stringify(props))}`
+        const page = `${ISLANDS}/${name}#${encodeURIComponent(JSON.stringify(props))}`
         node.tagName = "figure"
         node.properties = {
           className: ["embed", "island-frame"],
@@ -253,7 +252,6 @@ export function rehypeIslands() {
       node.properties = {
         className: ["island"],
         dataIsland: name,
-        dataIslandSrc: src,
         dataIslandLoad: String(p.load ?? "visible"),
         dataIslandProps: JSON.stringify(props),
       }
