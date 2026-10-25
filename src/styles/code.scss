@@ -64,6 +64,8 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
   padding-top: 0.2rem;
   padding-bottom: 0.2rem;
   background: color-mix(in srgb, var(--lightgray) 45%, var(--light));
+  // for what else is in the bar to give way when it's narrow: @container code-bar (max-width: …)
+  container: code-bar / inline-size;
 }
 
 // a title too long for its bar loses its start, keeping the file's name:
@@ -83,23 +85,36 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
   }
 }
 
-// over the code, so it gives its height back: the code starts where it would
+// over the code, so it gives its height back: the code starts where it would.
+// The code's top margin is the block's, so the block starts at the code's
+// border, as a titled one starts at its bar (compare columns line them up)
+figure:has(> .code-corner) {
+  margin-top: 1rem;
+}
+
 .code-corner {
   @include sticks-to-the-top;
   z-index: 2;
   display: flex;
   justify-content: flex-end;
-  height: 2.25rem;
-  margin-bottom: -2.25rem;
+  height: 2.6rem;
+  margin-bottom: -2.6rem;
   pointer-events: none;
 
+  & + pre {
+    margin-top: 0;
+  }
+
+  // on its own paper, so code scrolling under it while it sticks doesn't show through
   & > .code-actions {
     height: max-content;
-    margin: 1px 1px 0 0;
-    padding: 0.2rem 0.25rem 0.2rem 1.5rem;
-    border-radius: 0 5px 0 8px;
-    background: linear-gradient(to right, transparent, var(--light) 1.25rem);
+    margin: 0.35rem 0.35rem 0 0;
+    padding: 0.1rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    background: var(--light);
     pointer-events: auto;
+    transition: opacity 0.2s ease;
   }
 }
 
@@ -178,13 +193,19 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
   }
 
   [data-viewer-code]:not(:hover, :has(:focus-visible)) > .code-corner > .code-actions {
-    background: none;
+    opacity: 0;
+  }
+
+  // and in a title bar, they leave their room to the title while they're hidden
+  [data-viewer-code]:not(:hover, :has(:focus-visible)) > figcaption > .code-actions {
+    max-width: 0;
+    overflow: hidden;
   }
 }
 
 @media (hover: none) {
   :has(> .code-corner) > pre > code {
-    padding-top: 2rem;
+    padding-top: 2.6rem;
   }
 }
 

@@ -41,14 +41,9 @@ const button = (cls: string, label: string, svg: string) => makeButton(`viewer-b
 const link = (cls: string, label: string, svg: string) => makeLink(`viewer-button ${cls}`, label, svg)
 
 const DIAGRAMS = "figure.diagram-graphviz, figure.diagram-svg, figure.diagram-mermaid"
-// code that opens here: a code file with a full-screen button, or a code
-// block long enough to have been given one (addExpands)
-const CODE = "figure.code-file:has(.code-file-full), [data-viewer-code]"
 // embeds that are alive (a graph you drag, a pdf's pages): they can't be
 // copied, so they come into the viewer themselves and go back after
 const LIVE = "figure.diagram-graph, figure.embed-pdf"
-/** a code block taller than this many lines gets a way into the viewer */
-const LONG_CODE = 20
 // link previews show a copy of another note: its pictures aren't this page's.
 // (A margin figure's copy in .margin-layer is this page's, and opens.)
 const ELSEWHERE = ".margin-preview, .margin-hover, .popover, a, .basalt-viewer"
@@ -88,7 +83,7 @@ const ownLink = (a: Element) => isImageLink(a) && !a.closest(".margin-preview, .
 function collect(): Item[] {
   const found: Item[] = []
   const candidates = document.querySelectorAll<HTMLElement>(
-    `img.zoomable, ${DIAGRAMS}, figure.embed-frame, ${CODE}, ${LIVE}, ${IMAGE_LINKS}`,
+    `img.zoomable, ${DIAGRAMS}, figure.embed-frame, ${LIVE}, ${IMAGE_LINKS}`,
   )
   for (const el of candidates) {
     if (el instanceof HTMLAnchorElement) {
@@ -110,10 +105,6 @@ function collect(): Item[] {
       found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.currentSrc || el.src, pair: themedPair(el) })
     } else if (el.matches(LIVE)) {
       found.push({ kind: "live", origin: el, caption: captionOf(el) })
-    } else if (el.matches(CODE)) {
-      const name = el.querySelector(".code-file-name, [data-rehype-pretty-code-title]")?.textContent?.trim() ?? ""
-      const raw = el.querySelector<HTMLAnchorElement>(".code-file-raw")?.href
-      found.push({ kind: "code", origin: el, caption: name, src: raw })
     } else if (el.matches("figure.embed-frame")) {
       const frame = el.querySelector("iframe")
       if (frame) found.push({ kind: "frame", origin: el, caption: captionOf(frame), src: frame.src })
@@ -746,29 +737,14 @@ function addExpands(root: ParentNode, signal: AbortSignal) {
     )
     el.append(b)
   }
-  // a long code block (not a code file, whose bar has its own button)
-  for (const pre of root.querySelectorAll<HTMLElement>("article pre")) {
-    if (pre.closest(`figure.code-file, figure.diagram, ${ELSEWHERE}, .mermaid-source`) || pre.matches(":has(> code.mermaid)")) continue
-    const block = pre.closest<HTMLElement>("figure[data-rehype-pretty-code-figure]") ?? pre
-    if (block.hasAttribute("data-viewer-code")) continue
-    const lines = pre.querySelectorAll("[data-line], .line").length || (pre.textContent ?? "").split("\n").length
-    if (lines <= LONG_CODE) continue
-    block.dataset.viewerCode = ""
-    const b = button("viewer-expand", "full screen", ICON("expand"))
-    b.addEventListener(
-      "click",
-      (e) => {
-        e.stopPropagation()
-        openViewer(block)
-      },
-      { signal },
-    )
-    block.append(b)
-  }
 }
 
-/** A code file's full-screen button opens it here (codefile.ts). */
-export const openCode = (figure: HTMLElement) => openViewer(figure)
+/** A code block's full-screen button opens it here alone, not among the page's pictures (codefile.ts). */
+export function openCode(block: HTMLElement) {
+  const caption = block.querySelector(".code-file-name, [data-rehype-pretty-code-title]")?.textContent?.trim() ?? ""
+  const src = block.querySelector<HTMLAnchorElement>(".code-file-raw")?.href
+  return openViewer(block, { only: { kind: "code", origin: block, caption, src } })
+}
 
 // a link to a picture opens it here rather than going to the file (⌘/ctrl
 // still does). In capture, before Astro's router takes the click.
