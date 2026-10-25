@@ -23,7 +23,7 @@ showcase/
     files/
       sieve.py
       euclid.csv
-    assets/…             # starts folded
+    assets/…             # pictures, left out
 ```
 
 Each line is an entry. A name ending in `/` (or with entries under it) is a folder; click it, or tab to it and press enter, to fold it. `# ` after a name is its note, and a note can hold `code` and [[links]].
