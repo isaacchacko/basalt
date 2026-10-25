@@ -79,7 +79,7 @@ function neighbourhood(notes: Note[], here: string, depth: number): GraphData {
 const hrefOf = (slug: string) => "/" + slug.replace(/(^|\/)index$/, "")
 
 /** A renderer in `el` that keeps to the page's theme and goes to a clicked note. */
-function draw(el: HTMLElement, data: GraphData, signal: AbortSignal, small: boolean, onGo?: () => void) {
+function draw(el: HTMLElement, data: () => GraphData, signal: AbortSignal, small: boolean, onGo?: () => void) {
   const renderer = new GraphRenderer(el, {
     mode: "select",
     arrows: false,
@@ -92,12 +92,16 @@ function draw(el: HTMLElement, data: GraphData, signal: AbortSignal, small: bool
     textFadeThreshold: -2,
     theme: pageTheme(),
   })
-  renderer.setData(data)
+  renderer.setData(data())
   renderer.on("nodeClick", ({ id }) => {
     onGo?.()
     navigate(hrefOf(id))
   })
-  const retheme = () => renderer.setOptions({ theme: pageTheme() })
+  // this note's colour is the theme's too: the nodes keep their places
+  const retheme = () => {
+    renderer.setOptions({ theme: pageTheme() })
+    renderer.setData(data())
+  }
   const themes = new MutationObserver(retheme)
   themes.observe(document.documentElement, { attributes: true, attributeFilter: ["saved-theme", "data-theme", "class", "style"] })
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme, { signal })
@@ -116,7 +120,7 @@ onPage((signal) => {
     const here = view.dataset.here ?? ""
     const depth = Number(view.dataset.depth ?? 1)
     const local = view.querySelector<HTMLElement>(".graph-view-local")!
-    draw(local, neighbourhood(notes, here, depth), signal, true)
+    draw(local, () => neighbourhood(notes, here, depth), signal, true)
 
     const dialog = view.querySelector<HTMLDialogElement>("dialog.graph-view-global")!
     const canvas = dialog.querySelector<HTMLElement>(".graph-view-global-canvas")!
@@ -127,7 +131,7 @@ onPage((signal) => {
         dialog.showModal()
         const ctrl = new AbortController()
         signal.addEventListener("abort", () => ctrl.abort(), { once: true })
-        draw(canvas, neighbourhood(notes, here, -1), ctrl.signal, false, () => dialog.close())
+        draw(canvas, () => neighbourhood(notes, here, -1), ctrl.signal, false, () => dialog.close())
         closeBig = () => ctrl.abort()
       },
       { signal },
