@@ -36,6 +36,7 @@ export default {
 )
 fs.writeFileSync(path.join(site, "notes/dump.md"), "# A dump\n\nHello :wave:, [[other]].\n")
 fs.writeFileSync(path.join(site, "notes/other.md"), "---\nprivate: true\n---\n\nsecret\n")
+fs.writeFileSync(path.join(site, "notes/embeds.md"), "![[other]]\n")
 fs.writeFileSync(path.join(site, "notes/draft.md"), "---\ndraft: true\n---\n\nnot yet\n")
 process.env.BASALT_SITE = site
 
@@ -55,5 +56,11 @@ describe("a site's plugins", () => {
     assert.strictEqual(other.metadata.frontmatter.draft, false)
     const draft = await renderFile(path.join(site, "notes/draft.md"))
     assert.strictEqual(draft.metadata.frontmatter.draft, true)
+  })
+
+  test("an unpublished note can't be embedded either", async () => {
+    const out = await renderFile(path.join(site, "notes/embeds.md"))
+    assert.match(out.code, /nothing to embed: no note called other/)
+    assert.doesNotMatch(out.code, /secret/)
   })
 })

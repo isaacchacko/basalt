@@ -159,7 +159,7 @@ function treeProcessor() {
     .use([...basaltRehype, ...site.rehypePlugins])
 }
 
-const targets = new Map<string, { stamp: number; target: Promise<Target> }>()
+const targets = new Map<string, { stamp: number; target: Promise<Target | undefined> }>()
 
 /** A note rendered on its own (its embeds left as they are), cached until its file changes. */
 export async function renderTarget(slug: FullSlug): Promise<Target | undefined> {
@@ -173,6 +173,9 @@ export async function renderTarget(slug: FullSlug): Promise<Target | undefined> 
     const vfile = new VFile({ value: content, path: file.abs, data: { astro: { frontmatter } } })
     ownTree ??= treeProcessor()
     const tree = (await ownTree.run(ownTree.parse(vfile), vfile)) as Root
+    // an unpublished note isn't there to embed, as it isn't there to visit
+    const fm = vfile.data.frontmatter
+    if (fm?.draft || fm?.private) return undefined
     return {
       slug,
       title: vfile.data.frontmatter?.title,
