@@ -13,7 +13,7 @@ import {
   stripSlashes,
   transformLink,
   type FullSlug,
-} from "./path"
+} from "./path.ts"
 
 export interface Resolved {
   /** root-absolute, with its anchor: "/sources/garden-ideas#why" */

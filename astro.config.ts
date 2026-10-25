@@ -18,6 +18,8 @@ export default defineConfig({
   // a site's non-note files (images, pdfs, code) are served from here: see linkPublic
   publicDir: path.join(site.work, "public"),
   outDir: path.join(site.work, "dist"),
+  // per site, so sites (and worktrees sharing node_modules) don't share a cache
+  cacheDir: path.join(site.work, "cache"),
   trailingSlash: "ignore",
   integrations: [preact({ compat: true }), agentApi()],
   markdown: {
