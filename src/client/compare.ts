@@ -294,7 +294,8 @@ function startBlock(figure: HTMLElement, signal: AbortSignal) {
   viewerButton(full, figure, signal, 16)
   actions.append(full)
   figure.dataset.quietControls = ""
-  figure.append(actions)
+  // first in the block's tab order, as it's first in its corner
+  figure.prepend(actions)
 
   let closeReader: (() => void) | undefined
   let frame = 0
