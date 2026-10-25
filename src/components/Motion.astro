@@ -1,0 +1,12 @@
+---
+// Basalt's arrival: when a page comes in, its title sets like cooling rock
+// (Fraunces going from light and round to its full weight) and the note rises
+// into place a block at a time. It runs on every navigation, and does nothing
+// under prefers-reduced-motion or without JavaScript, where the page is simply
+// there. The first page's arrival is started before it paints (Head.astro).
+import "../styles/motion.scss"
+---
+
+<script>
+  import "../client/motion"
+</script>

@@ -1,0 +1,26 @@
+---
+// Where a page sits: the root, its folders, then the page itself.
+import type { TreeNode } from "../layouts/notes"
+import { hrefOf } from "../layouts/notes"
+
+interface Props {
+  trail: TreeNode[]
+  /** the page's own crumb, when it isn't the last node of the trail (a tag page) */
+  last?: string
+  rootName: string
+}
+const { trail, last, rootName } = Astro.props
+const crumbs = trail.map((n, i) => ({ name: i === 0 ? rootName : n.name, href: hrefOf(n.slug || "index") }))
+if (last) crumbs.push({ name: last, href: "" })
+---
+
+<nav class="breadcrumb-container" aria-label="breadcrumbs">
+  {
+    crumbs.map((c, i) => (
+      <div class="breadcrumb-element">
+        {i === crumbs.length - 1 ? <a aria-current="page">{c.name}</a> : <a href={c.href}>{c.name}</a>}
+        {i !== crumbs.length - 1 && <p> ❯ </p>}
+      </div>
+    ))
+  }
+</nav>

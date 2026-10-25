@@ -1,0 +1,45 @@
+---
+// One level of the explorer: notes as links, folders as a link plus their
+// own list. A folder the current note is in starts open; nav.ts applies the
+// state each reader left the others in.
+import type { TreeNode } from "../layouts/notes"
+import { hrefOf } from "../layouts/notes"
+
+interface Props {
+  nodes: TreeNode[]
+  current: string
+  open: "collapsed" | "open"
+}
+const { nodes, current, open } = Astro.props
+const inside = (folder: string) => current === folder || current.startsWith(folder + "/")
+---
+
+{
+  nodes.map((node) =>
+    node.isFolder ? (
+      <li>
+        <div class:list={["folder-container", { active: current === `${node.slug}/index` || current === node.slug }]} data-folderpath={`${node.slug}/index`}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="folder-icon">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          <div>
+            <a href={hrefOf(node.slug)} data-for={`${node.slug}/index`} class="folder-title">
+              {node.name}
+            </a>
+          </div>
+        </div>
+        <div class:list={["folder-outer", { open: open === "open" || inside(node.slug) }]}>
+          <ul class="content">
+            <Astro.self nodes={node.children} current={current} open={open} />
+          </ul>
+        </div>
+      </li>
+    ) : (
+      <li>
+        <a href={hrefOf(node.slug)} data-for={node.slug} class:list={{ active: node.slug === current }}>
+          {node.name}
+        </a>
+      </li>
+    ),
+  )
+}

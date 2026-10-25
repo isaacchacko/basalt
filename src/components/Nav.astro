@@ -1,0 +1,50 @@
+---
+// Basalt's navbar. On a wide screen it folds away to its margin, leaving one
+// chevron halfway down it; reach into the margin (or tab into it) and after a
+// beat it opens, taking room from the note rather than covering it. Open, it
+// has the mark and the site's title, the explorer, and a bottom tray with the
+// theme toggle. Below desktop width it's a bar across the top instead.
+//
+// It persists across page transitions, so what's open in it stays open.
+import Mark from "basalt:components/Mark"
+import Explorer from "basalt:components/Explorer"
+import Darkmode from "basalt:components/Darkmode"
+import type { TreeNode } from "../layouts/notes"
+import type { LayoutConfig } from "../lib/config"
+
+interface Props {
+  title: string
+  root: TreeNode
+  current: string
+  layout: LayoutConfig
+}
+const { title, root, current, layout } = Astro.props
+// what the tree is: a navbar kept across a transition is replaced when it changes
+const shape = (n: TreeNode): string => `${n.slug}:${n.name}(${n.children.map(shape).join(",")})`
+let hash = 0
+for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.charCodeAt(0)) | 0
+---
+
+<div class="left sidebar" transition:persist="basalt-nav" data-tree={hash.toString(36)}>
+  <div class="nav-rail" aria-hidden="true">
+    <svg class="nav-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 5l7 7-7 7"></path>
+    </svg>
+  </div>
+  <div class="nav-head">
+    <a class="nav-mark" href="/" aria-label={title}><Mark /></a>
+  </div>
+  <h2 class="page-title"><a href="/">{title}</a></h2>
+  {layout.components.explorer && <Explorer root={root} current={current} open={layout.explorer.folderDefaultState} />}
+  {
+    layout.components.darkmode && (
+      <div class="nav-tray">
+        <Darkmode />
+      </div>
+    )
+  }
+</div>
+
+<script>
+  import "../client/nav"
+</script>

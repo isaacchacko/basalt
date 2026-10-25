@@ -1,0 +1,21 @@
+---
+// A note's tags, each a link to its tag's page.
+interface Props {
+  tags: string[]
+}
+const { tags } = Astro.props
+---
+
+{
+  tags.length > 0 && (
+    <ul class="tags">
+      {tags.map((tag) => (
+        <li>
+          <a href={`/tags/${tag}`} class="internal tag-link" data-slug={`tags/${tag}`}>
+            {tag}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}

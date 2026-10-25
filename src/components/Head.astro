@@ -1,0 +1,88 @@
+---
+// The page's <head>: its title and description, the tags a link preview
+// reads (Open Graph, Twitter), the canonical url at the site's baseUrl, the
+// fonts, and the theme, set before the first paint.
+import { ClientRouter } from "astro:transitions"
+import { registry } from "../lib/registry"
+
+interface Props {
+  title: string
+  description?: string
+  /** the page's path, e.g. "/blog/a-post" */
+  path: string
+  noindex?: boolean
+}
+const { title, description, path, noindex } = Astro.props
+const { site } = registry()
+const cfg = site.config
+const fullTitle = title === cfg.title ? title : `${title} · ${cfg.title}`
+const desc = description ?? cfg.description
+const base = cfg.baseUrl ? `https://${cfg.baseUrl.replace(/\/$/, "")}` : undefined
+const url = base ? `${base}${path === "/" ? "/" : path}` : undefined
+
+// Fraunces with its optical size, weight, softness and wonk axes; Instrument
+// Sans to read; JetBrains Mono only for code
+const fonts =
+  "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1" +
+  "&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=JetBrains+Mono:wght@400;600&display=swap"
+
+// the mark, as the tab's icon
+const icon =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.6">` +
+      `<g stroke="#3a3835"><path d="M1.5 12V27M3.75 13.8V28.8M8.25 13.8V28.8M10.5 12V27M1.5 27L3.75 28.8L8.25 28.8L10.5 27"/><path d="M11.5 5V27M13.75 6.8V28.8M18.25 6.8V28.8M20.5 5V27M11.5 27L13.75 28.8L18.25 28.8L20.5 27"/><path d="M21.5 15V27M23.75 16.8V28.8M28.25 16.8V28.8M30.5 15V27M21.5 27L23.75 28.8L28.25 28.8L30.5 27"/></g>` +
+      `<g stroke="#d4572a"><path d="M1.5 12L3.75 10.2L8.25 10.2L10.5 12L8.25 13.8L3.75 13.8Z"/><path d="M11.5 5L13.75 3.2L18.25 3.2L20.5 5L18.25 6.8L13.75 6.8Z"/><path d="M21.5 15L23.75 13.2L28.25 13.2L30.5 15L28.25 16.8L23.75 16.8Z"/></g></svg>`,
+  )
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{fullTitle}</title>
+{desc && <meta name="description" content={desc} />}
+{url && <link rel="canonical" href={url} />}
+{noindex && <meta name="robots" content="noindex" />}
+<meta name="generator" content="Basalt" />
+<link rel="icon" href={icon} />
+<link rel="alternate" type="application/rss+xml" title={cfg.title} href="/rss.xml" />
+
+<meta property="og:site_name" content={cfg.title} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:type" content="website" />
+{desc && <meta property="og:description" content={desc} />}
+{url && <meta property="og:url" content={url} />}
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content={fullTitle} />
+{desc && <meta name="twitter:description" content={desc} />}
+{cfg.baseUrl && <meta property="twitter:domain" content={cfg.baseUrl} />}
+{url && <meta property="twitter:url" content={url} />}
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href={fonts} />
+
+<!--
+  The theme, before anything paints: the reader's choice, else their system's.
+  And the first page's arrival (src/client/motion.ts), so its blocks never
+  show and then vanish. Inline, since a module script runs too late for both.
+-->
+<script is:inline>
+  ;(() => {
+    const root = document.documentElement
+    let theme
+    try {
+      theme = localStorage.getItem("theme")
+    } catch {}
+    theme ??= matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    root.setAttribute("saved-theme", theme)
+    let hot = false
+    try {
+      hot = sessionStorage.getItem("basalt:hot") === "1"
+      sessionStorage.removeItem("basalt:hot")
+    } catch {}
+    if (hot) root.dataset.hot = ""
+    else if (!matchMedia("(prefers-reduced-motion: reduce)").matches) root.classList.add("basalt-arrive")
+  })()
+</script>
+
+<ClientRouter fallback="swap" />

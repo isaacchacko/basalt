@@ -1,0 +1,22 @@
+---
+// The foot of every page: Basalt's credit and the site's own links.
+interface Props {
+  links: Record<string, string>
+}
+const { links } = Astro.props
+---
+
+<footer>
+  <p>Made with <a href="https://basalt.isaacchacko.com">Basalt</a> © {new Date().getFullYear()}</p>
+  {
+    Object.keys(links).length > 0 && (
+      <ul>
+        {Object.entries(links).map(([text, href]) => (
+          <li>
+            <a href={href}>{text}</a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</footer>
