@@ -6,6 +6,8 @@
 //                       whose target isn't in the build
 //   missing embeds      an ![[embed]] Basalt couldn't find
 //   unknown islands     an <island name="x"> with no islands/x.tsx (or .ts, .jsx, .js)
+//   compare anchors     a ^name in a compare block with no partner, or one
+//                       that crosses another: it never lines up (a warning)
 //   orphans             notes nothing links to (a warning)
 //
 // Each problem names the note's file (the one you edit) and, where it can be
@@ -122,6 +124,12 @@ export function check(dist, notes, { islands = null } = {}) {
         const at = what ? locate(textOf(note), what) : { line: null }
         problems.push({ kind: "missing embed", note: note.file, line: at.line, detail })
       }
+      if (node.tagName === "figure" && cls.includes("compare")) {
+        for (const [name, why] of strayAnchors(node)) {
+          const at = textOf(note).split("\n").findIndex((l) => new RegExp(`\\^${escape(name)}(?=[=\\s]|$)`).test(l))
+          problems.push({ kind: "compare anchor", note: note.file, line: at < 0 ? null : at + 1, detail: `^${name} ${why}, ignored`, warning: true })
+        }
+      }
       const island = node.properties?.dataIsland
       if (islands && typeof island === "string" && !islands.includes(island) && !seenIslands.has(island)) {
         seenIslands.add(island)
@@ -166,6 +174,53 @@ export function check(dist, notes, { islands = null } = {}) {
     if (slug !== "index" && !linkedTo.has(slug)) problems.push({ kind: "orphan", note: note.file, line: null, detail: "nothing links here", warning: true })
   }
   return problems
+}
+
+/**
+ * A compare block's written anchors that don't line up, the way the page
+ * pairs them (src/client/compare.ts): a name in every column, kept in the
+ * order of the first column unless it crosses one already kept.
+ */
+export function strayAnchors(figure) {
+  const order = new Map()
+  visit(figure, "element", (node) => void order.set(node, order.size))
+  const columns = []
+  visit(figure, "element", (node) => {
+    if ([node.properties?.className ?? []].flat().includes("compare-column")) columns.push(node)
+  })
+  const anchorsOf = (column) => {
+    // each name where it first lands in the column, as the page finds it
+    const found = new Map()
+    const put = (name, at) => (found.get(name) ?? Infinity) > at && found.set(name, at)
+    visit(column, "element", (node) => {
+      const name = node.properties?.dataCompareAnchor
+      if (typeof name === "string") put(name, order.get(node))
+      if (typeof node.properties?.dataCompareLines !== "string") return
+      const lines = []
+      visit(node, "element", (line) => void (line.properties?.dataLine !== undefined && lines.push(line)))
+      for (const [name, at] of JSON.parse(node.properties.dataCompareLines)) {
+        const text = at.startsWith("/") ? at.slice(1, -1).replace(/\\(.)/g, "$1") : null
+        const line = text === null ? lines[Number(at) - 1] : lines.find((l) => toString(l).includes(text))
+        if (line) put(name, order.get(line))
+      }
+    })
+    return found
+  }
+  const found = columns.map(anchorsOf)
+  const stray = []
+  const kept = []
+  const down = (f) => [...f].sort((a, b) => a[1] - b[1]).map(([name]) => name)
+  for (const name of new Set(found.flatMap(down))) {
+    const row = found.map((f) => f.get(name))
+    if (row.some((at) => at === undefined)) {
+      stray.push([name, "has no partner in another column"])
+      continue
+    }
+    const crosses = kept.find((k) => !row.every((at, i) => (k.row[0] < row[0]) === (k.row[i] < at)))
+    if (crosses) stray.push([name, `crosses ^${crosses.name}`])
+    else kept.push({ name, row })
+  }
+  return stray
 }
 
 export function report(all, json) {

@@ -52,3 +52,44 @@ test("an unknown island is reported at its line", () => {
   const problems = check(dist, notes, { islands: ["tally"] })
   assert.deepEqual(problems, [{ kind: "unknown island", note: "notes/z.md", line: 3, detail: '"anemometer" (have: tally)' }])
 })
+
+test("a compare anchor that crosses another, or has no partner, is a warning at its line", () => {
+  const text = [
+    "> [!compare] A",
+    "> ```ts ^tiles=/map/ ^move=/onPointerMove/",
+    "> ```",
+    "> Alone. ^solo",
+    "",
+    "> [!compare] B",
+    "> ```ts ^move=1 ^tiles=2",
+    "> ```",
+  ].join("\n")
+  const abs = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basalt-note-")), "porting.md")
+  fs.writeFileSync(abs, text)
+  const lines = (...ls: string[]) => ls.map((l) => `<span data-line="">${l}</span>`).join("\n")
+  const dist = site({
+    "porting.html":
+      `<figure class="compare"><div class="compare-columns">` +
+      `<div class="compare-column"><div class="compare-lines" data-compare-lines='[["tiles","/map/"],["move","/onPointerMove/"]]'><pre><code>${lines("albums.map(a =>", "onPointerMove={lean}")}</code></pre></div><p data-compare-anchor="solo">Alone.</p></div>` +
+      `<div class="compare-column"><div class="compare-lines" data-compare-lines='[["move","1"],["tiles","2"]]'><pre><code>${lines("addEventListener(\"pointermove\")", "tiles.map(t =>")}</code></pre></div></div>` +
+      `</div></figure>`,
+  })
+  const problems = check(dist, new Map([["porting", { file: "notes/porting.md", abs }]])).filter((p) => p.kind === "compare anchor")
+  assert.deepEqual(problems, [
+    { kind: "compare anchor", note: "notes/porting.md", line: 2, detail: "^move crosses ^tiles, ignored", warning: true },
+    { kind: "compare anchor", note: "notes/porting.md", line: 4, detail: "^solo has no partner in another column, ignored", warning: true },
+  ])
+
+  // the page goes by the lines a fence's anchors land on, not the order they're written in
+  const landed = site({
+    "porting.html":
+      `<figure class="compare"><div class="compare-columns">` +
+      `<div class="compare-column"><div class="compare-lines" data-compare-lines='[["tiles","/map/"],["move","/onPointerMove/"]]'><pre><code>${lines("onPointerMove={lean}", "albums.map(a =>")}</code></pre></div></div>` +
+      `<div class="compare-column"><div class="compare-lines" data-compare-lines='[["tiles","1"],["move","2"]]'><pre><code>${lines("tiles.map(t =>", "addEventListener(\"pointermove\")")}</code></pre></div></div>` +
+      `</div></figure>`,
+  })
+  assert.deepEqual(
+    check(landed, new Map([["porting", { file: "notes/porting.md", abs }]])).filter((p) => p.kind === "compare anchor").map((p) => p.detail),
+    ["^tiles crosses ^move, ignored"],
+  )
+})
