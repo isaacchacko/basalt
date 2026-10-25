@@ -67,7 +67,8 @@ const el = (tagName: string, properties: Element["properties"], children: Elemen
 })
 
 const formatDate = (d: Date, locale: string) =>
-  d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "2-digit" })
+  // a frontmatter date is a day, read as midnight UTC: shown as that day anywhere
+  d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "2-digit", timeZone: "UTC" })
 
 export function renderNoteLists(root: Root, locale = "en-US", all: () => Listed[] = listed) {
   let notes: Listed[] | undefined

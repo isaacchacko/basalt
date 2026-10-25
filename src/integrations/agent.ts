@@ -136,6 +136,26 @@ export function agentApi(): AstroIntegration {
           if (!status.trigger.includes(p)) status.trigger.push(p)
           write()
         }
+        // Basalt's build-time code (markdown plugins, site and config loading)
+        // and a site's basalt.config.ts are loaded with the config, outside
+        // Vite's reach: a change to one restarts the server, as a change to the
+        // config does (Astro restarts when astro.config.ts changes)
+        const basaltSrc = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
+        const configFile = path.join(basaltSrc, "..", "astro.config.ts")
+        const buildTime = [
+          path.join(basaltSrc, "markdown"),
+          path.join(basaltSrc, "lib"),
+          path.join(basaltSrc, "integrations"),
+          path.join(site.dir, "basalt.config.ts"),
+        ]
+        server.watcher.add(buildTime)
+        server.watcher.on("change", (p) => {
+          if (p.endsWith(".test.ts") || !buildTime.some((d) => p === d || p.startsWith(d + path.sep))) return
+          const now = new Date()
+          try {
+            fs.utimesSync(configFile, now, now)
+          } catch {}
+        })
         server.watcher.on("change", touched)
         server.watcher.on("add", touched)
         server.watcher.on("unlink", touched)

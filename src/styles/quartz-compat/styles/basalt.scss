@@ -1,0 +1,4 @@
+// A site's custom.scss written for the Quartz build starts with
+// `@use "styles/base.scss"` (and basalt.scss), Quartz's own stylesheets. On
+// Astro, Basalt's are already on the page, so those imports find these empty
+// files instead (sass loadPaths in astro.config.ts).

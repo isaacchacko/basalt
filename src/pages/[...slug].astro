@@ -94,6 +94,7 @@ const Content = rendered?.Content
       title={titleOf(props.note)}
       description={descriptionOf(props.note)}
       date={dateOf(props.note)}
+      dated={props.note.data.dated === true}
       minutes={readingTimeOf(props.note)}
       tags={tagsOf(props.note)}
       meta={folderNode ? count : undefined}

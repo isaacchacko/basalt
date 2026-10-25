@@ -62,9 +62,11 @@ export function remarkNote() {
     if (cssclasses) data.cssclasses = cssclasses
 
     // frontmatter's date, else when the file was made
+    const given = isoDate(coalesce(data, ["date", "created", "published", "publishDate"]))
     data.date =
-      isoDate(coalesce(data, ["date", "created", "published", "publishDate"])) ??
-      (file.path && fs.existsSync(file.path) ? fs.statSync(file.path).birthtime.toISOString() : undefined)
+      given ?? (file.path && fs.existsSync(file.path) ? fs.statSync(file.path).birthtime.toISOString() : undefined)
+    // whether the note says when it's from (a site can show dates only then)
+    data.dated = given !== undefined
 
     // not published: the page route leaves these out
     data.draft = truthy(data.draft)

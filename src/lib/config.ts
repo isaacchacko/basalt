@@ -10,6 +10,10 @@
 //   // basalt.config.ts (beside its markdown plugins, if it has any)
 //   export default { layout: { components: { breadcrumbs: false } } }
 //
+// and a top-level "theme" (in either) for the site's palette:
+//
+//   { "theme": { "colors": { "lightMode": { "light": "#f5eedd" }, "darkMode": { ... } } } }
+//
 // A page turns an opt-in part on (or off) for itself in its frontmatter:
 // `graph: true`, `toc: true`, `backlinks: true`.
 
@@ -26,7 +30,8 @@ export interface LayoutConfig {
     explorer: boolean
     search: boolean
     darkmode: boolean
-    meta: boolean
+    /** the date and reading time: on every note, only on notes with a date of their own ("dated"), or none */
+    meta: boolean | "dated"
     tags: boolean
     footer: boolean
   }
@@ -42,6 +47,12 @@ export interface LayoutConfig {
   footer: { links: Record<string, string> }
   /** how many notes rss.xml carries */
   rssLimit: number
+  /**
+   * The site's palette, over Basalt's (src/styles/basalt.scss): any of
+   * light, lightgray, gray, darkgray, dark, secondary, tertiary, highlight,
+   * textHighlight, for each mode. In basalt.json it's a top-level "theme".
+   */
+  theme: { colors: { lightMode: Record<string, string>; darkMode: Record<string, string> } }
 }
 
 export interface BasaltConfig {
@@ -67,6 +78,7 @@ export const defaults: LayoutConfig = {
   breadcrumbs: { rootName: "Home" },
   footer: { links: {} },
   rssLimit: 10,
+  theme: { colors: { lightMode: {}, darkMode: {} } },
 }
 
 function merge<T>(base: T, over: unknown): T {
@@ -93,7 +105,10 @@ async function siteConfig(dir: string): Promise<BasaltConfig> {
   if (!file) return {}
   try {
     const mod = await nativeImport(pathToFileURL(file).href + `?t=${fs.statSync(file).mtimeMs}`)
-    return { layout: (mod.layout ?? (mod.default as BasaltConfig | undefined)?.layout) as BasaltConfig["layout"] }
+    const own = (mod.default ?? {}) as BasaltConfig & { theme?: unknown }
+    const lay = (mod.layout ?? own.layout ?? {}) as Record<string, unknown>
+    const theme = mod.theme ?? own.theme
+    return { layout: { ...lay, ...(theme ? { theme } : {}) } as BasaltConfig["layout"] }
   } catch (err) {
     console.error(`basalt: ${file}: ${(err as Error).message}`)
     return {}
@@ -105,11 +120,12 @@ let last: LayoutConfig | undefined
 /** The site's layout, read fresh each page (basalt.json and basalt.config.ts can change while serving). */
 export async function layout(): Promise<LayoutConfig> {
   const dir = siteDir()
-  let json: { layout?: unknown } = {}
+  let json: { layout?: Record<string, unknown>; theme?: unknown } = {}
   try {
     json = JSON.parse(fs.readFileSync(path.join(dir, "basalt.json"), "utf8"))
   } catch {}
-  last = merge(merge(defaults, json.layout), (await siteConfig(dir)).layout)
+  const fromJson = { ...json.layout, ...(json.theme ? { theme: json.theme } : {}) }
+  last = merge(merge(defaults, fromJson), (await siteConfig(dir)).layout)
   return last
 }
 
@@ -145,4 +161,21 @@ export function features(data: Record<string, unknown>, cfg: LayoutConfig): Feat
     return cfg[key]
   }
   return { graph: pick("graph"), toc: pick("toc"), backlinks: pick("backlinks") }
+}
+
+/** The site's palette as css, to follow Basalt's own (empty when it has none). */
+export function paletteCss(cfg: LayoutConfig): string {
+  const block = (sel: string, colors: Record<string, string>) => {
+    const decls = Object.entries(colors)
+      .filter(([k, v]) => /^[a-zA-Z]+$/.test(k) && /^[#\w(),.\s%-]+$/.test(v))
+      .map(([k, v]) => `--${k}: ${v};`)
+      .join(" ")
+    return decls ? `${sel} { ${decls} }` : ""
+  }
+  return [
+    block(":root", cfg.theme.colors.lightMode ?? {}),
+    block(':root[saved-theme="dark"]', cfg.theme.colors.darkMode ?? {}),
+  ]
+    .filter(Boolean)
+    .join("\n")
 }

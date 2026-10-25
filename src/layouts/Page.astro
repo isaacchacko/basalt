@@ -37,6 +37,8 @@ interface Props {
   title: string
   description?: string
   date?: Date
+  /** the note gives its own date (else `date` is when its file was made) */
+  dated?: boolean
   minutes?: number
   /** said after the date in the note's header (a folder's count) */
   meta?: string
@@ -53,6 +55,7 @@ const {
   title,
   description,
   date,
+  dated = false,
   minutes,
   meta,
   tags = [],
@@ -91,7 +94,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
             <div class="popover-hint">
               {layout.components.breadcrumbs && breadcrumbs && <Breadcrumbs trail={trail} last={crumb} rootName={layout.breadcrumbs.rootName} />}
               <h1 class="article-title">{title}</h1>
-              {layout.components.meta && <ContentMeta date={date} minutes={minutes} extra={meta} />}
+              {(layout.components.meta === "dated" ? dated : layout.components.meta) && <ContentMeta date={date} minutes={minutes} extra={meta} />}
               {layout.components.tags && <TagList tags={tags} />}
             </div>
           </div>

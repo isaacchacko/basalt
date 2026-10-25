@@ -4,6 +4,7 @@
 // fonts, and the theme, set before the first paint.
 import { ClientRouter } from "astro:transitions"
 import { registry } from "../lib/registry"
+import { layout, paletteCss } from "../lib/config"
 
 interface Props {
   title: string
@@ -19,6 +20,9 @@ const fullTitle = title === cfg.title ? title : `${title} · ${cfg.title}`
 const desc = description ?? cfg.description
 const base = cfg.baseUrl ? `https://${cfg.baseUrl.replace(/\/$/, "")}` : undefined
 const url = base ? `${base}${path === "/" ? "/" : path}` : undefined
+// the site's palette, over Basalt's (doubled :root, so it wins wherever the
+// stylesheets land in the head)
+const palette = paletteCss(await layout()).replaceAll(":root", ":root:root")
 
 // Fraunces with its optical size, weight, softness and wonk axes; Instrument
 // Sans to read; JetBrains Mono only for code
@@ -84,5 +88,7 @@ const icon =
     else if (!matchMedia("(prefers-reduced-motion: reduce)").matches) root.classList.add("basalt-arrive")
   })()
 </script>
+
+{palette && <style is:inline set:html={palette} />}
 
 <ClientRouter fallback="swap" />

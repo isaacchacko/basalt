@@ -41,6 +41,12 @@ export default defineConfig({
     },
     // (merged with resolve above)
     server: { fs: { allow: [site.dir, basalt] } },
+    // a site stylesheet written for the Quartz build still compiles (see quartz-compat)
+    css: {
+      preprocessorOptions: {
+        scss: { loadPaths: [path.join(basalt, "src", "styles", "quartz-compat")] },
+      },
+    },
     // found up front, so a lazy import of one doesn't fail after Vite re-optimises
     optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact"] },
   },
