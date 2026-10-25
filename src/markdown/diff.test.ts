@@ -147,5 +147,8 @@ describe("renderDiff", () => {
     const html = toHtml(await renderDiff(GIT + "\n" + GIT.replaceAll("add.ts", "sub.ts")))
     assert.match(html, />2 files</)
     assert.strictEqual(html.match(/data-diff="file"/g)?.length, 2)
+    // each with its own stat, and the title the sum
+    assert.match(html, /<span class="diff-file-name">src\/sub.ts<\/span><span class="diff-stat" aria-label="3 added, 2 removed">/)
+    assert.match(html, /aria-label="6 added, 4 removed"/)
   })
 })

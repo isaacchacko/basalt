@@ -249,6 +249,13 @@ function changedWords(hunk: DiffLine[]): Map<DiffLine, Array<[number, number]>> 
   return marks
 }
 
+function stat(added: number, removed: number): Element {
+  return el("span", { className: ["diff-stat"], ariaLabel: `${added} added, ${removed} removed` }, [
+    ...(added ? [el("span", { className: ["diff-stat-added"] }, [text(`+${added}`)])] : []),
+    ...(removed ? [el("span", { className: ["diff-stat-removed"] }, [text(`−${removed}`)])] : []),
+  ])
+}
+
 /** a file's path, or old → new */
 function nameOf(f: DiffFile): string {
   if (f.from && f.to && f.from !== f.to) return `${f.from} → ${f.to}`
@@ -280,17 +287,22 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
   for (const f of files) {
     const lang = opts.lang ?? languageOf(f.to ?? f.from)
     const name = nameOf(f)
+    const fileAdded = f.lines.filter((l) => l.kind === "add").length
+    const fileRemoved = f.lines.filter((l) => l.kind === "del").length
+    added += fileAdded
+    removed += fileRemoved
     if (name && name !== title) {
-      const status = f.status && f.status !== "renamed" ? f.status : undefined
+      const status = f.status === "new file" || f.status === "deleted" ? f.status : undefined
       rows.push(
         el("span", { dataLine: "", dataDiff: "file" }, [
           el("span", { className: ["diff-file-name"] }, [text(name)]),
           ...(status ? [el("span", { className: ["diff-file-status"] }, [text(status)])] : []),
+          ...(fileAdded || fileRemoved ? [stat(fileAdded, fileRemoved)] : []),
         ]),
       )
     }
     if (f.status === "binary" && !f.lines.length) {
-      rows.push(el("span", { dataLine: "", dataDiff: "note" }, [text("a binary file, not shown")]))
+      rows.push(el("span", { dataLine: "", dataDiff: "note", className: ["diff-label"] }, [text("a binary file, not shown")]))
       continue
     }
 
@@ -329,8 +341,6 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
           rows.push(el("span", { dataLine: "", dataDiff: "note" }, [text(l.text)]))
           continue
         }
-        if (l.kind === "add") added++
-        if (l.kind === "del") removed++
         gutterDigits = Math.max(gutterDigits, String(l.old ?? "").length, String(l.new ?? "").length)
         const n = l.kind === "del" ? l.old : l.new
         rows.push(
@@ -358,14 +368,7 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
   const caption = title
     ? el("figcaption", { dataRehypePrettyCodeTitle: "", ...shared }, [
         text(title),
-        ...(added || removed
-          ? [
-              el("span", { className: ["diff-stat"], ariaLabel: `${added} added, ${removed} removed` }, [
-                ...(added ? [el("span", { className: ["diff-stat-added"] }, [text(`+${added}`)])] : []),
-                ...(removed ? [el("span", { className: ["diff-stat-removed"] }, [text(`−${removed}`)])] : []),
-              ]),
-            ]
-          : []),
+        ...(added || removed ? [stat(added, removed)] : []),
       ])
     : undefined
   return el(

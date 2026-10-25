@@ -75,4 +75,6 @@ diff --git a/drafts/old.md b/notes/published.md
 similarity index 100%
 rename from drafts/old.md
 rename to notes/published.md
+diff --git a/assets/card.png b/assets/card.png
+Binary files a/assets/card.png and b/assets/card.png differ
 ```

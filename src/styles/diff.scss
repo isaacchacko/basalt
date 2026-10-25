@@ -21,7 +21,7 @@ figure.diff {
   --diff-word: 26%;
   --diff-num: calc(var(--diff-digits, 0) * 1ch + 1.2ch);
   --diff-numbers: calc(0.6ch + 2 * var(--diff-num));
-  --code-gutter: calc(var(--diff-numbers) + 2ch);
+  --code-gutter: calc(var(--diff-numbers) + 2.5ch);
 
   :root[saved-theme="dark"] & {
     --diff-line: 17%;
@@ -108,7 +108,7 @@ figure.diff {
     left: var(--diff-numbers);
     z-index: 1;
     display: inline-block;
-    width: 2ch;
+    width: 2.5ch;
     padding-left: 0.4ch;
     box-sizing: border-box;
     text-indent: 0;
@@ -186,6 +186,7 @@ figure.diff {
     & > span.diff-file-status {
       margin-left: 1ch;
       color: var(--gray);
+      font-family: var(--bodyFont);
       font-weight: 400;
       font-style: italic;
     }
@@ -195,6 +196,10 @@ figure.diff {
     padding-left: calc(var(--code-gutter) + 0.5ch);
     color: var(--gray);
     font-style: italic;
+
+    &.diff-label {
+      font-family: var(--bodyFont);
+    }
   }
 
   .diff-stat {
@@ -203,6 +208,7 @@ figure.diff {
     margin-left: 0.75ch;
     font-family: var(--codeFont);
     font-size: 0.8rem;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
 
     & > .diff-stat-added {
@@ -218,7 +224,7 @@ figure.diff {
 @container (max-width: 30rem) {
   figure.diff[data-numbered] > pre > code {
     --diff-numbers: calc(0.6ch + var(--diff-num));
-    --code-gutter: calc(var(--diff-numbers) + 2ch);
+    --code-gutter: calc(var(--diff-numbers) + 2.5ch);
 
     .diff-gutter {
       &::before {
