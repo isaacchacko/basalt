@@ -110,11 +110,37 @@ export function sourceDirs(site: Site): string[] {
  */
 export function linkPublic(site: Site, files: SiteFile[]): string {
   const out = path.join(site.work, "public")
-  fs.rmSync(out, { recursive: true, force: true })
   fs.mkdirSync(out, { recursive: true })
+  // brought up to date in place, never wiped: a build while a dev server is
+  // serving the same folder mustn't leave it serving nothing
+  const want = new Map<string, string>()
   const own = path.join(site.dir, "public")
-  if (fs.existsSync(own)) fs.cpSync(own, out, { recursive: true, verbatimSymlinks: true })
-  for (const f of files) if (!f.isNote) linkOne(out, f)
+  const walkOwn = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, entry.name)
+      if (entry.isDirectory()) walkOwn(abs)
+      else want.set(path.relative(own, abs), abs)
+    }
+  }
+  if (fs.existsSync(own)) walkOwn(own)
+  for (const f of files) if (!f.isNote) want.set(f.slug, f.abs)
+  const have = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, entry.name)
+      const rel = path.relative(out, abs)
+      if (entry.isDirectory()) {
+        have(abs)
+        if (!fs.readdirSync(abs).length) fs.rmdirSync(abs)
+      } else if (!want.has(rel) || fs.readlinkSync(abs) !== want.get(rel)) fs.rmSync(abs)
+    }
+  }
+  have(out)
+  for (const [rel, abs] of want) {
+    const dest = path.join(out, rel)
+    if (fs.lstatSync(dest, { throwIfNoEntry: false })) continue
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.symlinkSync(abs, dest)
+  }
   return out
 }
 

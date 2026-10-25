@@ -41,5 +41,7 @@ export default defineConfig({
     },
     // (merged with resolve above)
     server: { fs: { allow: [site.dir, basalt] } },
+    // found up front, so a lazy import of one doesn't fail after Vite re-optimises
+    optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact"] },
   },
 })

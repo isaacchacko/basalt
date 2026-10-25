@@ -1,0 +1,31 @@
+---
+// An island alone in a page, for <island frame>: the iframe's src is
+// /basalt/island/<name>#<props as json>.
+import fs from "node:fs"
+import path from "node:path"
+import { siteDir } from "../../../lib/site.ts"
+import MediaScripts from "../../../components/MediaScripts.astro"
+
+export function getStaticPaths() {
+  const dir = path.join(siteDir(), "islands")
+  const names = fs.existsSync(dir)
+    ? fs.readdirSync(dir).filter((f) => /^[a-z0-9][\w-]*\.(tsx|ts|jsx|js)$/i.test(f) && !f.includes(".test.")).map((f) => f.replace(/\.\w+$/, ""))
+    : []
+  return names.map((name) => ({ params: { name } }))
+}
+const { name } = Astro.params
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{name}</title>
+    <style is:global>html,body{margin:0;height:100%}#island{height:100%}</style>
+  </head>
+  <body>
+    <div id="island" data-island={name} data-island-frame></div>
+    <MediaScripts />
+  </body>
+</html>
