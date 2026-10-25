@@ -1,14 +1,16 @@
-// The whole pipeline, on the showcase's notes, the way Astro runs it.
+// The whole pipeline, on a fixed site (test/fixtures/site: the showcase as it
+// was when these were written, kept apart so the showcase can change), the
+// way Astro runs it.
 import "./test-hooks.ts"
 import test, { describe } from "node:test"
 import assert from "node:assert"
 import path from "node:path"
 
-process.env.BASALT_SITE = path.resolve("examples/showcase")
+process.env.BASALT_SITE = path.resolve("test/fixtures/site")
 const { renderFile } = await import("./render.ts")
 const { refreshRegistry } = await import("../lib/registry.ts")
 const { ofmText } = await import("./ofm.ts")
-const notes = path.resolve("examples/showcase/notes")
+const notes = path.resolve("test/fixtures/site/notes")
 const render = (rel: string) => renderFile(path.join(notes, rel))
 
 describe("the showcase, rendered", () => {
