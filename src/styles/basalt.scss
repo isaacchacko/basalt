@@ -305,28 +305,19 @@ figure.code-file {
 
 // ---------- a textbook's measure ----------
 
-// prose keeps to about 65 characters a line, the way a book's does; figures,
-// code, tables and diagrams keep the whole column. Beside the text, in the
-// gutter, go its margin notes (Component.Secondary lays them out).
-article
-  > :is(
-    p,
-    ul,
-    ol,
-    dl,
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    blockquote:not(.transclude),
-    .callout,
-    aside,
-    .note-list-block,
-    .katex-display
-  ) {
-  max-width: var(--measure, 34em);
+// one measure for everything in the main content: prose keeps to about 65
+// characters a line, the way a book's does, and figures, code, tables,
+// diagrams and embeds end on the same right edge, so it's never ragged.
+// Beside it, in the side content, go its margin notes. In rem, so a block
+// set smaller (a caption, a code block) keeps the same edge.
+article > * {
+  box-sizing: border-box;
+  max-width: var(--measure, 34rem);
+}
+
+// display maths is a block of the measure too, scrolling if it's wider
+article > .katex-display {
+  display: block;
 }
 
 // ---------- pictures keep their edges ----------

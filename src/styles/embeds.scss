@@ -6,7 +6,8 @@ figure.embed {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  max-width: var(--embed-width, 100%);
+  // at most the main content's measure (basalt.scss), or the width it asked for
+  max-width: min(var(--embed-width, 100%), var(--measure, 34rem));
   min-width: 0;
 
   & > iframe,
