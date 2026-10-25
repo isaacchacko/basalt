@@ -12,6 +12,17 @@ import { refreshRegistry, registry } from "./lib/registry"
 import { linkOne, linkPublic, sourceDirs, type SiteFile } from "./lib/site"
 import { textTransforms } from "./markdown"
 
+// a change to Basalt's markdown code (or a site's own plugins) re-renders
+// every note, not just the ones whose text changed
+function codeDigest(siteDir: string): string {
+  const dir = path.join(path.dirname(new URL(import.meta.url).pathname), "markdown")
+  const files = [
+    ...fs.readdirSync(dir).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).map((f) => path.join(dir, f)),
+    path.join(siteDir, "basalt.config.ts"),
+  ]
+  return files.map((f) => (fs.existsSync(f) ? fs.statSync(f).mtimeMs : 0)).join(",")
+}
+
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(\r?\n|$)/
 
 function transform(raw: string, file: SiteFile): string {
@@ -29,11 +40,16 @@ export function basaltLoader(): Loader {
       let reg = refreshRegistry()
       linkPublic(reg.site, reg.files)
 
-      const sync = async (file: SiteFile) => {
+      const code = codeDigest(reg.site.dir)
+      const sync = async (file: SiteFile, force = false) => {
         const raw = fs.readFileSync(file.abs, "utf8")
-        const digest = ctx.generateDigest(raw + reg.slugs.length)
         const existing = store.get(file.slug)
-        if (existing && existing.digest === digest) return
+        // the notes it embeds are part of it (the store skips an unchanged digest)
+        const embeds = ((existing?.data.transcludes as string[] | undefined) ?? [])
+          .map((slug) => reg.bySlug.get(slug as never))
+          .map((f) => (f && fs.existsSync(f.abs) ? fs.statSync(f.abs).mtimeMs : 0))
+        const digest = ctx.generateDigest(raw + reg.slugs.length + code + embeds.join(","))
+        if (!force && existing && existing.digest === digest) return
         const rendered = await ctx.renderMarkdown(transform(raw, file), {
           fileURL: pathToFileURL(file.abs),
         })
@@ -82,6 +98,15 @@ export function basaltLoader(): Loader {
         if (!file?.isNote) return
         try {
           await sync(file)
+          // and every note that embeds it
+          for (const entry of store.values()) {
+            const embeds = (entry.data.transcludes as string[] | undefined) ?? []
+            const other = registry().bySlug.get(entry.id as never)
+            if (other && embeds.includes(file.slug)) {
+              await sync(other, true)
+              logger.info(`${other.rel}: embeds ${file.rel}, rendered again`)
+            }
+          }
         } catch (err) {
           logger.error(`${file.rel}: ${(err as Error).message}`)
         }

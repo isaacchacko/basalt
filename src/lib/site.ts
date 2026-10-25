@@ -1,6 +1,6 @@
 // A Basalt site is a folder: its notes, plus a few optional files that set it
 // up. Basalt reads it from BASALT_SITE (or --site), and never writes into it
-// except under <site>/.basalt.
+// except under <site>/.basalt/astro.
 //
 //   basalt.json         { title, baseUrl, description, content: [{ from, to }] }
 //   basalt.config.ts    optional: markdown plugins, layout choices (see config.ts)
@@ -14,7 +14,7 @@
 
 import fs from "node:fs"
 import path from "node:path"
-import { slugifyFilePath, type FilePath, type FullSlug } from "./path"
+import { slugifyFilePath, type FilePath, type FullSlug } from "./path.ts"
 
 export interface SiteConfig {
   title: string
@@ -28,7 +28,7 @@ export interface SiteConfig {
 export interface Site {
   dir: string
   config: SiteConfig
-  /** where Basalt writes for this site: <site>/.basalt */
+  /** where Basalt writes for this site: <site>/.basalt/astro (the Quartz build keeps <site>/.basalt) */
   work: string
 }
 
@@ -57,7 +57,7 @@ export function loadSite(dir = siteDir()): Site {
     locale: raw.locale ?? "en-US",
     content: Array.isArray(raw.content) ? raw.content : [{ from: "notes" }],
   }
-  return { dir, config, work: path.join(dir, ".basalt") }
+  return { dir, config, work: path.join(dir, ".basalt", "astro") }
 }
 
 const IGNORED = /(^|\/)(\.|node_modules\/|private\/)/
@@ -106,7 +106,7 @@ export function sourceDirs(site: Site): string[] {
 
 /**
  * Everything that isn't a note is served as it is, at its slug: Basalt keeps a
- * tree of links to them in <site>/.basalt/public, Astro's public folder.
+ * tree of links to them in <site>/.basalt/astro/public, Astro's public folder.
  */
 export function linkPublic(site: Site, files: SiteFile[]): string {
   const out = path.join(site.work, "public")

@@ -1,0 +1,24 @@
+---
+// The notes that link here, in the margin when the note asks for them.
+interface Props {
+  backlinks: { slug: string; title: string }[]
+  label?: string
+}
+const { backlinks, label = "Linked from" } = Astro.props
+const href = (slug: string) => "/" + slug.replace(/(^|\/)index$/, "")
+---
+
+<nav class="backlinks margin-part" aria-label="backlinks">
+  <p class="margin-label">{label}</p>
+  <ul>
+    {
+      backlinks.map((b) => (
+        <li>
+          <a href={href(b.slug)} class="internal" data-slug={b.slug}>
+            {b.title}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

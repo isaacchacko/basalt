@@ -1,10 +1,81 @@
 ---
-// The margin column: sidenotes, margin notes, previews, and whatever the page opted into.
+// The margin column, Tufte's: one column beside the note that holds its
+// sidenotes, margin notes and margin figures, each level with the line it
+// belongs to, and, one at a time, the preview of a hovered link or a quiet
+// tooltip. The script copies the notes out of the article into the column
+// (src/client/margin.ts) and shows what's hovered (src/client/previews.ts).
+//
+// The graph, the contents and the backlinks are not on every page: a note
+// opts in with `graph: true`, `toc: true` or `backlinks: true`, or the site
+// turns them on for every note (src/lib/config.ts, `margin`). When on, they
+// rest at the top of the column and step aside for the notes.
+import { getCollection, type CollectionEntry } from "astro:content"
+import Graph from "./Graph.astro"
+import Toc from "./Toc.astro"
+import Backlinks from "./Backlinks.astro"
+import "../styles/margin.scss"
+import "../styles/previews.scss"
+
 interface Props {
-  note: unknown
+  note: CollectionEntry<"notes">
   headings: { depth: number; slug: string; text: string }[]
-  backlinks: { slug: string; title: string }[]
+  backlinks?: { slug: string; title: string }[]
 }
+const { note, headings, backlinks: given } = Astro.props
+const data = note.data as Record<string, unknown>
+
+type Parts = { graph?: boolean; toc?: boolean; backlinks?: boolean }
+// the site's defaults, once the shell's config exists
+const configs = import.meta.glob<Record<string, any>>("../lib/config.ts", { eager: true })
+const config = Object.values(configs)[0]
+const defaults: Parts =
+  config?.margin ?? config?.default?.margin ?? config?.config?.margin ?? config?.siteConfig?.margin ?? {}
+const on = (part: keyof Parts) =>
+  typeof data[part] === "boolean" ? (data[part] as boolean) : Boolean(defaults[part])
+
+const showGraph = on("graph")
+const showToc = on("toc") && headings.some((h) => h.depth > 1)
+const wantBacklinks = on("backlinks")
+
+// what each note links to: the md plugins' `links`, else the internal links in its html
+const linksOf = (n: CollectionEntry<"notes">): string[] => {
+  const d = n.data as Record<string, unknown>
+  if (Array.isArray(d.links)) return d.links as string[]
+  const html = (n as { rendered?: { html?: string } }).rendered?.html ?? ""
+  return [...html.matchAll(/data-slug="([^"]+)"/g)].map((m) => m[1])
+}
+const titleOf = (n: CollectionEntry<"notes">) =>
+  ((n.data as Record<string, unknown>).title as string | undefined) ?? n.id.split("/").pop()!
+
+let all: { id: string; title: string; links: string[] }[] = []
+if (showGraph || (wantBacklinks && !given?.length)) {
+  const notes = await getCollection("notes")
+  all = notes
+    .filter((n) => !(n.data as Record<string, unknown>).draft && !(n.data as Record<string, unknown>).private)
+    .map((n) => ({ id: n.id, title: titleOf(n), links: linksOf(n) }))
+}
+const backlinks = wantBacklinks
+  ? given?.length
+    ? given
+    : all.filter((n) => n.id !== note.id && n.links.includes(note.id)).map((n) => ({ slug: n.id, title: n.title }))
+  : []
+const showBacklinks = wantBacklinks && backlinks.length > 0
+const resting = showGraph || showToc || showBacklinks
 ---
 
-<aside class="margin"></aside>
+<aside class="margin" aria-label="margin">
+  {
+    resting && (
+      <div class="margin-resting">
+        {showGraph && <Graph here={note.id} notes={all} />}
+        {showToc && <Toc headings={headings} />}
+        {showBacklinks && <Backlinks backlinks={backlinks} />}
+      </div>
+    )
+  }
+</aside>
+
+<script>
+  import "../client/margin"
+  import "../client/previews"
+</script>
