@@ -1,37 +1,37 @@
 ---
-title: media
+title: pictures, sound and documents
 ---
 
-## images
+Put a file in your notes folder and embed it with `![[name]]`. Basalt works out what it is and gives it the right frame. Click any picture on this page and it grows out of the page to fill the screen. There you can zoom, pan, and step through every picture on the page with the arrow keys, or swipe on a phone.
 
-A plain image, a sized one (`|320`), and one with a caption (the markdown title). Click any of them to see it full size.
+## pictures
 
-![[card.png]]
+`![[dark.png]]` shows a picture at the width of the text:
 
-![[card.png|320]]
+![[dark.png]]
 
-![a test card](assets/card.png "a caption, from the image's title")
+`![[phone.png|240]]` sets its width, and a title in the markdown, `![a page on a phone](phone.png "the same page, on a phone")`, becomes its caption:
+
+![a page on a phone](assets/phone.png "the same page, on a phone")
 
 ## video
 
-`![[clip.mp4]]`: a player that doesn't download the whole file until it's played.
+`![[saving.mp4]]` gets a player that doesn't fetch the file until you press play. This one is a page changing as its note is saved:
 
-![[clip.mp4]]
+![[saving.mp4|saving a note, with the page open]]
 
-`![[clip.mp4|a looping clip|gif|480]]`: no controls, muted, looping, like a gif.
+Add `|gif` and it plays like one: muted, looping, no controls.
 
-![[clip.mp4|a looping clip|gif|480]]
+![[saving.mp4|the same, as a gif|gif|480]]
 
-`![[clip.mp4#t=2|starts two seconds in]]`: media fragments pass through to the player.
+## sound
 
-![[clip.mp4#t=2|starts two seconds in]]
+`![[a440.m4a]]` gets a player in the page's own colours:
 
-## audio
+![[a440.m4a|A440, the note an orchestra tunes to]]
 
-![[tone.m4a|a 440hz tone]]
+## documents
 
-## pdf
+`![[margin.pdf#page=2|560]]` opens a PDF in Basalt's own reader, at page two and 560 pixels tall. This one is the margin page of this tour, printed. Its bar turns pages, zooms, fits the width, goes full screen, opens the browser's own viewer at the page you're on, and downloads it. Its text can be selected and searched. With the reader focused, the arrow keys turn pages, + and − zoom, and F goes full screen.
 
-`![[basalt.pdf#page=2|560]]`: Basalt's own viewer, opened at page two, 560px tall. Its bar pages through, zooms, fits the width, goes full screen, opens the browser's viewer in a new tab, and downloads. With the viewer focused, the arrow keys page, + and - zoom, and F goes full screen.
-
-![[basalt.pdf#page=2|560]]
+![[margin.pdf#page=2|560]]

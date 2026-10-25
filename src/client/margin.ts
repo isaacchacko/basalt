@@ -43,7 +43,20 @@ export function onPage(start: (signal: AbortSignal) => void) {
     start(ctrl.signal)
   }
   document.addEventListener("astro:page-load", run)
-  document.addEventListener("astro:before-swap", () => {
+  document.addEventListener("astro:before-swap", (e) => {
+    // the page coming in keeps the margin as it is until its own is placed,
+    // so its notes never show inline for a moment. A swap of the same page
+    // (an edit while writing) keeps the notes themselves too, until then.
+    const swap = e as unknown as { newDocument: Document; to: URL }
+    const mode = document.documentElement.dataset.margin
+    if (mode) swap.newDocument.documentElement.dataset.margin = mode
+    const old = document.querySelector<HTMLElement>(".margin > .margin-layer")
+    const target = swap.newDocument.querySelector(".margin")
+    if (mode === "beside" && old && target && swap.to.pathname === location.pathname) {
+      const keep = old.cloneNode(true) as HTMLElement
+      keep.dataset.stale = ""
+      target.prepend(keep)
+    }
     ctrl?.abort()
     ctrl = null
     body = null
@@ -290,6 +303,8 @@ onPage((signal) => {
     frame = requestAnimationFrame(place)
   }
   place()
+  // the notes kept from before a swap give way to these, now they're placed
+  for (const stale of margin.querySelectorAll(".margin-layer[data-stale]")) stale.remove()
 
   // sizes that move lines: the article's, the column's width, each item's
   let width = margin.offsetWidth
@@ -355,7 +370,8 @@ onPage((signal) => {
         ref.setAttribute("aria-expanded", String(open))
       }
     },
-    { signal },
+    // before Astro's router sees it, or it jumps to the footnote at the bottom
+    { signal, capture: true },
   )
 
   signal.addEventListener("abort", () => {

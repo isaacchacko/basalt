@@ -104,6 +104,15 @@ html[data-margin="beside"] article {
   }
 }
 
+// on a phone each note opens under its own line, so the list at the bottom
+// would only say it all again
+html[data-margin="inline"] article {
+  section[data-footnotes],
+  section.footnotes {
+    display: none;
+  }
+}
+
 // ---------- in the margin ----------
 
 .margin-layer {

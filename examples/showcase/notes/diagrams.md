@@ -1,55 +1,56 @@
 ---
-title: diagrams
+title: pictures written as text
 ---
 
-Pictures written as text.
+Some pictures are easier to write than to draw. Write one in a code block, and Basalt draws it. Each stays as text in your note, so you can change it as easily as a sentence.
 
-## graph
+## a graph
 
-A ` ```graph ` block in [graph](https://graph.isaacchacko.com)'s language, drawn by its renderer: drag the nodes, scroll to zoom. It's laid out at build time too, so with no JavaScript it's an svg of the same layout.
+A ` ```graph ` block in [graph](https://graph.isaacchacko.com)'s language: one line per link, with `{colour size}` for a node. Drag the nodes and scroll to zoom. Basalt lays it out when the site is built, so without JavaScript it's still a picture of the same graph.
 
-```graph title="what basalt is made of"
-basalt {tomato 2} -> quartz, graph
-quartz -> remark, rehype, preact
-graph -> renderer, website
-renderer -> physics, camera, labels
-basalt -> embeds, islands, diagrams
-diagrams -> renderer, graphviz, katex
+```graph title="what a garden is made of"
+garden {tomato 2} -> notes, links, pictures
+notes -> sidenotes, asides
+links -> previews, backlinks
+pictures -> diagrams, images, pdfs
+diagrams -> graphs, flowcharts, math
 ```
 
-## graphviz
+## a flowchart
 
-Drawn at build time, so it's in the html: no script, works in popovers and feeds. Its ink is `currentColor`, so it follows dark mode.
+A ` ```dot ` block in [Graphviz](https://graphviz.org)'s language, drawn when the site is built. It's plain html in the page, with no script to wait for, and its ink follows the page into dark mode.
 
 ```dot title="how a note becomes a page"
 digraph {
   rankdir=LR
   node [shape=box, style=rounded]
-  markdown -> mdast [label="remark"]
-  mdast -> hast [label="rehype"]
-  hast -> html [label="emit"]
-  hast -> "embeds, islands" [style=dashed]
+  "your note" -> "its links, resolved" -> "its page"
+  "your note" -> "its pictures, drawn" -> "its page"
+  "its page" -> "the side content" [style=dashed]
 }
 ```
 
-## mermaid
+## a sequence
 
-Drawn in the browser by Quartz; until then the source shows.
+A ` ```mermaid ` block, drawn in the browser by [Mermaid](https://mermaid.js.org):
 
 ```mermaid
-graph TD
-  A[note] -->|embeds| B[note]
-  A -->|links| C[note]
-  B --> C
+sequenceDiagram
+  you->>editor: save the note
+  editor->>Basalt: the file changed
+  Basalt->>page: swap in the new note
+  page-->>you: same scroll, new words
 ```
 
 ## math
 
-Inline $e^{i\pi} + 1 = 0$, a `$$` block, and a GitHub-style ` ```math ` block, which Quartz showed as code:
+Inline, like $e^{i\pi} + 1 = 0$, or set on its own line with `$$`:
 
 $$
 \int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
 $$
+
+GitHub's ` ```math ` blocks work too:
 
 ```math
 \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
@@ -57,16 +58,20 @@ $$
 
 ## svg
 
+An ` ```svg ` block is drawn as it's written:
+
 ```svg
 <svg viewBox="0 0 120 40" width="240" xmlns="http://www.w3.org/2000/svg">
   <rect x="2" y="2" width="116" height="36" rx="8" fill="none" stroke="currentColor"/>
-  <text x="60" y="26" text-anchor="middle" font-size="16" fill="currentColor">inline svg</text>
+  <text x="60" y="26" text-anchor="middle" font-size="16" fill="currentColor">drawn as text</text>
 </svg>
 ```
 
-## a diagram that doesn't parse
+Click any of these to see it full screen.
 
-It fails the figure, not the build:
+## a typo
+
+A diagram that doesn't parse says so, and the rest of the page builds:
 
 ```dot
 digraph { a -> }

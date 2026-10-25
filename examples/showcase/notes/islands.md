@@ -1,35 +1,35 @@
 ---
-title: islands
+title: live components
 ---
 
-An island is a component from the site's `islands/` folder, mounted into an otherwise static page.
+An island is a component, written in Preact, React or plain JavaScript, that comes alive in an otherwise still page. Put it in your site's `islands/` folder and place it in any note with a tag. Edit its file while the page is open and it's swapped in place, keeping its state.
 
-## a preact island, rendered at build time
+## rendered ahead, then alive
 
-`<island name="counter" start="3" ssr></island>`: the button is in the html already; the script makes it count.
+`<island name="counter" start="3" ssr></island>`: with `ssr`, the button is drawn when the site is built, so it's on the page before any script runs. The script only makes it count.
 
 <island name="counter" start="3" ssr></island>
 
-## a plain-js island, mounted when it scrolls into view
+## mounted when it's seen
 
-`<island name="clock" tz="America/Los_Angeles">...</island>`: what's inside the tag shows until it mounts. It's in San Francisco <island name="clock" tz="America/Los_Angeles">(a clock goes here)</island> right now.
+`<island name="clock" tz="America/Los_Angeles">…</island>`: whatever's inside the tag shows until the island mounts, as it scrolls into view. It's <island name="clock" tz="America/Los_Angeles">(a clock goes here)</island> in San Francisco right now.
 
-## an island in a frame of its own
+## in a frame of its own
 
-`<island name="counter" frame height="160"></island>`: an iframe with the island alone in it, for a component that wants the whole viewport or keeps its own css.
+`<island name="counter" frame height="160"></island>` puts the island alone in a frame, for a component that wants its own styles or the whole screen.
 
 <island name="counter" frame height="160" start="10"></island>
 
-## live html
+## html, written in the note
 
-A ` ```html live ` block runs in a sandboxed frame that takes the page's colours and grows to fit:
+A ` ```html live ` block runs in a sandboxed frame that takes the page's colours and grows to fit what's in it:
 
 ```html live
 <p>Pick a colour:</p>
 <input
   type="color"
-  value="#284b63"
+  value="#d4572a"
   oninput="document.getElementById('out').textContent = this.value"
 />
-<code id="out">#284b63</code>
+<code id="out">#d4572a</code>
 ```

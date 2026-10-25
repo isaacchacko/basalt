@@ -1,41 +1,31 @@
 ---
-title: transclusion
+title: notes inside notes
 ---
 
-`![[note]]` puts one note inside another. Quartz does this already; Basalt fixes how it fails and lets an embed be titled.
+`![[note]]` puts one note inside another, so something you've written once can appear wherever it's needed. Edit the original and every page that embeds it changes too. All of these come from [[gardens|why a garden]].
 
-## a whole note, titled by its alias
+## a whole note
 
-`![[garden-ideas|the garden note, embedded whole]]`
+`![[gardens|why a garden, embedded whole]]`
 
-![[garden-ideas|the garden note, embedded whole]]
+![[gardens|why a garden, embedded whole]]
 
-## a heading, and everything under it
+## a section
 
-`![[garden-ideas#what to plant]]`
+`![[gardens#what to plant]]` brings a heading and everything under it:
 
-![[garden-ideas#what to plant]]
+![[gardens#what to plant]]
 
-## a block
+## a paragraph, or a list item
 
-`![[garden-ideas#^unfinished]]` and a list item, `![[garden-ideas#^pictures]]`:
+Mark a block with `^name` at its end, then embed it: `![[gardens#^unfinished]]` and `![[gardens#^pictures]]`.
 
-![[garden-ideas#^unfinished]]
+![[gardens#^unfinished]]
 
-![[garden-ideas#^pictures]]
-
-## the same note twice
-
-Quartz kept one list of notes it had embedded on the whole page, so a second embed of the same note was reported as _circular_. Basalt only calls an embed circular when a note really embeds itself:
-
-![[garden-ideas#^unfinished]]
+![[gardens#^pictures]]
 
 ## when there's nothing to embed
 
-Each of these says what's missing, instead of leaving a bare "Transclude of" link:
+An embed of something that isn't there says what's missing:
 
-![[no-such-note]]
-
-![[garden-ideas#no such heading]]
-
-![[garden-ideas#^nosuchblock]]
+![[gardens#a heading that isn't there]]

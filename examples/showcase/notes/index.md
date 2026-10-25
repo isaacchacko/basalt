@@ -1,54 +1,68 @@
 ---
 title: Basalt
-description: Hypertext gardens that publish in a second and read like a good textbook.
+description: Publish your notes as a site that reads like a good textbook.
 ---
 
-Basalt turns a folder of markdown into a hypertext garden: notes that link to one another, published as a site. Its pages are set the way [Edward Tufte](https://www.edwardtufte.com/) sets his books, with the remarks in the margin beside the line they're about, the way a good math textbook keeps them.[^textbook] Pictures, players, pdfs, diagrams, code and live components sit in the text as figures, each with a fallback that still reads without JavaScript.
+Basalt turns a folder of markdown notes into a website that reads like a well-made book. Notes link to one another, and every remark sits in the side content, beside the line it's about. That's how [Edward Tufte](https://www.edwardtufte.com/) sets his books, and how a good math textbook keeps its asides.[^tufte]
 
-## writing in it
+> [!aside]
+> ![[tufte.jpg|Edward Tufte]]
+> Edward Tufte, presenting in Dallas, 2015. Photo by Keegan Peterzell, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0).
 
-You write markdown the way you would in Obsidian: `[[wikilinks]]`, `![[embeds]]`, callouts and footnotes. A footnote becomes a note in the margin.
+You write plain markdown, in Obsidian or any editor you like. Basalt does the rest: it links your notes, sets footnotes beside their lines, opens pictures full screen, gives PDFs their own reader, and draws diagrams you write as text.
 
-Save, and the page you have open updates in place in about a second. Your scroll position stays, and so does whatever you had open. Stylesheets and components are swapped in live too, so you can build a page by watching it. An agent can do the same: the dev server reports whether the last build is ready or failed at `/__basalt/status`.
+## reading a page
+
+This page is one. Each page has three parts:
+
+- **The navbar** waits as a chevron in the left margin. Reach for it and it opens, with every note in the garden.
+- **The main content** is the note itself, set to a comfortable measure of about sixty-five characters a line.
+- **The side content** holds the note's remarks, each beside its line, and whatever you point at. Hover a link like [[margin]] and its opening appears there, without taking you anywhere.
+
+Press ⌘F to search the whole garden. Press it again for the browser's own find.
+
+## writing one
+
+Write a footnote,
+
+```md
+Euclid proved there are infinitely many primes.[^elements]
+
+[^elements]: In the _Elements_, Book IX, Proposition 20, around 300 BC.
+```
+
+and it becomes a sentence with its note beside it:
+
+> Euclid proved there are infinitely many primes.[^elements]
+
+Save the file, and the page you have open changes in place in under a second. Your scroll position stays put, and so does anything you had open. You watch the page while you write it.
 
 > [!aside] Why "Basalt"
-> Basalt cools into columns, the hexagonal pillars of the Giant's Causeway and of this site's mark. A garden of notes grows the same way, one column at a time.
-
-## reading it
-
-Every page has three parts. The navigation folds away to a chevron in the left margin until you reach for it. The note takes most of the width. The margin on the right holds the note's remarks, and whatever you're pointing at: a preview of another note, or a tooltip. It holds one thing at a time.
-
-Pages move with some care. A title sets from light to full weight as you arrive, the note rises into place, and a picture grows out of the page when you open it.
+> Basalt cools into columns: the hexagonal pillars of the Giant's Causeway, and of this site's mark. A garden of notes grows the same way, one column at a time.
 
 ## the tour
 
-Each of these pages shows one part of Basalt:
+Each page shows one part of Basalt, and is written with it:
 
-- [[margin]]: footnotes and asides in the margin
-- [[media]]: images, video, audio and Basalt's own pdf viewer
-- [[web]]: YouTube, Spotify, tweets and any page in a frame
-- [[diagrams]]: graphs, Graphviz, Mermaid and math, written as text
-- [[files]]: code files and csv tables, embedded from the folder
-- [[islands]]: interactive components in a static page
+- [[margin]]: sidenotes, margin notes and figures, and previews of the notes you link to
+- [[media]]: pictures, video, sound, and a reader for PDFs
+- [[web]]: videos, posts and whole pages from elsewhere, set into a note
+- [[diagrams]]: graphs, flowcharts and math, written as text
+- [[files]]: code and data, shown from the files themselves
+- [[islands]]: live components in a still page
 - [[transclusion]]: one note inside another
-- [[secondary]]: the margin, and what it shows when you hover
 
-## starting one
+## building with it
 
-A Basalt site is a folder: notes, plus a few optional files that set it up.
+Basalt is built on [Astro](https://astro.build). A garden is a folder of notes and a short `basalt.json`, plus its own styles, components or interactive islands if it wants them. Any of Basalt's parts can be swapped for your own. It's also made to be built by an agent: the dev server says when a change has reached the page, and what broke if it didn't.
 
-```sh
-my-garden/
-  notes/              your markdown
-  basalt.json         { "content": [{ "from": "notes" }] }
-  styles/custom.scss  your look, on top of Basalt's
-  islands/            interactive components, if you want them
-
-cd basalt && npx quartz build --site ../my-garden --serve
-```
+- [[start]]: start a garden
+- [[agents]]: building pages with an agent
 
 ## made from
 
-Basalt is a fork of [Quartz](https://quartz.jzhao.xyz) by Jacky Zhao, which does most of the work. Its margins follow [Tufte CSS](https://edwardtufte.github.io/tufte-css/). Its graphs are drawn by [isaacchacko/graph](https://graph.isaacchacko.com), its pdfs by [pdf.js](https://mozilla.github.io/pdf.js/), and its math by [KaTeX](https://katex.org). It's made by [Isaac Chacko](https://isaacchacko.com) for his own garden.
+Basalt began as a fork of [Quartz](https://quartz.jzhao.xyz) by Jacky Zhao, and its markdown still comes from Quartz's plugins. Its side content follows [Tufte CSS](https://edwardtufte.github.io/tufte-css/). Its graphs are drawn by [graph](https://graph.isaacchacko.com), its PDFs by [pdf.js](https://mozilla.github.io/pdf.js/), and its math by [KaTeX](https://katex.org). It's made by [Isaac Chacko](https://isaacchacko.com) for his own garden.
 
-[^textbook]: The argument runs down the middle of the page, and the side remarks that help with it sit alongside, where your eye already is.
+[^tufte]: In _The Visual Display of Quantitative Information_ and the books after it, Tufte puts the notes beside the text, where the eye already is, instead of at the foot of the page.
+
+[^elements]: In the _Elements_, Book IX, Proposition 20, around 300 BC.

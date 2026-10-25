@@ -1,11 +1,23 @@
 {
   "title": "Basalt",
   "baseUrl": "basalt.isaacchacko.com",
-  "description": "Hypertext gardens that publish in a second and read like a good textbook.",
+  "description": "Publish your notes as a site that reads like a good textbook.",
   "content": [
     {
       "from": "notes",
       "to": ""
     }
-  ]
+  ],
+  "layout": {
+    "components": {
+      "meta": "dated"
+    },
+    "footer": {
+      "links": {
+        "Quartz": "https://quartz.jzhao.xyz",
+        "Tufte CSS": "https://edwardtufte.github.io/tufte-css/",
+        "isaacchacko.com": "https://isaacchacko.com"
+      }
+    }
+  }
 }

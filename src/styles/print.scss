@@ -1,0 +1,96 @@
+// A page on paper: only the note. No navbar, bars or controls; its sidenotes
+// gathered as footnotes at the end and its margin notes set in the text, in
+// ink on white, without motion.
+
+@media print {
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  :root,
+  :root[saved-theme="dark"] {
+    --light: #fff;
+    --lightgray: #ddd;
+    --gray: #666;
+    --darkgray: #222;
+    --dark: #000;
+    color-scheme: light;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .sidebar.left,
+  .sidebar.right,
+  .page-header header,
+  #quartz-body > footer,
+  .margin-layer,
+  .viewer-expand,
+  .pdf-bar,
+  .code-file-actions,
+  button {
+    display: none !important;
+  }
+
+  #quartz-root,
+  #quartz-root > #quartz-body {
+    display: block !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .center {
+    max-width: 40em;
+    margin: 0 auto;
+  }
+
+  html[data-margin] article {
+    .sidenote {
+      display: none !important;
+    }
+    .marginnote {
+      display: block !important;
+      margin: 0.8em 0 0.8em 1.5em;
+      font-size: 0.9em;
+    }
+    section[data-footnotes],
+    section.footnotes {
+      display: block !important;
+    }
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: underline;
+    text-decoration-thickness: 0.5px;
+  }
+  a.external::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    word-break: break-all;
+  }
+
+  figure,
+  pre,
+  table,
+  img,
+  .katex-display,
+  .marginnote {
+    break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+  }
+}

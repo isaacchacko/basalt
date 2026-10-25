@@ -1,43 +1,35 @@
 ---
-title: web embeds
+title: the web, embedded
 ---
 
-A bare `![](url)` to a site Basalt knows becomes that site's player. Each comes with a caption linking back to the source, so the page still makes sense in an RSS reader or with frames blocked.
+Paste a link to a video, a post or a pen as an image, `![](url)`, and Basalt sets it into the note as a player. Each one keeps a caption linking back to where it came from, so the note still makes sense in a feed reader or with embeds blocked.
 
-## youtube, as a facade
+## a video
 
-Just a thumbnail until it's clicked, so five videos on a page don't load five players. With JavaScript off it is a link to the video.
+A video is just its picture until you press play, so a page with five of them doesn't load five players. Without JavaScript it's a link to the video.
 
-`![a video, starting 42 seconds in](https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42)`
+`![The Mother of All Demos](https://www.youtube.com/watch?v=yJDv-zdhzMY)`
 
-![a video, starting 42 seconds in](https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42)
+![The Mother of All Demos, Douglas Engelbart, 1968: the first hypertext, shown live](https://www.youtube.com/watch?v=yJDv-zdhzMY)
 
-## vimeo
+Vimeo and Spotify links work the same way.
 
-![](https://vimeo.com/22439234)
+## a post
 
-## spotify
-
-![](https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT)
-
-## a tweet
-
-Until twitter's script loads (or if it never does), this is a quote with a link.
+Until the post's own script loads, or if it never does, this is a quotation with a link.
 
 ![](https://twitter.com/jack/status/20)
 
-## codepen
+## a pen
 
 ![](https://codepen.io/chriscoyier/pen/gfdDu)
 
-## any page, in a frame
+## any page
 
-`![iframe|800x420](https://example.com)`: a page Basalt doesn't know, opted into with the alt text `iframe`.
+A site Basalt doesn't know can still come in, in a frame: give the image the alt text `iframe`, and a size if you like.
 
-![iframe|800x420](https://example.com)
+`![iframe|800x420](https://graph.isaacchacko.com)`
 
-## an iframe written by hand
+![iframe|800x420](https://graph.isaacchacko.com)
 
-Gets `loading="lazy"` and a link out.
-
-<iframe src="https://example.org" height="240"></iframe>
+The frame's expand button opens the page full screen.

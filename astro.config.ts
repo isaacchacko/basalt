@@ -21,6 +21,8 @@ export default defineConfig({
   // per site, so sites (and worktrees sharing node_modules) don't share a cache
   cacheDir: path.join(site.work, "cache"),
   trailingSlash: "ignore",
+  // Astro's own dev toolbar: not part of a Basalt page (it also appeared inside island frames)
+  devToolbar: { enabled: false },
   integrations: [preact({ compat: true }), agentApi()],
   markdown: {
     syntaxHighlight,
@@ -48,6 +50,6 @@ export default defineConfig({
       },
     },
     // found up front, so a lazy import of one doesn't fail after Vite re-optimises
-    optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact"] },
+    optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact", "graph/packages/renderer/src/renderer"] },
   },
 })

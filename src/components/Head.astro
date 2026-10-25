@@ -79,6 +79,9 @@ const icon =
     } catch {}
     theme ??= matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
     root.setAttribute("saved-theme", theme)
+    // wide enough for the side content: notes are drawn there, not inline,
+    // from the first paint (src/client/margin.ts confirms it, or undoes it)
+    if (matchMedia("(min-width: 1200px)").matches) root.dataset.margin = "beside"
     let hot = false
     try {
       hot = sessionStorage.getItem("basalt:hot") === "1"
