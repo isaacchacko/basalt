@@ -117,11 +117,28 @@ function notePreview(link: HTMLAnchorElement): Item {
       const body = el("div", "margin-preview-body")
       body.append(...blocks.map((b) => document.importNode(b, true)))
       rebase(body, url)
-      box.append(title, body)
+      // a page preview is a window onto another page, and says so: where the
+      // page is above it, that it goes on below it. (A tooltip, or a card the
+      // page itself wrote, has neither.)
+      box.classList.add("margin-page")
+      const crumbs = [...got.querySelectorAll(".breadcrumb-container .breadcrumb-element")]
+        // a crumb's words, without the arrow drawn after it
+        .map((c) => c.textContent?.replace(/[❯›>»]/g, "").trim())
+        .filter(Boolean)
+      const head = el("div", "margin-page-head")
+      head.innerHTML = PAGE_GLYPH
+      head.append(el("span", "margin-page-path", crumbs.length ? crumbs.join(" › ") : url.pathname))
+      const foot = el("a", "margin-page-foot", hash ? "Open the page at this section" : "Open the page")
+      foot.href = link.href
+      foot.dataset.noPreview = "true"
+      box.append(head, title, body, foot)
       return box
     },
   }
 }
+
+const PAGE_GLYPH =
+  '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>'
 
 function imagePreview(link: HTMLAnchorElement): Item {
   const src = new URL(link.href).pathname
@@ -183,10 +200,10 @@ function marked(content: HTMLElement): Item {
   return {
     key: `marked:${key}`,
     build: async () => {
-      const box = el("div", "margin-preview margin-marked")
+      const box = el("div", "margin-marked")
       box.dataset.kind = content.dataset.secondary ?? ""
       const title = content.dataset.secondaryTitle?.trim()
-      if (title) box.append(el("span", "margin-preview-title", title))
+      if (title) box.append(el("span", "margin-tip-title margin-marked-title", title))
       const copy = content.cloneNode(true) as HTMLElement
       copy.removeAttribute("data-secondary")
       copy.removeAttribute("hidden")
