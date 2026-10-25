@@ -37,12 +37,15 @@ function linesWithDepth(source: string): { depth: number; text: string }[] {
     // `.` is the folder tree ran in, not an entry
     return out[0]?.text === "." ? out.slice(1).map((l) => ({ ...l, depth: l.depth - 1 })) : out
   }
+  // every line a "- " is a markdown list, not a tree of removed entries
+  const bullets = lines.every((l) => /^\s*- /.test(l))
   const indents: number[] = []
   return lines.map((l) => {
     const indent = /^\s*/.exec(l)![0].replace(/\t/g, "    ").length
     while (indents.length && indents.at(-1)! >= indent) indents.pop()
     indents.push(indent)
-    return { depth: indents.length - 1, text: l.trim() }
+    const text = l.trim()
+    return { depth: indents.length - 1, text: bullets ? text.slice(2) : text }
   })
 }
 
@@ -170,9 +173,11 @@ function row(e: Entry, depth: number): string {
     ? svg(ICONS.folderOpen, "tree-icon tree-icon-open") + svg(ICONS.folder, "tree-icon tree-icon-shut")
     : svg(ICONS[kindOf(e.name)], "tree-icon")
   // only the name carries data-line, so a compare block's ^anchor=/text/ can't match the note
+  // a narrow column breaks a long name after a dot before it breaks mid-word
+  const shown = escapeHtml(e.name).replace(/(?<=[^.])\.(?=.)/g, ".<wbr>")
   const name = e.href
-    ? `<a class="tree-name" href="${escapeHtml(e.href)}" data-line>${escapeHtml(e.name)}</a>`
-    : `<span class="tree-name" data-line>${escapeHtml(e.name)}</span>`
+    ? `<a class="tree-name" href="${escapeHtml(e.href)}" data-line>${shown}</a>`
+    : `<span class="tree-name" data-line>${shown}</span>`
   const elided = e.folded && !e.children.length ? '<span class="tree-elided">/…</span>' : ""
   // the tint can't be seen by a screen reader
   const said = e.mark ? `<span class="tree-said">, ${e.mark}</span>` : ""
