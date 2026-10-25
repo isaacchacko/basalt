@@ -12,6 +12,8 @@ export interface Entry {
   dir: boolean
   /** written `name/…`: shut, or with nothing under it, its contents left out */
   folded: boolean
+  /** written `… 18 more files`: a quiet row standing in for what's left out */
+  more?: boolean
   mark?: Mark
   note?: string
   children: Entry[]
@@ -60,6 +62,11 @@ export function entry(text: string): Entry {
   if (hash) {
     e.note = text.slice(hash.index + hash[0].length).trim() || undefined
     text = text.slice(0, hash.index).trim()
+  }
+  if (/^(…|\.\.\.)/.test(text)) {
+    e.more = true
+    e.name = text
+    return e
   }
   if (/\/(…|\.\.\.)$/.test(text)) {
     e.folded = true
@@ -165,6 +172,7 @@ function noteHtml(text: string): string {
 }
 
 function row(e: Entry, depth: number): string {
+  if (e.more) return `<div class="tree-row" style="--d:${depth}"><span class="tree-chevron"></span><span class="tree-more">${escapeHtml(e.name)}</span></div>`
   const tag = e.dir ? "summary" : "div"
   const chevron = e.dir ? svg(ICONS.chevron, "tree-chevron") : '<span class="tree-chevron"></span>'
   // both, and the stylesheet shows the one for whether the <details> is open
@@ -186,7 +194,7 @@ function row(e: Entry, depth: number): string {
 function list(entries: Entry[], depth: number): string {
   const items = entries.map((e) => {
     const attrs = [
-      `class="tree-entry ${e.dir ? "tree-dir" : "tree-file"}"`,
+      `class="tree-entry ${e.more ? "tree-more-entry" : e.dir ? "tree-dir" : "tree-file"}"`,
       e.mark ? `data-mark="${e.mark}"` : "",
       e.dir && !e.children.length ? "data-empty" : "",
     ]

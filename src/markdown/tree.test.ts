@@ -132,6 +132,14 @@ describe("trees", () => {
     assert.match(treeHtml("quartz/…  # Quartz itself"), /tree-elided">\/…</)
   })
 
+  test("a line starting … stands in for what's left out, quietly", () => {
+    const top = parseTree("a/\n  b.md\n  … 18 more files")
+    assert.deepStrictEqual(top[0].children.map((e) => [e.name, e.more]), [["b.md", undefined], ["… 18 more files", true]])
+    const html = treeHtml("a/\n  ... 3 more")
+    assert.match(html, /<span class="tree-more">\.\.\. 3 more<\/span>/)
+    assert.doesNotMatch(html.slice(html.indexOf("tree-more-entry")), /tree-icon/)
+  })
+
   test("a ```tree block becomes the figure, inside a quote too", async () => {
     const processor = unified().use(remarkParse).use(remarkTree)
     const tree = (await processor.run(processor.parse("> ```tree\n> a/\n>   b\n> ```"))) as Root
