@@ -108,19 +108,22 @@ html:not([data-margin="beside"]) article > figure.compare {
   padding: 0;
 }
 
-// hovering one of a pair lights both
-.compare-column [data-compare-anchor] {
+// hovering one of a pair lights both, in ink, not the accent: a site's accent
+// may be a diff's red or green. A tree's entry lights its own row, not its folder's children
+.compare-column :is([data-compare-anchor], .tree-row) {
   border-radius: 4px;
   transition: box-shadow 0.25s ease, background-color 0.25s ease;
 }
-.compare-column .compare-lit {
+.compare-column .compare-lit:not(li) {
   box-shadow:
     0 0 0 4px var(--light),
-    0 0 0 5px color-mix(in srgb, var(--tertiary) 45%, transparent);
+    0 0 0 5px color-mix(in srgb, var(--gray) 60%, transparent);
 }
-.compare-column :is([data-compare-line], li).compare-lit {
-  box-shadow: none;
-  background: var(--highlight);
+.compare-column [data-compare-line].compare-lit,
+.compare-column li.compare-lit > .tree-row,
+.compare-column li.compare-lit > details > .tree-row {
+  box-shadow: inset 2px 0 0 var(--gray);
+  background: color-mix(in srgb, var(--dark) 7%, transparent);
 }
 
 // ---------- the full-screen control: quiet until the block is wanted ----------
