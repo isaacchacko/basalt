@@ -1,10 +1,10 @@
 ---
-title: pictures written as text
+title: Pictures written as text
 ---
 
 Some pictures are easier to write than to draw. Write one in a code block, and Basalt draws it. Each stays as text in your note, so you can change it as easily as a sentence.
 
-## a graph
+## A graph
 
 A ` ```graph ` block in [graph](https://graph.isaacchacko.com)'s language: one line per link, with `{colour size}` for a node. Drag the nodes and scroll to zoom. Basalt lays it out when the site is built, so without JavaScript it's still a picture of the same graph.
 
@@ -16,7 +16,7 @@ pictures -> diagrams, images, pdfs
 diagrams -> graphs, flowcharts, math
 ```
 
-## a flowchart
+## A flowchart
 
 A ` ```dot ` block in [Graphviz](https://graphviz.org)'s language, drawn when the site is built. It's plain html in the page, with no script to wait for, and its ink follows the page into dark mode.
 
@@ -30,7 +30,7 @@ digraph {
 }
 ```
 
-## a sequence
+## A sequence
 
 A ` ```mermaid ` block, drawn in the browser by [Mermaid](https://mermaid.js.org):
 
@@ -42,7 +42,7 @@ sequenceDiagram
   page-->>you: same scroll, new words
 ```
 
-## math
+## Math
 
 Inline, like $e^{i\pi} + 1 = 0$, or set on its own line with `$$`:
 
@@ -56,7 +56,7 @@ GitHub's ` ```math ` blocks work too:
 \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
 ```
 
-## svg
+## SVG
 
 An ` ```svg ` block is drawn as it's written:
 
@@ -69,7 +69,7 @@ An ` ```svg ` block is drawn as it's written:
 
 Click any of these to see it full screen.
 
-## a typo
+## A typo
 
 A diagram that doesn't parse says so, and the rest of the page builds:
 

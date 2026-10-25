@@ -1,10 +1,10 @@
 ---
-title: pictures, sound and documents
+title: Pictures, sound and documents
 ---
 
 Put a file in your notes folder and embed it with `![[name]]`. Basalt works out what it is and gives it the right frame. Click any picture on this page and it grows out of the page to fill the screen. There you can zoom, pan, and step through every picture on the page with the arrow keys, or swipe on a phone.
 
-## pictures
+## Pictures
 
 `![[phone.png|240]]` shows a picture, here 240 pixels wide:
 
@@ -14,7 +14,7 @@ A title in the markdown becomes its caption, `![the margin page](dark.png "the m
 
 ![the margin page](assets/dark.png "the margin page, in the dark")
 
-## video
+## Video
 
 `![[saving.mp4]]` gets a player that doesn't fetch the file until you press play. This one is a page changing as its note is saved:
 
@@ -24,13 +24,13 @@ Add `|gif` and it plays like one: muted, looping, no controls.
 
 ![[saving.mp4|the same, as a gif|gif|480]]
 
-## sound
+## Sound
 
 `![[a440.m4a]]` gets a player in the page's own colours:
 
 ![[a440.m4a|A440, the note an orchestra tunes to]]
 
-## documents
+## Documents
 
 `![[margin.pdf#page=2|560]]` opens a PDF in Basalt's own reader, at page two and 560 pixels tall. This one is the margin page of this tour, printed. Its bar turns pages, zooms, fits the width, goes full screen, opens the browser's own viewer at the page you're on, and downloads it. Its text can be selected and searched. With the reader focused, the arrow keys turn pages, + and − zoom, and F goes full screen.
 

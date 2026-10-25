@@ -1,22 +1,22 @@
 ---
-title: notes inside notes
+title: Notes inside notes
 ---
 
 `![[note]]` puts one note inside another, so something you've written once can appear wherever it's needed. Edit the original and every page that embeds it changes too. All of these come from [[gardens|why a garden]].
 
-## a whole note
+## A whole note
 
 `![[gardens|why a garden, embedded whole]]`
 
 ![[gardens|why a garden, embedded whole]]
 
-## a section
+## A section
 
 `![[gardens#what to plant]]` brings a heading and everything under it:
 
 ![[gardens#what to plant]]
 
-## a paragraph, or a list item
+## A paragraph, or a list item
 
 Mark a block with `^name` at its end, then embed it: `![[gardens#^unfinished]]` and `![[gardens#^pictures]]`.
 
@@ -24,7 +24,7 @@ Mark a block with `^name` at its end, then embed it: `![[gardens#^unfinished]]` 
 
 ![[gardens#^pictures]]
 
-## when there's nothing to embed
+## When there's nothing to embed
 
 An embed of something that isn't there says what's missing:
 

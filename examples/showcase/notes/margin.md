@@ -1,5 +1,5 @@
 ---
-title: notes in the margin
+title: Notes in the margin
 aliases: [secondary]
 ---
 
@@ -7,7 +7,7 @@ A Basalt page keeps its remarks in the side content, beside the line they belong
 
 There are three kinds. A footnote becomes a numbered **sidenote**.[^how] An `> [!aside]` after a paragraph becomes an unnumbered **margin note** beside it. An aside with a picture in it is a **margin figure**.
 
-## a proof, with its remarks
+## A proof, with its remarks
 
 **Theorem.** There are infinitely many primes.
 
@@ -28,11 +28,11 @@ The proof doesn't say $N$ itself is prime. $2 \cdot 3 \cdot 5 \cdot 7 \cdot 11 \
 > ![[primes.svg]]
 > The primes below 100, as a sieve leaves them.
 
-## when notes crowd
+## When notes crowd
 
 When notes would overlap, they're set one under the next. A sentence that cites several things at once[^one] keeps all of them[^two] beside it, in order.[^three] On a phone there's no room beside the text, so a number opens its note under the line when you tap it.
 
-## pointing at things
+## Pointing at things
 
 The side content also shows what you're pointing at, one thing at a time. Hover a link to another note, like [[transclusion]] or the [[diagrams#graphviz|graphviz section]] of another page, and its opening appears beside the line. Move away and it goes. A link out of the garden, like [Quartz](https://quartz.jzhao.xyz), says where it leads.
 

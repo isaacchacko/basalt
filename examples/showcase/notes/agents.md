@@ -1,10 +1,10 @@
 ---
-title: building with an agent
+title: Building with an agent
 ---
 
 Basalt is made to be built by an agent as well as by hand. An agent can write a note, save it, and know for certain whether its change reached the page or what broke.
 
-## the loop
+## The loop
 
 The dev server keeps a status, at `/__basalt/status` and in `.basalt/astro/status.json`:
 
@@ -22,7 +22,7 @@ basalt wait my-garden --after 12
 
 A saved note comes back in well under a second. A component or a stylesheet is swapped into the open page, and the scroll and state survive.
 
-## when it breaks
+## When it breaks
 
 A mistake doesn't take the server down. The last good page stays up, and the status says where the problem is, in the file the agent edits:
 
@@ -35,7 +35,7 @@ A mistake doesn't take the server down. The last good page stays up, and the sta
 
 The next good save clears it.
 
-## checking a whole garden
+## Checking a whole garden
 
 `basalt check my-garden --json` builds the site and lists what's wrong in every note: links to notes that don't exist, missing pictures, embeds and islands, and notes that nothing links to.
 
@@ -43,6 +43,6 @@ The next good save clears it.
 [{ "kind": "broken link", "note": "notes/index.md", "detail": "a href=/no-such-note" }]
 ```
 
-## making it its own
+## Making it its own
 
 A garden can replace any part of the page with its own: put `Footer.astro` in its `components/` folder and it's used in place of Basalt's, and can still wrap the original. Islands, styles and markdown plugins are files in the garden too, so an agent never has to edit Basalt itself.
