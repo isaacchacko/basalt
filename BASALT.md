@@ -59,7 +59,7 @@ Several sites can be served at once from one Basalt.
 
 Obsidian-flavoured markdown:
 
-- **Links and embeds:** `[[wikilinks]]`, `[[note#heading]]`, and `![[embeds]]` of images (`|320` for a width), video, audio, pdfs, code files (`![[hello.py#L3-L9|fullscreen]]`), csv, other notes and their sections or blocks (`#^id`).
+- **Links and embeds:** `[[wikilinks]]`, `[[note#heading]]`, and `![[embeds]]` of images (`|320` for a width), video, audio, pdfs, code files (`![[hello.py#L3-L9]]`), csv, other notes and their sections or blocks (`#^id`).
 - **Text:** callouts (`> [!note]-` folds), `==highlights==`, `#tags`, `%%comments%%`.
 - **The margin:** a footnote becomes a numbered **sidenote** beside its line. `> [!aside]` after a paragraph becomes an unnumbered **margin note**, and a margin note with an image is a **margin figure**.
 - **Pictures that follow the theme:** save a dark version beside a picture or video (`shot.dark.png` next to `shot.png`) and embed `shot.png` as usual. The page shows whichever matches its theme, and swaps when the theme is toggled; the other loads only when it's needed.
@@ -79,6 +79,7 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 - **Search is ⌘F.** Type to search the whole garden. `#tag query` searches one tag. `@` lists the pages; `@page query` searches inside one page and `@here query` inside the page you're on, each result a passage: choose one and the page opens scrolled to it, marked for a moment.
 - **⌘G** shows the whole garden as a graph, on the whole screen: every note and its links, and the files they use (pictures, sounds, videos, pdfs, code, data: anything a note embeds or points at, from markdown or raw html) as smaller nodes coloured by kind, the page you're on marked. Click a note to go there, a sound to play it, a picture or pdf to see it in the viewer; pointing at a file shows it in the corner, and "files" in the bar hides them. ⌘G again or escape closes it. The graph in the side content shows a note's files too.
 - **Cards that open on a click.** A `[data-secondary]` child is its parent's card in the side content, shown on hover. Give it (or its parent) `data-secondary-open="click"` and it opens on a click instead (or enter, or space), and stays, links and ▶ rows and all, until its parent is clicked again, escape, or a click elsewhere; on a phone, as a sheet at the foot of the screen. Its parent gets `aria-expanded`.
+- **Code blocks have their controls inside them.** Point at one (or tab into it) and its bar shows them: wrap lines (when they run past the edge), show raw, copy, and full screen. A block with a title (```` ```ts title="a.ts" ````) or a code file has them in its title bar, after the name; one without, in its top right corner. On a touch screen they're always there.
 - **Media opens full screen** in one viewer: images, diagrams and frames, with zoom, pan, swipe, ←/→ and pinch.
 - **PDFs** open in Basalt's own viewer, with a text layer, a page that fits the screen in full screen, and "open in the browser's viewer" at the current page.
 
