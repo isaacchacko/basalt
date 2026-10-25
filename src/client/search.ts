@@ -178,6 +178,11 @@ async function fetchContent(slug: string): Promise<Element[]> {
   const html = new DOMParser().parseFromString(await (await fetch(url)).text(), "text/html")
   // a page's links are root-absolute already; ids would clash with this page's
   html.querySelectorAll("[id]").forEach((n) => (n.id = `search-preview-${n.id}`))
+  // the margin's notes would be spliced into their sentences, numbers and
+  // all: a preview reads as the text alone
+  html
+    .querySelectorAll(".sidenote, .marginnote, sup:has(> a[data-footnote-ref]), section[data-footnotes], section.footnotes")
+    .forEach((n) => n.remove())
   const contents = [...html.getElementsByClassName("popover-hint")]
   pageCache.set(slug, contents)
   return contents
