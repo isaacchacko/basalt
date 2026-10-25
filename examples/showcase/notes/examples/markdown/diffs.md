@@ -81,7 +81,7 @@ Binary files a/assets/card.png and b/assets/card.png differ
 
 ## Side by side
 
-`split` after `diff` puts the old file and the new one side by side, a removed line beside the line that replaced it, with a blank where a side has nothing. It's a compare block: on a phone the sides stack, and its button opens them in the reader, where they scroll together.
+`split` after `diff` puts the old file and the new one side by side, a removed line beside the line that replaced it, with a blank where a side has nothing. It's a compare block: on a phone the sides stack, and its button flips the page to the two sides alone.
 
 ```diff split
 diff --git a/src/lib/greet.ts b/src/lib/greet.ts
