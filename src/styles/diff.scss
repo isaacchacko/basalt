@@ -33,6 +33,10 @@ figure.diff {
     --diff-numbers: calc(0.6ch + var(--diff-num));
   }
 
+  &[data-side] > pre > code > .diff-label {
+    background: color-mix(in srgb, var(--lightgray) 30%, var(--light));
+  }
+
   &[data-side="old"] .diff-gutter::after,
   &[data-side="new"] .diff-gutter::before {
     content: none;

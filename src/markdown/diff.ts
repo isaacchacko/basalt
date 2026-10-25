@@ -397,7 +397,14 @@ function sides(rows: Row[]): [Row[], Row[]] {
     neu.push(both)
     i++
   }
-  return [old, neu]
+  return [said(old, "nothing before"), said(neu, "nothing after")]
+}
+
+/** A side with no lines of its own says so in its first blank row. */
+function said(side: Row[], words: string): Row[] {
+  const blank = side.indexOf(EMPTY)
+  if (blank < 0 || side.some((r) => "line" in r)) return side
+  return side.with(blank, { kind: "label", text: words })
 }
 
 function codeFigure(
