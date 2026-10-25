@@ -19,8 +19,12 @@ export const clipsOf = (word: HTMLElement): Clip[] => {
   }
 }
 const srcsOf = (word: Element) => (word.getAttribute("data-sound") ?? "").split(/\s*,\s*/).filter(Boolean)
+// the word a clip belongs to: anywhere on the page (an island's in the side
+// content too), but not a copy of one in a card
 const wordFor = (src: string) =>
-  [...document.querySelectorAll<HTMLElement>("article .sound")].find((w) => srcsOf(w).includes(src)) ?? null
+  [...document.querySelectorAll<HTMLElement>(".sound")].find(
+    (w) => srcsOf(w).includes(src) && !w.closest(".margin-hover, .basalt-now-playing, [data-secondary]"),
+  ) ?? null
 
 let now: { audio: HTMLAudioElement; clip: Clip; word: HTMLElement | null; card: HTMLElement; holder: HTMLElement } | null = null
 
