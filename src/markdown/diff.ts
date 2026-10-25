@@ -249,11 +249,15 @@ function changedWords(hunk: DiffLine[]): Map<DiffLine, Array<[number, number]>> 
   return marks
 }
 
+// drawn from its attributes, so a caption's text (the viewer's) is just its title
 function stat(added: number, removed: number): Element {
-  return el("span", { className: ["diff-stat"], ariaLabel: `${added} added, ${removed} removed` }, [
-    ...(added ? [el("span", { className: ["diff-stat-added"] }, [text(`+${added}`)])] : []),
-    ...(removed ? [el("span", { className: ["diff-stat-removed"] }, [text(`−${removed}`)])] : []),
-  ])
+  return el("span", {
+    className: ["diff-stat"],
+    role: "img",
+    ariaLabel: `${added} added, ${removed} removed`,
+    ...(added ? { dataAdded: `+${added}` } : {}),
+    ...(removed ? { dataRemoved: `−${removed}` } : {}),
+  })
 }
 
 /** a file's path, or old → new */

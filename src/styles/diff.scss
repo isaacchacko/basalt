@@ -211,11 +211,13 @@ figure.diff {
     font-weight: 400;
     font-variant-numeric: tabular-nums;
 
-    & > .diff-stat-added {
+    &[data-added]::before {
+      content: attr(data-added);
       color: var(--basalt-added);
     }
 
-    & > .diff-stat-removed {
+    &[data-removed]::after {
+      content: attr(data-removed);
       color: var(--basalt-removed);
     }
   }

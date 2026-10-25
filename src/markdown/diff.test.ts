@@ -121,7 +121,7 @@ describe("renderDiff", () => {
   test("a code block's markup: titled by its file, one [data-line] per line, the patch to copy", async () => {
     const html = toHtml(await renderDiff(GIT))
     assert.match(html, /^<figure data-rehype-pretty-code-figure="" class="diff" data-numbered="" style="--diff-digits: 2" data-copy="diff --git/)
-    assert.match(html, /<figcaption data-rehype-pretty-code-title=""[^>]*>src\/add.ts<span class="diff-stat" aria-label="3 added, 2 removed">/)
+    assert.match(html, /<figcaption data-rehype-pretty-code-title=""[^>]*>src\/add.ts<span class="diff-stat" role="img" aria-label="3 added, 2 removed" data-added="\+3" data-removed="−2"><\/span><\/figcaption>/)
     assert.strictEqual(html.match(/data-line=""/g)?.length, 11)
     assert.match(html, /data-diff="del"><span class="diff-gutter" aria-hidden="true" data-old="2" data-new="" data-n="2"><\/span><span class="diff-sign">-<\/span>/)
     // highlighted as typescript, both themes
@@ -134,13 +134,13 @@ describe("renderDiff", () => {
     const html = toHtml(await renderDiff("-let a = 1\n+let a = 2", { lang: "js", title: "t" }))
     assert.match(html, /<figcaption[^>]*>t</)
     assert.match(html, /--shiki-light/)
-    assert.match(html, /<span class="diff-stat-added">\+1<\/span><span class="diff-stat-removed">−1<\/span>/)
+    assert.match(html, /data-added="\+1" data-removed="−1"/)
     assert.doesNotMatch(html, /data-numbered/)
   })
 
   test("the stat leaves out a side with nothing on it", async () => {
     const html = toHtml(await renderDiff("+a\n+b", { title: "t" }))
-    assert.match(html, /<span class="diff-stat" aria-label="2 added, 0 removed"><span class="diff-stat-added">\+2<\/span><\/span>/)
+    assert.match(html, /aria-label="2 added, 0 removed" data-added="\+2"><\/span>/)
   })
 
   test("several files: each has its row", async () => {
@@ -148,7 +148,7 @@ describe("renderDiff", () => {
     assert.match(html, />2 files</)
     assert.strictEqual(html.match(/data-diff="file"/g)?.length, 2)
     // each with its own stat, and the title the sum
-    assert.match(html, /<span class="diff-file-name">src\/sub.ts<\/span><span class="diff-stat" aria-label="3 added, 2 removed">/)
+    assert.match(html, /<span class="diff-file-name">src\/sub.ts<\/span><span class="diff-stat" role="img" aria-label="3 added, 2 removed"/)
     assert.match(html, /aria-label="6 added, 4 removed"/)
   })
 })
