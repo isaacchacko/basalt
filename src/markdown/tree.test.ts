@@ -20,6 +20,13 @@ describe("trees", () => {
     assert.strictEqual(names("a\n\tb\n\t\tc"), "a/\n  b/\n    c")
   })
 
+  test("a markdown list is bullets, not removed entries", () => {
+    const top = parseTree("- docs/\n  - intro.md\n  - + guide.md")
+    assert.strictEqual(names("- docs/\n  - intro.md\n  - + guide.md"), "docs/\n  intro.md\n  guide.md")
+    assert.deepStrictEqual([top[0].mark, top[0].children[0].mark, top[0].children[1].mark], [undefined, undefined, "added"])
+    assert.strictEqual(parseTree("a/\n  - old.md")[0].children[0].mark, "removed")
+  })
+
   test("tree's output is read as it is, its count and its . dropped", () => {
     const out = [".", "├── a.md", "├── src", "│   ├── b.ts", "│   └── c", "│       └── d.ts", "└── e", "", "3 directories, 3 files"].join("\n")
     assert.strictEqual(names(out), "a.md\nsrc/\n  b.ts\n  c/\n    d.ts\ne")
@@ -124,9 +131,14 @@ describe("trees", () => {
   })
 
   test("only the name is the line an anchor's /text/ matches", () => {
-    const html = treeHtml("a.md  # notes")
-    assert.match(html, /<span class="tree-name" data-line>a\.md<\/span>/)
+    const html = treeHtml("README  # notes")
+    assert.match(html, /<span class="tree-name" data-line>README<\/span>/)
     assert.strictEqual(html.match(/data-line/g)?.length, 1)
+  })
+
+  test("a long name can break after its dots", () => {
+    assert.match(treeHtml("music.inline.ts"), /data-line>music.<wbr>inline.<wbr>ts</)
+    assert.match(treeHtml(".gitignore"), /data-line>\.gitignore</)
   })
 
   test("an elided folder says so", () => {
