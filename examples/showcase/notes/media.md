@@ -6,11 +6,7 @@ Put a file in your notes folder and embed it with `![[name]]`. Basalt works out 
 
 ## Pictures
 
-A picture that's a remark, like this phone screenshot, goes in the side content: put it in an aside, `> [!aside]`, with its caption under it. A tall, narrow picture costs the text nothing there.
-
-> [!aside]
-> ![[phone.png]]
-> The margin page on a phone, where its notes open under their lines.
+A picture that's a remark doesn't need room in the text at all. Link to it, `[[phone.png|on a phone]]`, and it appears in the side content while you point at the link: here's the margin page [[phone.png|on a phone]]. Click the link to see it full screen. A picture that should stay beside its paragraph goes in an aside, `> [!aside]`, as a margin figure.
 
 A picture the text is about goes in the main content. A title in the markdown becomes its caption, `![the margin page](dark.png "the margin page, in the dark")`, and `|320` after a name sets its width:
 
