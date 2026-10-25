@@ -1,5 +1,6 @@
 ---
 title: Pictures written as text
+aliases: [diagrams]
 ---
 
 Some pictures are easier to write than to draw. Write one in a code block, and Basalt draws it. Each stays as text in your note, so you can change it as easily as a sentence.

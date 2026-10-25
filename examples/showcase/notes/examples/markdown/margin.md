@@ -1,6 +1,6 @@
 ---
 title: Notes in the margin
-aliases: [secondary]
+aliases: [secondary, margin]
 ---
 
 A Basalt page keeps its remarks in the side content, beside the line they belong to, the way Edward Tufte's books do and the [Tufte CSS](https://edwardtufte.github.io/tufte-css/) that brought them to the web. The argument runs down the main content and the remarks that help with it sit alongside, where your eye already is.

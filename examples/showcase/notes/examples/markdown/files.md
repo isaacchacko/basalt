@@ -1,5 +1,6 @@
 ---
 title: Code and data
+aliases: [files]
 ---
 
 Embed a file that isn't a note, `![[sieve.py]]`, and it's shown from the file itself: change the code and the page changes with it.

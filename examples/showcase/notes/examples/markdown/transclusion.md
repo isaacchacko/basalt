@@ -1,5 +1,6 @@
 ---
 title: Notes inside notes
+aliases: [transclusion]
 ---
 
 `![[note]]` puts one note inside another, so something you've written once can appear wherever it's needed. Edit the original and every page that embeds it changes too. All of these come from [[gardens|why a garden]].

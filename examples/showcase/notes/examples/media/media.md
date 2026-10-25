@@ -1,5 +1,6 @@
 ---
 title: Pictures, sound and documents
+aliases: [media]
 ---
 
 Put a file in your notes folder and embed it with `![[name]]`. Basalt works out what it is and gives it the right frame. Click any picture on this page and it grows out of the page to fill the screen. There you can zoom, pan, and step through every picture on the page with the arrow keys, or swipe on a phone.
@@ -10,7 +11,7 @@ A picture that's a remark doesn't need room in the text at all. Link to it, `[[p
 
 A picture the text is about goes in the main content. A title in the markdown becomes its caption, and `|320` after a name sets its width:
 
-![the margin page](assets/margin-page.png "the margin page: toggle the theme and it changes with the page")
+![the margin page](/assets/margin-page.png "the margin page: toggle the theme and it changes with the page")
 
 Save a dark version beside a picture, `margin-page.dark.png` next to `margin-page.png`, and the page shows whichever matches its theme. Nothing to write: embed the picture as usual, and Basalt finds its twin.
 

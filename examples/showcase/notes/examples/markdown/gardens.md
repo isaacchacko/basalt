@@ -1,6 +1,7 @@
 ---
 title: Why a garden
 tags: [gardens]
+aliases: [gardens]
 ---
 
 A note other notes on this site embed pieces of: see [[transclusion]].

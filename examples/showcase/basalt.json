@@ -18,6 +18,24 @@
         "Tufte CSS": "https://edwardtufte.github.io/tufte-css/",
         "isaacchacko.com": "https://isaacchacko.com"
       }
+    },
+    "explorer": {
+      "folderDefaultState": "open",
+      "order": [
+        "start",
+        "agents",
+        "examples",
+        "markdown",
+        "diagrams",
+        "media",
+        "embeds",
+        "margin",
+        "files",
+        "transclusion",
+        "gardens",
+        "web",
+        "islands"
+      ]
     }
   }
 }
