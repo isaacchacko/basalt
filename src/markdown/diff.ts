@@ -269,44 +269,37 @@ function nameOf(f: DiffFile): string {
 export interface DiffOptions {
   lang?: string
   title?: string
+  split?: boolean
 }
 
-/** The fence's info after `diff`: `lang=ts`, `title="…"`. */
+/** The fence's info after `diff`: `lang=ts`, `title="…"`, `split`. */
 export function diffOptions(meta: string | undefined): DiffOptions {
   const m = meta ?? ""
   const lang = /(?:^|\s)lang=["']?([\w+#.-]+)/.exec(m)?.[1]
   const t = /(?:^|\s)title=(?:"([^"]*)"|'([^']*)'|(\S+))/.exec(m)
-  return { lang, title: t ? (t[1] ?? t[2] ?? t[3]) : undefined }
+  return { lang, title: t ? (t[1] ?? t[2] ?? t[3]) : undefined, split: /(?:^|\s)split(?=\s|$)/.test(m) }
 }
 
-export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<Element> {
-  const files = parseDiff(src)
-  const theme = `${THEMES.light} ${THEMES.dark}`
-  const rows: ElementContent[] = []
-  let added = 0
-  let removed = 0
-  let gutterDigits = 0
-  const title = opts.title ?? (files.length === 1 ? nameOf(files[0]) || undefined : files.length > 1 ? `${files.length} files` : undefined)
+type Ranges = Array<[number, number]>
+type Row =
+  | { kind: "file"; name: string; status?: string; added: number; removed: number }
+  | { kind: "hunk"; text: string; anchor?: string }
+  | { kind: "note" | "label" | "empty"; text: string }
+  | { kind: "add" | "del" | "ctx"; line: DiffLine; tokens: ThemedToken[]; marks?: Ranges }
 
+/** Every row a diff draws, its code highlighted and its changed words found. */
+async function layout(files: DiffFile[], opts: DiffOptions, title: string | undefined): Promise<Row[]> {
+  const rows: Row[] = []
   for (const f of files) {
     const lang = opts.lang ?? languageOf(f.to ?? f.from)
     const name = nameOf(f)
-    const fileAdded = f.lines.filter((l) => l.kind === "add").length
-    const fileRemoved = f.lines.filter((l) => l.kind === "del").length
-    added += fileAdded
-    removed += fileRemoved
     if (name && name !== title) {
       const status = f.status === "new file" || f.status === "deleted" ? f.status : undefined
-      rows.push(
-        el("span", { dataLine: "", dataDiff: "file" }, [
-          el("span", { className: ["diff-file-name"] }, [text(name)]),
-          ...(status ? [el("span", { className: ["diff-file-status"] }, [text(status)])] : []),
-          ...(fileAdded || fileRemoved ? [stat(fileAdded, fileRemoved)] : []),
-        ]),
-      )
+      const count = (kind: Kind) => f.lines.filter((l) => l.kind === kind).length
+      rows.push({ kind: "file", name, status, added: count("add"), removed: count("del") })
     }
     if (f.status === "binary" && !f.lines.length) {
-      rows.push(el("span", { dataLine: "", dataDiff: "note", className: ["diff-label"] }, [text("a binary file, not shown")]))
+      rows.push({ kind: "label", text: "a binary file, not shown" })
       continue
     }
 
@@ -326,44 +319,101 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
       const tokensOf = new Map<DiffLine, ThemedToken[]>()
       before.forEach((l, i) => l.kind === "del" && tokensOf.set(l, oldTokens[i] ?? []))
       after.forEach((l, i) => tokensOf.set(l, newTokens[i] ?? []))
-
       const marks = changedWords(hunk)
 
       for (const l of hunk) {
-        if (l.kind === "hunk") {
-          const m = HUNK.exec(l.text)
-          rows.push(
-            el("span", { dataLine: "", dataDiff: "hunk" }, [
-              el("span", { className: ["diff-gutter"], ariaHidden: "true" }),
-              el("span", { className: ["diff-hunk-range"] }, [text(m ? l.text.slice(0, l.text.length - m[5].length) : l.text)]),
-              ...(m?.[5].trim() ? [el("span", { className: ["diff-hunk-context"] }, [text(m[5])])] : []),
-            ]),
-          )
-          continue
-        }
-        if (l.kind === "note") {
-          rows.push(el("span", { dataLine: "", dataDiff: "note" }, [text(l.text)]))
-          continue
-        }
-        gutterDigits = Math.max(gutterDigits, String(l.old ?? "").length, String(l.new ?? "").length)
-        rows.push(
-          el("span", { dataLine: "", dataDiff: l.kind }, [
-            el("span", {
-              className: ["diff-gutter"],
-              ariaHidden: "true",
-              dataOld: l.old ?? "",
-              dataNew: l.new ?? "",
-            }),
-            el("span", { className: ["diff-sign"] }, [text(l.kind === "add" ? "+" : l.kind === "del" ? "-" : " ")]),
-            ...tokens(tokensOf.get(l) ?? [], marks.get(l)),
-          ]),
-        )
+        if (l.kind === "hunk" || l.kind === "note") rows.push({ kind: l.kind, text: l.text })
+        else if (l.kind === "add" || l.kind === "del" || l.kind === "ctx")
+          rows.push({ kind: l.kind, line: l, tokens: tokensOf.get(l) ?? [], marks: marks.get(l) })
       }
     }
   }
+  return rows
+}
 
+function rowElement(row: Row): Element {
+  const line = (children: ElementContent[], props: Properties = {}) =>
+    el("span", { dataLine: "", dataDiff: row.kind, ...props }, children)
+  switch (row.kind) {
+    case "file":
+      return line([
+        el("span", { className: ["diff-file-name"] }, [text(row.name)]),
+        ...(row.status ? [el("span", { className: ["diff-file-status"] }, [text(row.status)])] : []),
+        ...(row.added || row.removed ? [stat(row.added, row.removed)] : []),
+      ])
+    case "hunk": {
+      const m = HUNK.exec(row.text)
+      return line(
+        [
+          el("span", { className: ["diff-gutter"], ariaHidden: "true" }),
+          el("span", { className: ["diff-hunk-range"] }, [text(m ? row.text.slice(0, row.text.length - m[5].length) : row.text)]),
+          ...(m?.[5].trim() ? [el("span", { className: ["diff-hunk-context"] }, [text(m[5])])] : []),
+        ],
+        row.anchor ? { dataCompareAnchor: row.anchor } : {},
+      )
+    }
+    case "label":
+      return el("span", { dataLine: "", dataDiff: "note", className: ["diff-label"] }, [text(row.text)])
+    case "note":
+    case "empty":
+      return line([text(row.text)])
+    default: {
+      const { line: l } = row
+      return line([
+        el("span", { className: ["diff-gutter"], ariaHidden: "true", dataOld: l.old ?? "", dataNew: l.new ?? "" }),
+        el("span", { className: ["diff-sign"] }, [text(row.kind === "add" ? "+" : row.kind === "del" ? "-" : " ")]),
+        ...tokens(row.tokens, row.marks),
+      ])
+    }
+  }
+}
+
+const EMPTY: Row = { kind: "empty", text: " " }
+
+/**
+ * A split view's two columns: context on both, a removed line on the old
+ * side beside the line that replaced it on the new, and a blank row where a
+ * side has nothing, so every row stays level with its partner.
+ */
+function sides(rows: Row[]): [Row[], Row[]] {
+  const old: Row[] = []
+  const neu: Row[] = []
+  let hunks = 0
+  for (let i = 0; i < rows.length; ) {
+    const row = rows[i]
+    if (row.kind === "del" || row.kind === "add") {
+      const dels: Row[] = []
+      const adds: Row[] = []
+      while (rows[i]?.kind === "del") dels.push(rows[i++])
+      while (rows[i]?.kind === "add") adds.push(rows[i++])
+      for (let k = 0; k < Math.max(dels.length, adds.length); k++) {
+        old.push(dels[k] ?? EMPTY)
+        neu.push(adds[k] ?? EMPTY)
+      }
+      continue
+    }
+    const both = row.kind === "hunk" ? { ...row, anchor: `hunk-${++hunks}` } : row
+    old.push(both)
+    neu.push(both)
+    i++
+  }
+  return [old, neu]
+}
+
+function codeFigure(
+  rows: Row[],
+  src: string,
+  title: string | undefined,
+  [added, removed]: [number, number],
+  extra: Properties = {},
+): Element {
+  const theme = `${THEMES.light} ${THEMES.dark}`
   const lines: ElementContent[] = []
-  rows.forEach((r, i) => lines.push(...(i ? [text("\n")] : []), r))
+  rows.forEach((r, i) => lines.push(...(i ? [text("\n")] : []), rowElement(r)))
+  const digits = Math.max(
+    0,
+    ...rows.map((r) => ("line" in r ? Math.max(String(r.line.old ?? "").length, String(r.line.new ?? "").length) : 0)),
+  )
   const shared = { dataLanguage: "diff", dataTheme: theme }
   const code = el("code", { ...shared, style: "display: grid;" }, lines)
   const pre = el("pre", { tabIndex: 0, ...shared }, [code])
@@ -378,11 +428,33 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
     {
       dataRehypePrettyCodeFigure: "",
       className: ["diff"],
-      ...(gutterDigits ? { dataNumbered: "", style: `--diff-digits: ${gutterDigits}` } : {}),
+      ...(digits ? { dataNumbered: "", style: `--diff-digits: ${digits}` } : {}),
+      ...extra,
       dataCopy: src.replace(/\n$/, ""),
     },
     caption ? [caption, pre] : [pre],
   )
+}
+
+export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<Element> {
+  const files = parseDiff(src)
+  const title = opts.title ?? (files.length === 1 ? nameOf(files[0]) || undefined : files.length > 1 ? `${files.length} files` : undefined)
+  const rows = await layout(files, opts, title)
+  const count = (kind: Kind) => files.reduce((n, f) => n + f.lines.filter((l) => l.kind === kind).length, 0)
+  const added = count("add")
+  const removed = count("del")
+  if (!opts.split) return codeFigure(rows, src, title, [added, removed])
+
+  // the split view is a compare block (compare.ts) of the diff's two sides
+  const [old, neu] = sides(rows)
+  const column = (label: string, figure: Element) =>
+    el("div", { className: ["compare-column"], dataLabel: label }, [el("p", { className: ["compare-label"] }, [text(label)]), figure])
+  return el("figure", { className: ["compare", "diff-split"], dataColumns: "2" }, [
+    el("div", { className: ["compare-columns"] }, [
+      column("Before", codeFigure(old, src, title, [0, removed], { dataSide: "old" })),
+      column("After", codeFigure(neu, src, title, [added, 0], { dataSide: "new" })),
+    ]),
+  ])
 }
 
 const isDiff = (node: Element) =>

@@ -113,8 +113,9 @@ test("languageOf: from the extension, or the file's name", () => {
 })
 
 test("diffOptions: lang and title from the fence", () => {
-  assert.deepStrictEqual(diffOptions('lang=ts title="the fix"'), { lang: "ts", title: "the fix" })
-  assert.deepStrictEqual(diffOptions(undefined), { lang: undefined, title: undefined })
+  assert.deepStrictEqual(diffOptions('lang=ts title="the fix"'), { lang: "ts", title: "the fix", split: false })
+  assert.deepStrictEqual(diffOptions("split"), { lang: undefined, title: undefined, split: true })
+  assert.strictEqual(diffOptions('title="splitting hairs"').split, false)
 })
 
 describe("renderDiff", () => {
@@ -150,5 +151,21 @@ describe("renderDiff", () => {
     // each with its own stat, and the title the sum
     assert.match(html, /<span class="diff-file-name">src\/sub.ts<\/span><span class="diff-stat" role="img" aria-label="3 added, 2 removed"/)
     assert.match(html, /aria-label="6 added, 4 removed"/)
+  })
+
+  test("split: a compare block of the two sides, every row level with its partner", async () => {
+    const html = toHtml(await renderDiff(GIT, { split: true }))
+    assert.match(html, /^<figure class="compare diff-split" data-columns="2"><div class="compare-columns">/)
+    const [before, after] = html.split('<div class="compare-column" data-label="After">')
+    assert.match(before, /data-label="Before"><p class="compare-label">Before<\/p><figure[^>]*data-side="old"/)
+    assert.match(after, /<p class="compare-label">After<\/p><figure[^>]*data-side="new"/)
+    const rows = (side: string) => [...side.matchAll(/data-diff="(\w+)"/g)].map((m) => m[1])
+    // one removed line beside two added ones: a blank row under the removed one
+    assert.deepStrictEqual(rows(before), ["hunk", "ctx", "del", "empty", "ctx", "hunk", "del", "ctx", "note"])
+    assert.deepStrictEqual(rows(after), ["hunk", "ctx", "add", "add", "ctx", "hunk", "add", "ctx", "note"])
+    // each side counts its own lines, and its hunks are anchors compare keeps level
+    assert.match(before, /aria-label="0 added, 2 removed"/)
+    assert.match(after, /aria-label="3 added, 0 removed"/)
+    assert.strictEqual(before.match(/data-compare-anchor="hunk-\d"/g)?.join(), 'data-compare-anchor="hunk-1",data-compare-anchor="hunk-2"')
   })
 })
