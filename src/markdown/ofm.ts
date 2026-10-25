@@ -285,7 +285,8 @@ function callouts(tree: Root) {
     node.data = {
       hProperties: {
         ...(node.data?.hProperties ?? {}),
-        className: classNames.join(" "),
+        // as Quartz wrote it, one string, so the classes come out in this order
+        className: classNames.join(" ") as unknown as string[],
         "data-callout": calloutType,
         "data-callout-fold": collapse,
         "data-callout-metadata": calloutMetaData,

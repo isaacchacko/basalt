@@ -16,8 +16,8 @@ export async function renderFile(abs: string) {
   const file = reg.byAbs.get(abs)
   if (!file) throw new Error(`${abs} isn't one of the site's notes`)
   const processor = await createMarkdownProcessor({
-    remarkPlugins: md.remarkPlugins,
-    rehypePlugins: md.rehypePlugins,
+    remarkPlugins: md.remarkPlugins as never,
+    rehypePlugins: md.rehypePlugins as never,
     remarkRehype: md.processorOptions.remarkRehype,
     smartypants: md.processorOptions.smartypants,
     syntaxHighlight: md.syntaxHighlight,

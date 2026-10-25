@@ -32,7 +32,7 @@ const el = (
 
 const classes = (node: Element): string[] => {
   const c = node.properties?.className
-  return Array.isArray(c) ? (c as string[]) : typeof c === "string" ? c.split(" ") : []
+  return Array.isArray(c) ? (c as string[]) : typeof c === "string" ? (c as string).split(" ") : []
 }
 
 /** A footnote's content as phrasing, so it can sit inside the sentence citing it. */

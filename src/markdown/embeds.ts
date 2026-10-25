@@ -35,7 +35,7 @@ const text = (value: string): ElementContent => ({ type: "text", value })
 
 function classes(node: El): string[] {
   const c = node.properties?.className
-  return Array.isArray(c) ? (c as string[]) : typeof c === "string" ? c.split(" ") : []
+  return Array.isArray(c) ? (c as string[]) : typeof c === "string" ? (c as string).split(" ") : []
 }
 
 // ---------- the little language inside an embed's alias ----------
@@ -238,7 +238,7 @@ function hostOf(raw: string): string {
 function sourceLink(href: string, label: string): El {
   return el(
     "a",
-    { href, className: ["external", "embed-source"], target: "_blank", rel: "noopener noreferrer" },
+    { href, className: ["external", "embed-source"], target: "_blank", rel: ["noopener", "noreferrer"] },
     [text(label)],
   )
 }
@@ -273,7 +273,7 @@ export function renderWebEmbed(embed: WebEmbed, opts: EmbedOptions): El {
             className: ["embed-facade"],
             href: embed.url,
             target: "_blank",
-            rel: "noopener noreferrer",
+            rel: ["noopener", "noreferrer"],
             dataEmbedSrc: `https://www.youtube-nocookie.com/embed/${embed.id}?${params}`,
             dataEmbedTitle: title,
             ariaLabel: `play: ${title}`,
