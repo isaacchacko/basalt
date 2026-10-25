@@ -9,7 +9,8 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)")
 document.addEventListener("astro:before-swap", (e) => {
   const next = e.newDocument.documentElement
   delete next.dataset.hot
-  next.classList.toggle("basalt-arrive", !reduce.matches)
+  // an edit swapped in while writing (hotswap.ts) isn't an arrival
+  next.classList.toggle("basalt-arrive", !reduce.matches && !window.basaltHotSwap)
 })
 
 if (import.meta.hot) {

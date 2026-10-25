@@ -142,7 +142,21 @@ export function agentApi(): AstroIntegration {
 
         // ...which ends when Vite tells the pages
         const send = server.hot.send.bind(server.hot) as (...args: unknown[]) => void
+        // a reload for a note, a component or other server code becomes a
+        // swap in place (src/client/hotswap.ts): only client code reloads
+        const swappable = (files: string[]) =>
+          files.length > 0 &&
+          files.every(
+            (f) =>
+              /\.(md|astro|json)$/.test(f) ||
+              (/\.(ts|tsx|js|mjs)$/.test(f) && !f.includes(`${path.sep}client${path.sep}`) && !f.includes(`${path.sep}islands${path.sep}`)),
+          )
         ;(server.hot as { send: (...args: unknown[]) => void }).send = (...args: unknown[]) => {
+          const first = args[0] as { type?: string }
+          if (first && first.type === "full-reload" && swappable(status.trigger)) {
+            void settle({ state: "ready", change: "swap", error: null })
+            return send({ type: "custom", event: "basalt:swap", data: { files: status.trigger } })
+          }
           const payload = args[0] as { type?: string; err?: { message: string; loc?: { file?: string; line?: number; column?: number }; id?: string } }
           if (payload && typeof payload === "object") {
             if (payload.type === "update") void settle({ state: "ready", change: "hot", error: null })
