@@ -4,7 +4,7 @@ import assert from "node:assert"
 import { unified } from "unified"
 import remarkParse from "remark-parse"
 import type { Root } from "mdast"
-const { remarkDiagrams, renderGraphviz, themeSvg } = await import("./diagrams.ts")
+const { graphFigure, remarkDiagrams, renderGraphviz, themeSvg } = await import("./diagrams.ts")
 
 async function run(markdown: string): Promise<Root> {
   const processor = unified()
@@ -84,5 +84,19 @@ describe("diagrams", () => {
       themeSvg('<?xml version="1.0"?><!-- x --><svg><polygon fill="white" stroke="black"/></svg>'),
       '<svg><polygon fill="none" stroke="currentColor"/></svg>',
     )
+  })
+})
+
+describe("a graph's zoom", () => {
+  const block = (meta: string | null) =>
+    graphFigure({ type: "code", lang: "graph", meta, value: "a -> b" } as never)
+  test("off unless it asks", () => {
+    assert.match(block(null), /data-zoom="false"/)
+    assert.match(block('title="zoom out"'), /data-zoom="false"/)
+    assert.match(block("zoom=false"), /data-zoom="false"/)
+  })
+  test("zoom, canZoom or zoom=true turns it on", () => {
+    for (const meta of ["zoom", "canZoom", "zoom=true", 'title="x" zoom height=300'])
+      assert.match(block(meta), /data-zoom="true"/, meta)
   })
 })

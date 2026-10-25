@@ -84,8 +84,10 @@ export async function renderGraphviz(source: string, engine?: string): Promise<s
 
 /**
  * A ```graph block: settled here and drawn as an svg, which the embeds script
- * swaps for the live renderer, started from the same layout. `height=360`
- * and `arrows` / `noarrows` go after the language.
+ * swaps for the live renderer, started from the same layout. `height=360`,
+ * `arrows` / `noarrows` and `zoom` go after the language. Without `zoom` (or
+ * `canZoom`, `zoom=true`) the wheel scrolls the page past it, not into it;
+ * full screen in the viewer, it always zooms.
  */
 export function graphFigure(node: Code, caption?: string): string {
   const { data, errors } = parseGraph(node.value)
@@ -98,9 +100,11 @@ export function graphFigure(node: Code, caption?: string): string {
     ? false
     : /\barrows\b/.test(meta) || /->|<-/.test(node.value)
   const height = /height=(\d+)/.exec(meta)?.[1] ?? "360"
+  const bare = meta.replace(/title=(?:"[^"]*"|'[^']*'|\S+)/, "")
+  const zoom = /(?:^|\s)(?:can)?zoom(?:=(?:true|yes|on))?(?=\s|$)/i.test(bare)
   const settled = settle(data)
   const attr = escapeHtml(JSON.stringify(settled))
-  const live = `<div class="graph-embed" data-graph="${attr}" data-arrows="${arrows}" style="height:${height}px">${graphSvg(settled, { arrows })}</div>`
+  const live = `<div class="graph-embed" data-graph="${attr}" data-arrows="${arrows}" data-zoom="${zoom}" style="height:${height}px">${graphSvg(settled, { arrows })}</div>`
   return figure("graph", live, caption)
 }
 

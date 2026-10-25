@@ -10,7 +10,7 @@ Some pictures are easier to write than to draw. Write one in a code block, and B
 
 ## A graph
 
-A ` ```graph ` block in [graph](https://graph.isaacchacko.com)'s language: one line per link, with `{colour size}` for a node. Drag the nodes and scroll to zoom. Basalt lays it out when the site is built, so without JavaScript it's still a picture of the same graph.
+A ` ```graph ` block in [graph](https://graph.isaacchacko.com)'s language: one line per link, with `{colour size}` for a node. Drag the nodes. The wheel scrolls the page past it; a block that says `zoom` (` ```graph zoom `) zooms instead, and full screen, any graph does. Basalt lays it out when the site is built, so without JavaScript it's still a picture of the same graph.
 
 ```graph title="what a garden is made of"
 garden {tomato 2} -> notes, links, pictures

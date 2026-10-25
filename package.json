@@ -18,7 +18,7 @@
     "chokidar": "^6.0.0",
     "flexsearch": "^0.8.212",
     "github-slugger": "^2.0.0",
-    "graph": "github:isaacchacko/graph#18da86e86d025ddaf9ec3bec3547c456d5259cf9",
+    "graph": "github:isaacchacko/graph#f36ed5d140b0944b16759573878b9eae7c550a13",
     "gray-matter": "^4.0.3",
     "hast-util-from-html": "^2.0.3",
     "hast-util-to-html": "^9.0.5",

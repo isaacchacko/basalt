@@ -45,7 +45,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: s
 
 /** the card for what's playing: its cover (or a ♪), song, artist and album, progress, stop */
 function cardFor(clip: Clip, word: HTMLElement | null) {
-  const card = el("div", "now-playing")
+  const card = el("div", "basalt-now-playing")
   card.setAttribute("role", "status")
   const t = clip.track
   const link = (cls: string) => {
@@ -56,27 +56,27 @@ function cardFor(clip: Clip, word: HTMLElement | null) {
     a.rel = "noopener"
     return a
   }
-  const cover = link("now-playing-cover")
+  const cover = link("basalt-now-playing-cover")
   if (t?.cover) {
     const img = el("img", "")
     img.src = t.cover
     img.alt = ""
     cover.append(img)
-  } else cover.append(el("span", "now-playing-blank", "♪"))
-  const text = el("div", "now-playing-text")
-  text.append(el("span", "now-playing-what", clip.label ? `now playing · ${clip.label}` : "now playing"))
-  const title = link("now-playing-title")
+  } else cover.append(el("span", "basalt-now-playing-blank", "♪"))
+  const text = el("div", "basalt-now-playing-text")
+  text.append(el("span", "basalt-now-playing-what", clip.label ? `now playing · ${clip.label}` : "now playing"))
+  const title = link("basalt-now-playing-title")
   title.textContent = t?.title ?? word?.textContent?.trim() ?? "a clip"
   text.append(title)
   const by = [t?.artist, t?.album].filter(Boolean).join(" · ")
-  if (by) text.append(el("span", "now-playing-by", by))
-  const stop = el("button", "now-playing-stop")
+  if (by) text.append(el("span", "basalt-now-playing-by", by))
+  const stop = el("button", "basalt-now-playing-stop")
   stop.type = "button"
   stop.setAttribute("aria-label", "stop")
   stop.title = "stop"
   stop.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>'
   stop.addEventListener("click", () => halt())
-  const bar = el("span", "now-playing-bar")
+  const bar = el("span", "basalt-now-playing-bar")
   card.append(cover, text, stop, bar)
   return card
 }
@@ -85,7 +85,7 @@ function cardFor(clip: Clip, word: HTMLElement | null) {
 function place(card: HTMLElement, word: HTMLElement | null): HTMLElement {
   const margin = document.querySelector<HTMLElement>("aside.margin")
   if (isBeside() && margin && word && word.closest("article")) {
-    const rail = el("div", "now-playing-rail")
+    const rail = el("div", "basalt-now-playing-rail")
     rail.style.top = `${Math.max(0, lineOf(word).top - margin.getBoundingClientRect().top)}px`
     rail.append(card)
     margin.append(rail)
@@ -138,7 +138,7 @@ const act = (target: EventTarget | null): boolean => {
     return true
   }
   const word = t?.closest?.<HTMLElement>(".sound")
-  if (!word || word.closest(".now-playing")) return false
+  if (!word || word.closest(".basalt-now-playing")) return false
   const first = clipsOf(word)[0] ?? (srcsOf(word)[0] ? { src: srcsOf(word)[0] } : null)
   if (first) play(first, word)
   return !!first

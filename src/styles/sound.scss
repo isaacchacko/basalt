@@ -87,7 +87,7 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 }
 
 // what's playing: beside its word, then held at the top of the side content
-.now-playing-rail {
+.basalt-now-playing-rail {
   position: absolute;
   left: 0;
   right: 0;
@@ -95,7 +95,7 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
   z-index: 7;
   pointer-events: none;
 }
-.now-playing {
+.basalt-now-playing {
   position: sticky;
   top: 1rem;
   display: grid;
@@ -111,7 +111,7 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
   background: var(--light);
   box-shadow: 0 8px 26px -14px rgb(0 0 0 / 0.3);
   pointer-events: auto;
-  animation: now-playing-in 0.3s $ease;
+  animation: basalt-now-playing-in 0.3s $ease;
 
   &.is-leaving {
     opacity: 0;
@@ -134,13 +134,13 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
     border-left: 2px solid var(--tertiary);
   }
 }
-@keyframes now-playing-in {
+@keyframes basalt-now-playing-in {
   from {
     opacity: 0;
     translate: 0 6px;
   }
 }
-.now-playing-cover {
+.basalt-now-playing-cover {
   display: grid;
   place-items: center;
   width: 3.25rem;
@@ -156,11 +156,11 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
     object-fit: cover;
   }
 }
-.now-playing-blank {
+.basalt-now-playing-blank {
   color: var(--gray);
   font-size: 1.3rem;
 }
-.now-playing-text {
+.basalt-now-playing-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -172,12 +172,12 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
     white-space: nowrap;
   }
 }
-.now-playing-what {
+.basalt-now-playing-what {
   color: var(--gray);
   font-size: 0.72rem;
   font-style: italic;
 }
-.now-playing-title {
+.basalt-now-playing-title {
   color: var(--dark);
   font-weight: 600;
   font-size: 0.9rem;
@@ -187,11 +187,11 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
     text-decoration: underline;
   }
 }
-.now-playing-by {
+.basalt-now-playing-by {
   color: var(--darkgray);
   font-size: 0.8rem;
 }
-.now-playing-stop {
+.basalt-now-playing-stop {
   display: grid;
   place-items: center;
   width: 28px;
@@ -209,7 +209,7 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
   }
 }
 // the clip's progress, a hairline along the foot of the card
-.now-playing-bar {
+.basalt-now-playing-bar {
   grid-column: 1 / -1;
   height: 2px;
   margin-top: 0.35rem;
@@ -218,7 +218,7 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .now-playing,
+  .basalt-now-playing,
   .sound[data-playing]::after {
     animation: none;
   }

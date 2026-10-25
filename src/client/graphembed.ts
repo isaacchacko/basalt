@@ -27,6 +27,8 @@ async function drawGraph(el: HTMLElement, data: GraphData, signal: AbortSignal) 
   const renderer = new GraphRenderer(el, {
     mode: "select",
     arrows: el.dataset.arrows === "true",
+    // in the page the wheel scrolls past it unless it asked to zoom (```graph zoom)
+    zoom: el.dataset.zoom === "true",
     // fitted into a page, a graph is drawn small: bigger labels and dots read at that size
     textSize: 1.8,
     nodeSize: 1.4,
@@ -35,6 +37,8 @@ async function drawGraph(el: HTMLElement, data: GraphData, signal: AbortSignal) 
     theme: pageTheme(),
   })
   renderer.setData(data)
+  // for a site's own scripts (and tests): the element knows its renderer
+  ;(el as HTMLElement & { graph?: unknown }).graph = renderer
   svg?.remove()
   onTheme(() => renderer.setOptions({ theme: pageTheme() }), signal)
 
@@ -48,7 +52,15 @@ async function drawGraph(el: HTMLElement, data: GraphData, signal: AbortSignal) 
     refitting = performance.now() + 900
     renderer.zoomToFit()
   }
-  figure.addEventListener("basalt:viewer", refit, { signal })
+  // full screen in the viewer it always zooms; back in the page, as it asked
+  figure.addEventListener(
+    "basalt:viewer",
+    (e) => {
+      renderer.setOptions({ zoom: (e as CustomEvent<{ open: boolean }>).detail.open || el.dataset.zoom === "true" })
+      refit()
+    },
+    { signal },
+  )
   const watch = new ResizeObserver(() => {
     if (performance.now() < refitting) renderer.zoomToFit()
   })
