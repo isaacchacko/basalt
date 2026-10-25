@@ -1,27 +1,23 @@
-// Compare blocks (src/markdown/compare.ts): columns side by side, partners
-// level. In the page a block reaches across the side content for room, and
-// its columns stand side by side when they fit, stacked when they don't.
-// Anchored blocks (the same ^name in two columns) start level: the column
-// that's ahead waits, with space, for the other. Lines inside code don't
-// open gaps in the page; they line up in the reader.
+// Compare blocks (src/markdown/compare.ts): columns side by side, stacked
+// when there isn't room. Partners (the same ^name in two columns) start
+// level: the column that's ahead waits with a gap, above the block (and the
+// sentence leading into it) or above the line. No gap ever opens before a
+// column's first content: the columns start at the top together, and a pair
+// that would need a gap there is left out (basalt check says so).
 //
-// The reader is Basalt's viewer, which takes the block in itself (a live
-// embed). There each column scrolls on its own and the others follow, so
-// that what's level with an anchor in one is level with its partner in the
-// rest: between anchors they move in proportion. With no room for columns
-// (a phone) the reader shows one at a time, and switching keeps the place.
+// Beside the side content a block reaches across it. Its full-screen control
+// flips the page: the navbar, the side content and the rest of the note fold
+// away and the block spans the page, scrolled by the page's own scrollbar.
+// The control again, or Escape, flips back, keeping your place.
 //
-// Hovering an anchored block (or line) lights its partners.
+// Pointing at one of a pair lights both.
 
-import { PATHS, icon, button } from "./embeds"
-import { openViewer, toggleViewer, viewerButton } from "./viewer"
+import { PATHS, icon, button, still } from "./embeds"
 
 /** room kept clear of the side content's right edge, as code reach keeps (codereach.ts) */
 const SIDE_PAD = 16
-/** in the reader, how far down a column its reading line is */
+/** how far down the window the place kept across a flip is */
 const READING_LINE = 0.3
-/** how far either side of a pair, in column heights, the columns keep it level */
-const HOLD = 0.35
 // link previews show a copy of another note: its compare blocks stay as they are
 const ELSEWHERE = ".margin-preview, .margin-hover, .popover"
 
@@ -43,9 +39,35 @@ function resolveLines(figure: HTMLElement) {
       const el = entry && block.contains(entry) ? entry : line
       if (!el || el.dataset.compareAnchor) continue
       el.dataset.compareAnchor = name
-      if (el === line) el.dataset.compareLine = ""
     }
   }
+  // a line waits on its own, with code above it; a block's first line waits with its block
+  for (const line of figure.querySelectorAll<HTMLElement>("[data-line][data-compare-anchor]"))
+    if (line.closest("pre")?.querySelector("[data-line]") !== line) line.dataset.compareLine = ""
+}
+
+/** A block with the sentence that leads into it ("…on the page:") before it: they move as one. */
+function leadOf(el: HTMLElement): HTMLElement {
+  let lead = el
+  while (lead.previousElementSibling?.matches("p:not(.compare-label)") && lead.previousElementSibling.textContent!.trimEnd().endsWith(":"))
+    lead = lead.previousElementSibling as HTMLElement
+  return lead
+}
+
+/** Where an anchor's gap goes: before a line itself; before a block's lead-in, a block's first line's being its block's. */
+function gapPoint(el: HTMLElement): HTMLElement {
+  if (el.dataset.compareLine !== undefined) return el
+  return leadOf(el.matches("[data-line]") ? el.closest<HTMLElement>(".compare-column > *")! : el)
+}
+
+/** Nothing of the column's (but its label) comes before `point`. */
+function atStart(point: HTMLElement, column: HTMLElement): boolean {
+  const range = document.createRange()
+  const label = column.querySelector(":scope > .compare-label")
+  if (label) range.setStartAfter(label)
+  else range.setStart(column, 0)
+  range.setEndBefore(point)
+  return !range.toString().trim()
 }
 
 /** Each column's anchors, by name, first one wins: what's written, then trees' entries by path. */
@@ -64,7 +86,8 @@ const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Nod
 /**
  * Partners across every column, top to bottom: a name in every column, in
  * the same order in each. What the author wrote is kept first; a tree's entry
- * matched by path joins only where it fits between those.
+ * matched by path joins only where it fits between those. A pair at the start
+ * of one column and not another would need a gap there, and is left out.
  */
 function partners(columns: HTMLElement[]): Row[] {
   if (columns.length < 2) return []
@@ -77,9 +100,11 @@ function partners(columns: HTMLElement[]): Row[] {
     })
   const add = (key: "written" | "paths") => {
     for (const name of found[0][key].keys()) {
-      const row = found.map((f) => f[key].get(name))
+      const row = found.map((f) => f[key].get(name)) as Row
       if (row.some((el) => !el)) continue
-      if (fits(row as Row)) rows.push(row as Row)
+      const starts = row.map((el, i) => atStart(gapPoint(el), columns[i]))
+      if (starts.some(Boolean) && !starts.every(Boolean)) continue
+      if (fits(row)) rows.push(row)
     }
   }
   add("written")
@@ -87,49 +112,40 @@ function partners(columns: HTMLElement[]): Row[] {
   return rows.sort((a, b) => (before(a[0], b[0]) ? -1 : 1))
 }
 
-/** Where `el` starts in `column`'s content, from its top. */
-const offsetIn = (el: HTMLElement, column: HTMLElement) =>
-  el.getBoundingClientRect().top - column.getBoundingClientRect().top + column.scrollTop
-
-/** A block with the sentence that leads into it ("…on the page:") before it: they move as one. */
-function leadOf(el: HTMLElement): HTMLElement {
-  let lead = el
-  while (lead.previousElementSibling?.matches("p:not(.compare-label)") && lead.previousElementSibling.textContent!.trimEnd().endsWith(":"))
-    lead = lead.previousElementSibling as HTMLElement
-  return lead
-}
-
-function makeGap(): HTMLElement {
+/** A gap before a block: its own element. Before a line: the line's top margin (code lines sit in a grid). */
+function openGap(el: HTMLElement): (height: number) => void {
+  if (el.dataset.compareLine !== undefined) {
+    el.dataset.compareGap = ""
+    return (h) => (el.style.marginTop = `${h}px`)
+  }
   const gap = document.createElement("div")
   gap.className = "compare-gap"
   gap.setAttribute("aria-hidden", "true")
-  return gap
+  gapPoint(el).before(gap)
+  return (h) => (gap.style.height = `${h}px`)
 }
 
-/**
- * Inline, side by side: each row of partners starts level, the ones ahead
- * waiting with a gap before them (a block, or an entry in a tree). A line in
- * code doesn't open a gap in its block: those rows wait for the reader.
- */
-function level(figure: HTMLElement, columns: HTMLElement[], rows: Row[]) {
+function closeGaps(figure: HTMLElement) {
   for (const gap of figure.querySelectorAll(".compare-gap")) gap.remove()
+  for (const line of figure.querySelectorAll<HTMLElement>("[data-compare-gap]")) {
+    line.style.marginTop = ""
+    delete line.dataset.compareGap
+  }
+}
+
+/** Side by side, each row of partners starts level, the ones ahead waiting with a gap. */
+function level(figure: HTMLElement, columns: HTMLElement[], rows: Row[]) {
+  closeGaps(figure)
   if (columns.length < 2 || columns[0].offsetTop !== columns[1].offsetTop) return
   for (const row of rows) {
-    if (row.some((el) => el.dataset.compareLine !== undefined)) continue
-    const gaps = row.map((el) => {
-      const gap = makeGap()
-      leadOf(el).before(gap)
-      return gap
-    })
+    const gaps = row.map(openGap)
     // an empty gap lets the margins around it collapse as before; one with a
     // height doesn't, which moves its block a little further: measured again
-    const top = () => row.map((el) => el.getBoundingClientRect().top)
-    const target = Math.max(...top())
-    top().forEach((t, i) => (gaps[i].style.height = `${target - t}px`))
-    top().forEach((t, i) => {
-      const h = parseFloat(gaps[i].style.height)
-      if (h > 0) gaps[i].style.height = `${Math.max(0, h - (t - target))}px`
-    })
+    const tops = () => row.map((el) => el.getBoundingClientRect().top)
+    const target = Math.max(...tops())
+    const heights = tops().map((t) => target - t)
+    heights.forEach((h, i) => gaps[i](h))
+    tops().forEach((t, i) => heights[i] > 0 && gaps[i](Math.max(0, heights[i] - (t - target))))
   }
 }
 
@@ -137,115 +153,11 @@ function level(figure: HTMLElement, columns: HTMLElement[], rows: Row[]) {
 function reach(figure: HTMLElement) {
   figure.style.removeProperty("--compare-width")
   if (document.documentElement.dataset.margin !== "beside" || figure.parentElement?.tagName !== "ARTICLE") return
+  if (figure.hasAttribute("data-spread")) return
   const side = document.querySelector<HTMLElement>("aside.margin")
   if (!side) return
   const width = side.getBoundingClientRect().right - SIDE_PAD - figure.getBoundingClientRect().left
   if (width > figure.offsetWidth) figure.style.setProperty("--compare-width", `${Math.floor(width)}px`)
-}
-
-// ---------- the reader ----------
-
-/**
- * `y` (a point in column `from`'s content) in column `to`'s, through the
- * partners. Near a pair (within `hold` of it) the columns move together, so
- * the pair stays level while it's read; the difference in length between
- * two pairs is taken up in the stretch between them.
- */
-function carry(y: number, from: number, to: number, rows: Row[], columns: HTMLElement[], hold: number): number {
-  const a = columns[from]
-  const b = columns[to]
-  const knots: [number, number][] = [[0, 0]]
-  for (const row of rows) {
-    const k: [number, number] = [offsetIn(row[from], a), offsetIn(row[to], b)]
-    if (k[0] > knots.at(-1)![0] && k[1] >= knots.at(-1)![1]) knots.push(k)
-  }
-  knots.push([Math.max(a.scrollHeight, knots.at(-1)![0] + 1), Math.max(b.scrollHeight, knots.at(-1)![1])])
-  for (let i = 1; i < knots.length; i++) {
-    const [x0, y0] = knots[i - 1]
-    const [x1, y1] = knots[i]
-    if (y > x1) continue
-    const band = Math.min(hold, (x1 - x0) / 3, (y1 - y0) / 3)
-    if (y - x0 <= band) return y0 + (y - x0)
-    if (x1 - y <= band) return y1 - (x1 - y)
-    return y0 + band + ((y - x0 - band) / (x1 - x0 - 2 * band)) * (y1 - y0 - 2 * band)
-  }
-  return knots.at(-1)![1]
-}
-
-/** In the reader: columns that follow the one being read, and on a phone, one at a time. */
-function reader(figure: HTMLElement, columns: HTMLElement[], rows: Row[]): () => void {
-  const ctrl = new AbortController()
-  const { signal } = ctrl
-  let driver = columns[0]
-  let follow = 0
-  const line = (c: HTMLElement) => c.clientHeight * READING_LINE
-  const carryTo = (y: number, from: number, to: number) => carry(y, from, to, rows, columns, columns[from].clientHeight * HOLD)
-  const followFrom = (lead: HTMLElement) => {
-    const from = columns.indexOf(lead)
-    const y = lead.scrollTop + line(lead)
-    columns.forEach((c, to) => {
-      if (c === lead) return
-      c.scrollTop = carryTo(y, from, to) - line(c)
-    })
-  }
-  for (const column of columns) {
-    const lead = () => (driver = column)
-    for (const type of ["pointerenter", "wheel", "touchstart", "focusin", "keydown"])
-      column.addEventListener(type, lead, { signal, passive: true })
-    column.addEventListener(
-      "scroll",
-      () => {
-        if (column !== driver || !column.isConnected) return
-        cancelAnimationFrame(follow)
-        follow = requestAnimationFrame(() => followFrom(column))
-      },
-      { signal, passive: true },
-    )
-  }
-
-  // one column at a time: a switch over them, which keeps the place
-  const tabs = document.createElement("div")
-  tabs.className = "compare-tabs"
-  const show = (i: number, keep = true) => {
-    const from = columns.findIndex((c) => c.dataset.active !== undefined)
-    const y = from >= 0 && keep ? carryTo(columns[from].scrollTop + line(columns[from]), from, i) : 0
-    columns.forEach((c, j) => {
-      c.toggleAttribute("data-active", j === i)
-      tabs.children[j]?.setAttribute("aria-pressed", String(j === i))
-    })
-    driver = columns[i]
-    columns[i].scrollTop = y - line(columns[i])
-  }
-  columns.forEach((c, i) => {
-    const tab = document.createElement("button")
-    tab.type = "button"
-    tab.textContent = c.dataset.label || `Column ${i + 1}`
-    tab.addEventListener("click", () => show(i), { signal })
-    tabs.append(tab)
-  })
-  figure.prepend(tabs)
-
-  // the first pair level from the start: the column it's higher in starts lower
-  const first = rows[0]
-  const tops = first?.map((el, i) => offsetIn(el, columns[i])) ?? []
-  const lowest = Math.max(...tops)
-  first?.forEach((el, i) => {
-    if (lowest - tops[i] < 1) return
-    const gap = makeGap()
-    gap.style.height = `${lowest - tops[i]}px`
-    const label = columns[i].querySelector(":scope > .compare-label")
-    if (label) label.after(gap)
-    else columns[i].prepend(gap)
-  })
-  show(0, false)
-
-  return () => {
-    ctrl.abort()
-    cancelAnimationFrame(follow)
-    tabs.remove()
-    for (const gap of figure.querySelectorAll(".compare-gap")) gap.remove()
-    for (const c of columns) delete c.dataset.active
-  }
 }
 
 // ---------- each block ----------
@@ -273,44 +185,72 @@ function hoverPartners(figure: HTMLElement, rows: Row[], signal: AbortSignal) {
   }, { signal })
 }
 
+/** What's at the reading line in the block (a line, an entry, a block), and how far down the window it is. */
+function placeIn(figure: HTMLElement): { el: HTMLElement; top: number } {
+  const column = columnsOf(figure)[0].getBoundingClientRect()
+  const hit = document.elementFromPoint(column.left + column.width / 2, innerHeight * READING_LINE)
+  const el = (hit && figure.contains(hit) && hit.closest<HTMLElement>("[data-line], li, .compare-column > *")) || figure
+  return { el, top: el.getBoundingClientRect().top }
+}
+
 function startBlock(figure: HTMLElement, signal: AbortSignal) {
   const columns = columnsOf(figure)
   resolveLines(figure)
   const rows = partners(columns)
   hoverPartners(figure, rows, signal)
 
+  const sizes = new Map<Element, number>()
+  const lay = () => {
+    reach(figure)
+    level(figure, columns, rows)
+    for (const c of columns) for (const kid of c.children) sizes.set(kid, kid.getBoundingClientRect().height)
+  }
+  let frame = 0
+  const layLater = () => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(lay)
+  }
+
   const actions = document.createElement("span")
   actions.className = "code-actions compare-actions"
   const full = button("code-action compare-full", "full screen", icon(PATHS.expand, 16))
-  // the reader holds this comparison alone, not a gallery of the page's
-  full.addEventListener(
-    "click",
-    (e) =>
-      figure.dataset.inViewer !== undefined
-        ? toggleViewer(figure)
-        : openViewer(figure, { key: e.detail === 0, only: { kind: "live", origin: figure, caption: "" } }),
-    { signal },
-  )
-  viewerButton(full, figure, signal, 16)
+  full.setAttribute("aria-pressed", "false")
   actions.append(full)
   figure.dataset.quietControls = ""
   // first in the block's tab order, as it's first in its corner
   figure.prepend(actions)
 
-  let closeReader: (() => void) | undefined
-  let frame = 0
-  const sizes = new Map<Element, number>()
-  const lay = () => {
-    cancelAnimationFrame(frame)
-    frame = requestAnimationFrame(() => {
-      if (closeReader) return
-      reach(figure)
-      level(figure, columns, rows)
-      for (const c of columns) for (const kid of c.children) sizes.set(kid, kid.getBoundingClientRect().height)
-    })
+  const spread = (on: boolean) => {
+    if (on === figure.hasAttribute("data-spread")) return
+    const place = placeIn(figure)
+    const flip = () => {
+      document.documentElement.toggleAttribute("data-compare-spread", on)
+      figure.toggleAttribute("data-spread", on)
+      full.innerHTML = icon(on ? PATHS.collapse : PATHS.expand, 16)
+      full.setAttribute("aria-label", on ? "back to the page" : "full screen")
+      full.title = on ? "back to the page (esc)" : "full screen"
+      full.setAttribute("aria-pressed", String(on))
+      lay()
+      if (place.el === figure) figure.scrollIntoView({ block: "start", behavior: "instant" })
+      else scrollBy({ top: place.el.getBoundingClientRect().top - place.top, behavior: "instant" })
+    }
+    if (document.startViewTransition && !still()) document.startViewTransition(flip)
+    else flip()
   }
+  full.addEventListener("click", () => spread(!figure.hasAttribute("data-spread")), { signal })
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key !== "Escape" || !figure.hasAttribute("data-spread")) return
+      e.preventDefault()
+      spread(false)
+      full.focus({ preventScroll: true })
+    },
+    { signal },
+  )
+
   // what changes heights: the block's width, anything in a column growing
-  // (an image arriving, code wrapping); not the gaps, which this makes
+  // (an image arriving, code wrapping, a folder folding); not the gaps, which this makes
   let width = 0
   const ro = new ResizeObserver((entries) => {
     const moved = entries.some((e) =>
@@ -319,39 +259,22 @@ function startBlock(figure: HTMLElement, signal: AbortSignal) {
         : Math.abs((sizes.get(e.target) ?? -1) - e.target.getBoundingClientRect().height) > 0.5,
     )
     width = figure.offsetWidth
-    if (moved) lay()
+    if (moved) layLater()
   })
   ro.observe(figure)
-  for (const c of columns) for (const kid of c.children) if (!kid.classList.contains("compare-gap")) ro.observe(kid)
-  document.addEventListener("margin:placed", lay, { signal })
-  addEventListener("resize", lay, { signal })
-  document.fonts?.ready.then(() => !signal.aborted && lay())
+  for (const c of columns) for (const kid of c.children) ro.observe(kid)
+  document.addEventListener("margin:placed", layLater, { signal })
+  addEventListener("resize", layLater, { signal })
+  document.fonts?.ready.then(() => !signal.aborted && layLater())
 
-  figure.addEventListener(
-    "basalt:viewer",
-    (e) => {
-      const open = (e as CustomEvent<{ open: boolean }>).detail.open
-      if (open && !closeReader) {
-        for (const gap of figure.querySelectorAll(".compare-gap")) gap.remove()
-        figure.style.removeProperty("--compare-width")
-        figure.dataset.reader = ""
-        closeReader = reader(figure, columns, rows)
-      } else if (!open && closeReader) {
-        closeReader()
-        closeReader = undefined
-        delete figure.dataset.reader
-        lay()
-      }
-    },
-    { signal },
-  )
   signal.addEventListener("abort", () => {
     ro.disconnect()
     cancelAnimationFrame(frame)
-    closeReader?.()
+    document.documentElement.removeAttribute("data-compare-spread")
+    figure.removeAttribute("data-spread")
     actions.remove()
   })
-  lay()
+  layLater()
 }
 
 const SIDE_OCCUPANTS = ".margin-layer > *, .margin-resting > *, .basalt-now-playing"

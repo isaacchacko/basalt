@@ -93,7 +93,7 @@ Anything goes in a column: prose, lists, code, pictures.[^columns] Leave a blank
 > })
 > ```
 
-Point at a paragraph with a partner, and both light up. The full-screen control in the block's corner opens it in the reader, where each column scrolls on its own and the other keeps level with it.
+Point at a paragraph with a partner, and both light up. The full-screen control in the block's corner flips the page to the block alone, both columns across the page, scrolled by the page itself; Escape flips back.
 
 ## Anchors
 
@@ -102,7 +102,7 @@ Columns are rarely the same length, so the matching parts drift apart. An anchor
 - `^name` at the end of a paragraph, or on its own line after a code block, a table or a picture. It's Obsidian's block id, so Obsidian hides it.
 - `^name=7` in a code block's first line, after the language, names its 7th line; `^name=/text/` names the first line with *text* in it. The code stays as it was, so it copies clean anywhere.
 
-In the page, blocks line up: the column that's ahead waits for the other, with space. Lines inside code line up in the reader, where each column scrolls: what's level with an anchor in one column is level with its partner in the other, and between anchors they move in step.
+The column that's ahead waits for the other, with space: above a block, or above a line inside code. The columns always start together, so a pair that would need space before a column's first line is left out.
 
 ````md
 > [!compare] Before
@@ -115,7 +115,7 @@ In the page, blocks line up: the column that's ahead waits for the other, with s
 > …
 ````
 
-Here the steps start level with the code that takes them:
+Here each step starts level with the line that takes it:
 
 > [!compare] In words
 > Euclid's algorithm finds the greatest common divisor of two numbers.
@@ -125,13 +125,12 @@ Here the steps start level with the code that takes them:
 > It always ends, because the remainder is smaller each time. ^ends
 
 > [!compare] In code
-> ```py
+> ```py ^loop=/while/
 > def gcd(a, b):
 >     while b:
 >         a, b = b, a % b
 >     return a
 > ```
-> ^loop
 >
 > ```py
 > assert gcd(48, 18) == 6
@@ -166,4 +165,4 @@ Two trees line up by folder on their own: the same folder in both starts level, 
 
 ## On a phone
 
-With no room for two columns they stack, each under its title, the way they read in Obsidian. In the reader, one column shows at a time, with a switch between them; switching keeps your place.
+With no room for two columns they stack, each under its title, the way they read in Obsidian, and there's nothing to flip.

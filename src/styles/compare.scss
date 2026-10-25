@@ -1,9 +1,8 @@
 // Compare blocks (src/markdown/compare.ts, src/client/compare.ts): columns
 // side by side, each under its label, a hairline between them. Beside the
 // side content a block takes that width too (--compare-width, set by the
-// script); with less room than two columns need, they stack.
-
-$ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+// script); with less room than two columns need, they stack. Its full-screen
+// control flips the page to the block alone across it (data-compare-spread).
 
 figure.compare {
   position: relative;
@@ -51,8 +50,7 @@ html:not([data-margin="beside"]) article > figure.compare {
   }
 
   & > :first-child,
-  & > .compare-label + *,
-  & > .compare-label + .compare-gap + * {
+  & > .compare-label + * {
     margin-top: 0;
   }
   & > :last-child {
@@ -95,8 +93,9 @@ html:not([data-margin="beside"]) article > figure.compare {
   .compare-column:last-child > .compare-label {
     padding-right: 0;
   }
-  .compare-column:first-child > .compare-label {
-    padding-right: 2.25rem;
+  // stacked, it reads as the page does: nothing to flip to
+  figure.compare > .compare-actions {
+    display: none;
   }
 }
 
@@ -119,7 +118,7 @@ html:not([data-margin="beside"]) article > figure.compare {
     0 0 0 4px var(--light),
     0 0 0 5px color-mix(in srgb, var(--gray) 60%, transparent);
 }
-.compare-column [data-compare-line].compare-lit,
+.compare-column [data-line].compare-lit,
 .compare-column li.compare-lit > .tree-row,
 .compare-column li.compare-lit > details > .tree-row {
   box-shadow: inset 2px 0 0 var(--gray);
@@ -172,124 +171,38 @@ html:not([data-margin="beside"]) article > figure.compare {
   }
 }
 
-// ---------- the reader: the block in Basalt's viewer ----------
+// ---------- the page flipped to the block (client/compare.ts) ----------
 
-.compare-tabs {
-  display: none;
+// the navbar, the side content and the rest of the note fold away, and the
+// block spans the page, which scrolls it
+html[data-compare-spread] {
+  #quartz-body {
+    grid-template-columns: minmax(1rem, 1fr) minmax(0, 96rem) minmax(1rem, 1fr);
+    max-width: none;
+  }
+  // !important: the navbar and side content set their own display
+  #quartz-body > :not(.center),
+  .center > :not(article),
+  article > :not(figure.compare[data-spread]) {
+    display: none !important;
+  }
+  #quartz-body > .center {
+    grid-column: 2;
+  }
 }
 
-// the columns scroll themselves, so the viewer's own touch handling stands aside
-.viewer-media[data-kind="live"]:has(> figure.compare) {
-  touch-action: auto;
-}
+figure.compare[data-spread] {
+  width: 100%;
+  max-width: none;
+  margin: 1.5rem 0 40vh;
 
-figure.compare[data-reader] {
-  box-sizing: border-box;
-  border: 1px solid var(--lightgray);
-  border-radius: 8px;
-  background: var(--light);
-  overflow: hidden;
-
-  // the viewer has its own close; a code block's own full screen would leave the comparison
-  & > .compare-actions,
-  .code-file-full {
-    display: none;
-  }
-
-  .compare-columns {
-    flex: 1 1 auto;
-    min-height: 0;
-    gap: 0;
-  }
-
-  .compare-column {
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 0 1.5rem 70vh;
-
-    & + .compare-column {
-      padding-left: 1.5rem;
-    }
-  }
-
-  // a column's label stays at its top as it scrolls
-  .compare-label {
+  // the control stays at hand, top right, as the page scrolls
+  & > .compare-actions {
     position: sticky;
-    top: 0;
+    top: 0.6rem;
     z-index: 3;
-    margin: 0 -0.25rem 0.6rem;
-    padding: 0.9rem 0.25rem 0.5rem;
-    background: var(--light);
-    box-shadow: 0 1px 0 var(--lightgray);
-  }
-  .compare-column > :first-child:not(.compare-label) {
-    margin-top: 1rem;
-  }
-  .compare-column:last-child > .compare-label {
-    padding-right: 0.25rem;
-  }
-}
-
-// no room for columns: one at a time, under a switch between them
-@container (max-width: 32rem) {
-  figure.compare[data-reader] {
-    .compare-tabs {
-      display: flex;
-      gap: 0.25rem;
-      padding: 0.5rem 0.75rem 0;
-      border-bottom: 1px solid var(--lightgray);
-
-      button {
-        padding: 0.4rem 0.6rem 0.5rem;
-        border: none;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
-        background: none;
-        color: var(--gray);
-        font-family: var(--titleFont);
-        font-style: italic;
-        font-size: 1rem;
-        cursor: pointer;
-        transition:
-          color 0.2s ease,
-          border-color 0.3s $ease;
-
-        &[aria-pressed="true"] {
-          color: var(--dark);
-          border-bottom-color: var(--tertiary);
-        }
-        &:focus-visible {
-          outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
-          outline-offset: -2px;
-          border-radius: 4px;
-        }
-      }
-    }
-    // one on top of the other, both laid out, so switching can keep the place
-    .compare-columns {
-      grid-auto-flow: row;
-    }
-    .compare-column {
-      grid-area: 1 / 1;
-      padding: 0 1rem 70vh;
-      border: none;
-
-      &:not([data-active]) {
-        visibility: hidden;
-      }
-      & + .compare-column {
-        padding-left: 1rem;
-        padding-top: 0;
-        border: none;
-      }
-    }
-    // the switch says which column this is
-    .compare-label {
-      display: none;
-    }
-    .compare-column > :first-child:not(.compare-label),
-    .compare-column > .compare-label + * {
-      margin-top: 1rem;
-    }
+    justify-content: flex-end;
+    height: 0;
+    opacity: 1;
   }
 }

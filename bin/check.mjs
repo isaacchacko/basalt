@@ -6,8 +6,9 @@
 //                       whose target isn't in the build
 //   missing embeds      an ![[embed]] Basalt couldn't find
 //   unknown islands     an <island name="x"> with no islands/x.tsx (or .ts, .jsx, .js)
-//   compare anchors     a ^name in a compare block with no partner, or one
-//                       that crosses another: it never lines up (a warning)
+//   compare anchors     a ^name in a compare block with no partner, one that
+//                       crosses another, or one that would need a gap at the
+//                       top of a column: it never lines up (a warning)
 //   orphans             notes nothing links to (a warning)
 //
 // Each problem names the note's file (the one you edit) and, where it can be
@@ -179,11 +180,47 @@ export function check(dist, notes, { islands = null } = {}) {
 /**
  * A compare block's written anchors that don't line up, the way the page
  * pairs them (src/client/compare.ts): a name in every column, kept in the
- * order of the first column unless it crosses one already kept.
+ * order of the first column unless it would open a gap at the top of a
+ * column, or crosses one already kept.
  */
 export function strayAnchors(figure) {
   const order = new Map()
   visit(figure, "element", (node) => void order.set(node, order.size))
+  const parents = new Map()
+  visit(figure, (node, _i, parent) => void parents.set(node, parent))
+  const isLabel = (node) => [node.properties?.className ?? []].flat().includes("compare-label")
+  // the page opens a block's gap above the sentences leading into it ("…on the page:")
+  const gapPoint = (block) => {
+    let lead = block
+    for (;;) {
+      const kids = parents.get(lead).children.filter((k) => k.type === "element")
+      const prev = kids[kids.indexOf(lead) - 1]
+      if (!prev || prev.tagName !== "p" || isLabel(prev) || !toString(prev).trimEnd().endsWith(":")) return lead
+      lead = prev
+    }
+  }
+  // a line marked by its block (a split diff's): its block's first line waits with the block, others on their own
+  const firstLineGap = (line) => {
+    let block = line
+    while (block && block.tagName !== "pre") block = parents.get(block)
+    let first = null
+    if (block) visit(block, "element", (l) => (l.properties?.dataLine !== undefined && !first ? void (first = l) : undefined))
+    if (first !== line) return null
+    let top = block
+    while (!([parents.get(top)?.properties?.className ?? []].flat().includes("compare-column"))) top = parents.get(top)
+    return gapPoint(top)
+  }
+  const atStart = (column, point) => {
+    let before = ""
+    const walk = (node) => {
+      if (node === point) return true
+      if (node.type === "text") before += node.value
+      if (node.type !== "element" || isLabel(node)) return false
+      return node.children.some(walk)
+    }
+    walk(column)
+    return !before.trim()
+  }
   const columns = []
   visit(figure, "element", (node) => {
     if ([node.properties?.className ?? []].flat().includes("compare-column")) columns.push(node)
@@ -191,17 +228,26 @@ export function strayAnchors(figure) {
   const anchorsOf = (column) => {
     // each name where it first lands in the column, as the page finds it
     const found = new Map()
-    const put = (name, at) => (found.get(name) ?? Infinity) > at && found.set(name, at)
+    const put = (name, node, point) =>
+      (found.get(name)?.at ?? Infinity) > order.get(node) &&
+      found.set(name, { at: order.get(node), start: !!point && atStart(column, point) })
     visit(column, "element", (node) => {
       const name = node.properties?.dataCompareAnchor
-      if (typeof name === "string") put(name, order.get(node))
+      if (typeof name === "string") put(name, node, node.properties.dataLine === undefined ? gapPoint(node) : firstLineGap(node))
       if (typeof node.properties?.dataCompareLines !== "string") return
       const lines = []
-      visit(node, "element", (line) => void (line.properties?.dataLine !== undefined && lines.push(line)))
+      const entries = new Map()
+      visit(node, "element", (line, _i, parent) => {
+        if (line.properties?.dataLine === undefined) return
+        lines.push(line)
+        // a tree's line is its entry's name: the entry is what lines up
+        for (let up = parent; up && up !== node; up = parents.get(up)) if (up.tagName === "li") return void entries.set(line, up)
+      })
       for (const [name, at] of JSON.parse(node.properties.dataCompareLines)) {
         const text = at.startsWith("/") ? at.slice(1, -1).replace(/\\(.)/g, "$1") : null
         const line = text === null ? lines[Number(at) - 1] : lines.find((l) => toString(l).includes(text))
-        if (line) put(name, order.get(line))
+        // a fence's first line waits with its block; any other line waits on its own, with code above it
+        if (line) put(name, line, entries.get(line) ?? (line === lines[0] ? gapPoint(node) : null))
       }
     })
     return found
@@ -209,13 +255,18 @@ export function strayAnchors(figure) {
   const found = columns.map(anchorsOf)
   const stray = []
   const kept = []
-  const down = (f) => [...f].sort((a, b) => a[1] - b[1]).map(([name]) => name)
+  const down = (f) => [...f].sort((a, b) => a[1].at - b[1].at).map(([name]) => name)
   for (const name of new Set(found.flatMap(down))) {
-    const row = found.map((f) => f.get(name))
-    if (row.some((at) => at === undefined)) {
+    const landed = found.map((f) => f.get(name))
+    if (landed.some((l) => l === undefined)) {
       stray.push([name, "has no partner in another column"])
       continue
     }
+    if (landed.some((l) => l.start) && !landed.every((l) => l.start)) {
+      stray.push([name, "would need a gap at the top of a column"])
+      continue
+    }
+    const row = landed.map((l) => l.at)
     const crosses = kept.find((k) => !row.every((at, i) => (k.row[0] < row[0]) === (k.row[i] < at)))
     if (crosses) stray.push([name, `crosses ^${crosses.name}`])
     else kept.push({ name, row })
