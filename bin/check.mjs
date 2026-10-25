@@ -32,6 +32,18 @@ export function islandNames(siteDir) {
     .sort()
 }
 
+/**
+ * The note a link points at, as `check`'s notes are keyed: "blog" for /blog,
+ * /blog/, /blog/index and /blog/index.html alike, "index" for /.
+ */
+export function linkedSlug(url) {
+  const p = decodeURIComponent(url.split(/[?#]/)[0])
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/\.html$/, "")
+    .replace(/(^|\/)index$/, "")
+  return p || "index"
+}
+
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 const loose = (s) => s.toLowerCase().replace(/\.md$/, "").replace(/[\s_]+/g, "-")
 
@@ -60,7 +72,12 @@ export function locate(text, target) {
 
 /**
  * The problems in a build (dist), for the site's notes: `notes` maps each
- * note's slug to { file, abs } (file as shown, abs to read its source).
+ * note's slug to { file, abs } (file as shown, abs to read its source), and
+ * `islands` names the site's islands (null: don't check them).
+ *
+ * @param {string} dist
+ * @param {Map<string, { file: string, abs: string }>} notes
+ * @param {{ islands?: string[] | null }} [opts]
  */
 export function check(dist, notes, { islands = null } = {}) {
   const pages = []
@@ -128,7 +145,9 @@ export function check(dist, notes, { islands = null } = {}) {
         if (typeof url !== "string" || !url.startsWith("/") || url.startsWith("//")) continue
         if (attr === "href" && node.tagName !== "a") continue
         if (url.startsWith("/basalt/") || url.startsWith("/_astro/") || url.startsWith("/static/")) continue
-        linkedTo.add(decodeURIComponent(url.split(/[?#]/)[0]).replace(/^\//, "") || "index")
+        linkedTo.add(linkedSlug(url))
+        // and the note it names (a.internal[data-slug], "blog/index" for /blog)
+        if (typeof node.properties?.dataSlug === "string") linkedTo.add(linkedSlug("/" + node.properties.dataSlug))
         if (exists(url)) continue
         const target = url.split(/[?#]/)[0]
         const at = locate(textOf(note), target)
