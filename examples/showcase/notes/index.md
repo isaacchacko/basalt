@@ -14,7 +14,7 @@ Basalt is set the way [Edward Tufte](https://www.edwardtufte.com/) sets his book
 > Edward Tufte, Dallas, 2015. Photo by Keegan Peterzell, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0).
 
 > [!aside] Why "Basalt"
-> Basalt cools into hexagonal columns, like the Giant's Causeway, or this site's mark.
+> Basalt cools into hexagonal columns, like the Giant's Causeway.
 
 ## What's different
 

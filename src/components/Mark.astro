@@ -1,42 +1,14 @@
 ---
-// Basalt's mark: basalt pillars, in line. Each is a hexagonal prism seen a
-// little from above: the flattened hexagon of its top, the four edges of it
-// you can see, and the front of its foot. Line-drawn, with no fill.
+// Basalt's mark (src/lib/mark.ts), in the page's own paper and accent
+import { B, depth } from "../lib/mark"
 interface Props {
   size?: number
 }
 const { size = 36 } = Astro.props
-
-function pillar(cx: number, top: number, foot: number, w = 9) {
-  const h = w * 0.2
-  const [l, fl, fr, r] = [cx - w / 2, cx - w / 4, cx + w / 4, cx + w / 2]
-  const p = (x: number, y: number) => `${x.toFixed(2)} ${y.toFixed(2)}`
-  return {
-    top: `M${p(l, top)}L${p(fl, top - h)}L${p(fr, top - h)}L${p(r, top)}L${p(fr, top + h)}L${p(fl, top + h)}Z`,
-    body:
-      `M${p(l, top)}V${foot}M${p(fl, top + h)}V${foot + h}M${p(fr, top + h)}V${foot + h}M${p(r, top)}V${foot}` +
-      `M${p(l, foot)}L${p(fl, foot + h)}L${p(fr, foot + h)}L${p(r, foot)}`,
-  }
-}
-const pillars = [pillar(6, 12, 27), pillar(16, 5, 27), pillar(26, 15, 27)]
 ---
 
-<svg
-  class="nav-mark-pillars"
-  viewBox="0 0 32 32"
-  width={size}
-  height={size}
-  fill="none"
-  stroke-linejoin="round"
-  stroke-linecap="round"
-  aria-hidden="true"
->
-  {
-    pillars.map((p) => (
-      <g>
-        <path class="nav-mark-body" d={p.body} />
-        <path class="nav-mark-top" d={p.top} />
-      </g>
-    ))
-  }
+<svg class="nav-mark-b" viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
+  <defs><path id="basalt-mark-b" d={B} /></defs>
+  {depth.map((t) => <use href="#basalt-mark-b" transform={t} />)}
+  <use href="#basalt-mark-b" />
 </svg>

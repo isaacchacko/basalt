@@ -176,7 +176,7 @@ $semiBoldWeight: 600;
   }
 }
 
-// Basalt's mark: three pillars in line, the middle one tallest
+// Basalt's mark: a solid B, line-drawn in the accent (Mark.astro)
 .nav-mark {
   display: grid;
   place-items: center;
@@ -184,7 +184,6 @@ $semiBoldWeight: 600;
   height: 40px;
   margin-left: -4px;
   border-radius: 6px;
-  color: var(--dark);
   text-decoration: none;
   transition: background 0.3s ease;
 
@@ -192,29 +191,12 @@ $semiBoldWeight: 600;
     background: var(--highlight);
   }
 
-  .nav-mark-body {
-    stroke: var(--dark);
-    stroke-width: 1.3;
-  }
-
-  .nav-mark-top {
+  use {
+    fill: var(--light);
     stroke: var(--tertiary);
-    stroke-width: 1.4;
-  }
-
-  g {
-    transition: transform 0.45s $ease;
-  }
-  &:hover g:nth-child(1) {
-    transform: translateY(-1.5px);
-  }
-  &:hover g:nth-child(2) {
-    transform: translateY(1.5px);
-    transition-delay: 0.05s;
-  }
-  &:hover g:nth-child(3) {
-    transform: translateY(-1px);
-    transition-delay: 0.1s;
+    stroke-width: 1.275;
+    stroke-linejoin: round;
+    paint-order: stroke;
   }
 }
 

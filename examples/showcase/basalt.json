@@ -14,8 +14,8 @@
     },
     "footer": {
       "links": {
+        "GitHub": "https://github.com/isaacchacko/basalt",
         "Quartz": "https://quartz.jzhao.xyz",
-        "Tufte CSS": "https://edwardtufte.github.io/tufte-css/",
         "isaacchacko.com": "https://isaacchacko.com"
       }
     },

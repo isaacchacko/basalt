@@ -2,6 +2,7 @@
 // The page's <head>: its title and description, the tags a link preview
 // reads (Open Graph, Twitter), the canonical url at the site's baseUrl, the
 // fonts, and the theme, set before the first paint.
+import { markSvg } from "../lib/mark"
 import { ClientRouter } from "astro:transitions"
 import { registry } from "../lib/registry"
 import { layout, paletteCss } from "../lib/config"
@@ -32,13 +33,7 @@ const fontSheets = [
 ]
 
 // the mark, as the tab's icon
-const icon =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.6">` +
-      `<g stroke="#1b3fd0"><path d="M1.5 12V27M3.75 13.8V28.8M8.25 13.8V28.8M10.5 12V27M1.5 27L3.75 28.8L8.25 28.8L10.5 27"/><path d="M11.5 5V27M13.75 6.8V28.8M18.25 6.8V28.8M20.5 5V27M11.5 27L13.75 28.8L18.25 28.8L20.5 27"/><path d="M21.5 15V27M23.75 16.8V28.8M28.25 16.8V28.8M30.5 15V27M21.5 27L23.75 28.8L28.25 28.8L30.5 27"/></g>` +
-      `<g stroke="#1b3fd0"><path d="M1.5 12L3.75 10.2L8.25 10.2L10.5 12L8.25 13.8L3.75 13.8Z"/><path d="M11.5 5L13.75 3.2L18.25 3.2L20.5 5L18.25 6.8L13.75 6.8Z"/><path d="M21.5 15L23.75 13.2L28.25 13.2L30.5 15L28.25 16.8L23.75 16.8Z"/></g></svg>`,
-  )
+const icon = "data:image/svg+xml," + encodeURIComponent(markSvg())
 ---
 
 <meta charset="utf-8" />
