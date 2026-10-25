@@ -2,8 +2,7 @@ import type { Code, Html, Root } from "mdast"
 import { visit } from "unist-util-visit"
 
 // A ```tree block, drawn as a directory at build time. Folders are <details>,
-// so they fold without a script. Each entry's data-path is what a compare
-// block lines two trees up by.
+// so they fold without a script.
 
 type Mark = "added" | "removed" | "changed" | "highlighted"
 
@@ -172,12 +171,11 @@ function row(e: Entry, depth: number): string {
   const icon = e.dir
     ? svg(ICONS.folderOpen, "tree-icon tree-icon-open") + svg(ICONS.folder, "tree-icon tree-icon-shut")
     : svg(ICONS[kindOf(e.name)], "tree-icon")
-  // only the name carries data-line, so a compare block's ^anchor=/text/ can't match the note
   // a narrow column breaks a long name after a dot before it breaks mid-word
   const shown = escapeHtml(e.name).replace(/(?<=[^.])\.(?=.)/g, ".<wbr>")
   const name = e.href
-    ? `<a class="tree-name" href="${escapeHtml(e.href)}" data-line>${shown}</a>`
-    : `<span class="tree-name" data-line>${shown}</span>`
+    ? `<a class="tree-name" href="${escapeHtml(e.href)}">${shown}</a>`
+    : `<span class="tree-name">${shown}</span>`
   const elided = e.folded && !e.children.length ? '<span class="tree-elided">/…</span>' : ""
   // the tint can't be seen by a screen reader
   const said = e.mark ? `<span class="tree-said">, ${e.mark}</span>` : ""
@@ -185,33 +183,28 @@ function row(e: Entry, depth: number): string {
   return `<${tag} class="tree-row" style="--d:${depth}">${chevron}${icon}<span class="tree-label"><span>${name}${elided}</span>${said}${note}</span></${tag}>`
 }
 
-/** `base` is the parent's path; null for a lone top folder, whose path is empty */
-function list(entries: Entry[], depth: number, base: string | null): string {
+function list(entries: Entry[], depth: number): string {
   const items = entries.map((e) => {
-    const path = base === null ? "" : base + e.name + (e.dir ? "/" : "")
     const attrs = [
       `class="tree-entry ${e.dir ? "tree-dir" : "tree-file"}"`,
-      `data-path="${escapeHtml(path)}"`,
       e.mark ? `data-mark="${e.mark}"` : "",
       e.dir && !e.children.length ? "data-empty" : "",
     ]
       .filter(Boolean)
       .join(" ")
     if (!e.dir) return `<li ${attrs}>${row(e, depth)}</li>`
-    const children = e.children.length ? list(e.children, depth + 1, path) : ""
+    const children = e.children.length ? list(e.children, depth + 1) : ""
     return `<li ${attrs}><details${e.folded ? "" : " open"}>${row(e, depth)}${children}</details></li>`
   })
   return `<ul class="tree-list" style="--d:${depth}">${items.join("")}</ul>`
 }
 
-/** Paths start inside a lone top folder, so quartz/content/ and my-site/content/ are both content/. */
 export function treeHtml(source: string, meta?: string | null): string {
   const top = parseTree(source)
   if (!top.length) return ""
   const title = /title=(?:"([^"]*)"|'([^']*)'|(\S+))/.exec(meta ?? "")?.slice(1).find(Boolean)
   const caption = title ? `<figcaption class="tree-title">${escapeHtml(title)}</figcaption>` : ""
-  const lone = top.length === 1 && top[0].dir
-  return `<figure class="tree">${caption}${list(top, 0, lone ? null : "")}</figure>`
+  return `<figure class="tree">${caption}${list(top, 0)}</figure>`
 }
 
 export function remarkTree() {

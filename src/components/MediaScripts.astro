@@ -11,7 +11,7 @@ import "../styles/code.scss"
 import "../styles/diff.scss"
 import "../styles/sound.scss"
 import "../styles/tree.scss"
-import "../styles/compare.scss"
+import "../styles/tabs.scss"
 ---
 
 <script>
@@ -19,16 +19,16 @@ import "../styles/compare.scss"
   import { startViewer } from "../client/viewer"
   import { startCodeControls } from "../client/codefile"
   import { startCodeReach } from "../client/codereach"
+  import { startTabs } from "../client/tabs"
   import "../client/copy"
   import "../client/sound"
   import { startPdfs } from "../client/pdf"
   import { startIslands as islandsAtLoad } from "../client/islands"
   import { startGraphs } from "../client/graphembed"
   import { startMermaid } from "../client/mermaid"
-  import { startCompare } from "../client/compare"
 
   let startIslands = islandsAtLoad
-  const parts = [startEmbeds, startCodeControls, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startCompare, startViewer]
+  const parts = [startEmbeds, startCodeControls, startTabs, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startViewer]
   let page: AbortController | null = null
 
   function start() {

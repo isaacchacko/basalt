@@ -78,24 +78,3 @@ rename to notes/published.md
 diff --git a/assets/card.png b/assets/card.png
 Binary files a/assets/card.png and b/assets/card.png differ
 ```
-
-## Side by side
-
-`split` after `diff` puts the old file and the new one side by side, a removed line beside the line that replaced it, with a blank where a side has nothing. It's a compare block: on a phone the sides stack, and its button flips the page to the two sides alone.
-
-```diff split
-diff --git a/src/lib/greet.ts b/src/lib/greet.ts
---- a/src/lib/greet.ts
-+++ b/src/lib/greet.ts
-@@ -1,7 +1,8 @@ import { names } from "./names"
- import { names } from "./names"
- 
--export function greet(name: string) {
--  return "Hello, " + name + "!"
-+export function greet(name: string, polite = false) {
-+  const hello = polite ? "Good evening" : "Hello"
-+  return `${hello}, ${name}!`
- }
- 
- export const everyone = () => names.map((n) => greet(n))
-```

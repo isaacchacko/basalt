@@ -42,6 +42,25 @@ export const euclid = (k: number) => primes(100).slice(0, k).reduce((a, p) => a 
 basalt dev my-garden
 ```
 
+## Tabs
+
+Callouts in a row, `> [!tab] Python` then `> [!tab] TypeScript`, with only a blank line between them, take turns: one shows, and ‹ › above it step to the next. A tab holds anything a note can: code, a code file, prose, a table. In Obsidian and on GitHub they read one after another.
+
+> [!tab] Python
+> ![[sieve.py#L7-L11|the sieve itself]]
+
+> [!tab] TypeScript
+> ```ts title="primes.ts"
+> for (let p = 2; p <= n; p++) {
+>   if (crossed[p]) continue
+>   found.push(p)
+>   for (let m = p * p; m <= n; m += p) crossed[m] = 1
+> }
+> ```
+
+> [!tab] In words
+> Write out the numbers from 2 to n. The first one not crossed out is a prime: keep it, and cross out every multiple of it, starting from its square. Do that again until there are none left.
+
 ## A table
 
 A csv file, `![[euclid.csv]]`, becomes a table. These are the Euclid numbers from the proof on [[margin]], and the first six are prime:

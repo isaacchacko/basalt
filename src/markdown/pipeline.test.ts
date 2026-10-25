@@ -78,4 +78,13 @@ describe("ofm's text pass", () => {
   test("wikilinks in a table have their pipes escaped", () => {
     assert.strictEqual(ofmText("| a |\n| --- |\n| [[x|y]] |\n"), "| a |\n| --- |\n| [[x\\|y]] |\n")
   })
+
+  test("tab callouts in a row are one block of tabs; one alone stays a callout", async () => {
+    const { code } = await render("tabs.md")
+    const blocks = code.match(/<div class="tabs">[\s\S]*?<\/div>\n<p>Between/g) ?? []
+    assert.strictEqual(blocks.length, 1)
+    assert.deepStrictEqual([...blocks[0].matchAll(/<section class="tab"( data-label="(\w+)")?/g)].map((m) => m[2]), ["Basalt", "Quartz", undefined])
+    assert.match(blocks[0], /<p class="tab-label">Basalt<\/p>/)
+    assert.match(code, /<blockquote class="callout tab" data-callout="tab">[\s\S]*Alone/)
+  })
 })

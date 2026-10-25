@@ -53,7 +53,7 @@ $phone-navbar: 3.75rem;
   @media all and ($narrow) {
     top: $phone-navbar;
 
-    // in the viewer (compare's reader) there's no navbar above it
+    // in the viewer there's no navbar above it
     .basalt-viewer & {
       top: 0;
     }
@@ -90,7 +90,7 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
 
 // over the code, so it gives its height back: the code starts where it would.
 // The code's top margin is the block's, so the block starts at the code's
-// border, as a titled one starts at its bar (compare columns line them up)
+// border, as a titled one starts at its bar
 figure:has(> .code-corner) {
   margin-top: 1rem;
 }
@@ -187,14 +187,13 @@ figure:has(> .code-corner) {
 
 // quiet until pointed at or focused from the keyboard; a touch screen can't
 // point, so there they stay, the corner in a row of its own at the code's top.
-// A compare block's own controls are quiet the same way with [data-quiet-controls]
 @media (hover: hover) {
-  :is([data-viewer-code], [data-quiet-controls]) .code-actions > * {
+  [data-viewer-code] .code-actions > * {
     opacity: 0;
     transition: opacity 0.2s ease;
   }
 
-  :is([data-viewer-code], [data-quiet-controls]):is(:hover, :has(:focus-visible)) .code-actions > * {
+  [data-viewer-code]:is(:hover, :has(:focus-visible)) .code-actions > * {
     opacity: 1;
   }
 
