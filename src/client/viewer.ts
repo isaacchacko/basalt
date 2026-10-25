@@ -304,14 +304,17 @@ export async function openViewer(
       el = document.createElement("div")
       el.append(svg)
     } else if (item.kind === "code") {
-      // a copy of the code, highlighting and line numbers and all, at a
-      // reading size, scrolling inside the stage when it's long
-      const source = item.origin.matches("pre") ? item.origin : item.origin.querySelector("pre")!
-      const pre = source.cloneNode(true) as HTMLElement
-      pre.querySelectorAll(".clipboard-button, .viewer-expand").forEach((n) => n.remove())
-      pre.removeAttribute("tabindex")
+      // a copy of the block as the page draws it (a diff's rows too), at a
+      // reading size, scrolling inside the stage when it's long; the viewer
+      // has its own caption and controls
+      const block = item.origin.cloneNode(true) as HTMLElement
+      block.querySelectorAll(":scope > figcaption, .code-corner, .clipboard-button, .viewer-expand").forEach((n) => n.remove())
+      block.classList.remove("is-reaching", "has-more")
+      block.style.removeProperty("--code-reach")
+      block.style.margin = "0"
+      block.querySelector("pre")?.removeAttribute("tabindex")
       el = document.createElement("div")
-      el.append(pre)
+      el.append(block)
       w = Math.min(room.width, 1040)
       h = 0
       maxScale = 1

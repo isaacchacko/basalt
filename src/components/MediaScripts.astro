@@ -15,7 +15,7 @@ import "../styles/tree.scss"
 <script>
   import { startEmbeds } from "../client/embeds"
   import { startViewer } from "../client/viewer"
-  import { startCodeFiles } from "../client/codefile"
+  import { startCodeControls } from "../client/codefile"
   import { startCodeReach } from "../client/codereach"
   import "../client/copy"
   import "../client/sound"
@@ -25,7 +25,7 @@ import "../styles/tree.scss"
   import { startMermaid } from "../client/mermaid"
 
   let startIslands = islandsAtLoad
-  const parts = [startEmbeds, startCodeFiles, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startViewer]
+  const parts = [startEmbeds, startCodeControls, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startViewer]
   let page: AbortController | null = null
 
   function start() {
