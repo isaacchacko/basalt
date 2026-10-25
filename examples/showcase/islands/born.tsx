@@ -73,7 +73,7 @@ export default function Born({ label = "Basalt is young." }: { label?: string })
   const [at, setAt] = useState<{ left: number; top: number; width: number } | null>(null)
   const [under, setUnder] = useState(false)
   const [today, setToday] = useState(() => new Date())
-  const leave = useRef<number>()
+  const leave = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     if (document.getElementById("born-style")) return
