@@ -181,9 +181,9 @@ document.addEventListener("astro:page-load", () => {
 // the navigation for as long as the pointer is over it, and folds only once
 // the pointer has left it
 let releaseHold: ((e: PointerEvent) => void) | null = null
-document.addEventListener("astro:before-swap", () => {
+const hold = () => {
   const nav = navbar()
-  if (!nav || !(nav.matches(":hover") || nav.classList.contains("is-held"))) return
+  if (!nav) return
   nav.classList.add("is-held")
   if (releaseHold) document.removeEventListener("pointermove", releaseHold)
   releaseHold = (e: PointerEvent) => {
@@ -195,6 +195,21 @@ document.addEventListener("astro:before-swap", () => {
     releaseHold = null
   }
   document.addEventListener("pointermove", releaseHold)
+}
+// held from the press on one of its entries: by the time the page is swapped
+// (astro:before-swap) the view transition's overlay is already over the page,
+// and whether the navbar still counts as hovered then is a race
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    const nav = navbar()
+    if (e.pointerType === "mouse" && nav?.contains(e.target as Node)) hold()
+  },
+  { capture: true },
+)
+// and any navigation (a key, a link elsewhere) that starts while it's open
+document.addEventListener("astro:before-preparation", () => {
+  if (navbar()?.matches(":hover")) hold()
 })
 // before the swapped-in page paints, so the explorer never shows the last page's state
 document.addEventListener("astro:after-swap", () => {
