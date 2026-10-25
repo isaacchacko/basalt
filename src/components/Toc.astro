@@ -8,15 +8,14 @@ interface Props {
 }
 const { headings, label } = Astro.props
 const t = await words()
-const shown = headings.filter((h) => h.depth > 1 && h.depth <= 4)
-const top = Math.min(...shown.map((h) => h.depth))
+const top = Math.min(...headings.map((h) => h.depth))
 ---
 
 <nav class="toc margin-part" aria-label="contents">
   <p class="margin-label">{label ?? t("contents")}</p>
   <ol>
     {
-      shown.map((h) => (
+      headings.map((h) => (
         <li style={`--depth: ${h.depth - top}`}>
           <a href={`#${h.slug}`} data-for={h.slug}>{h.text}</a>
         </li>
