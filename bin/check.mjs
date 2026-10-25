@@ -1,12 +1,16 @@
 // basalt check: build the site and read every page for what's broken.
 //
-//   broken links     an internal link, image, video, audio, pdf or frame
-//                    whose target isn't in the build
-//   missing embeds   an ![[embed]] or island Basalt couldn't find
-//   orphans          notes nothing links to (a warning)
+//   notes that failed   a note Basalt couldn't render (its frontmatter doesn't
+//                       parse, say): it isn't in the build, or is a stale copy
+//   broken links        an internal link, image, video, audio, pdf or frame
+//                       whose target isn't in the build
+//   missing embeds      an ![[embed]] Basalt couldn't find
+//   unknown islands     an <island name="x"> with no islands/x.tsx (or .ts, .jsx, .js)
+//   orphans             notes nothing links to (a warning)
 //
-// Each problem names the note it's in (the file you edit). --json prints
-// them as JSON for an agent. Exits 1 when anything is broken.
+// Each problem names the note's file (the one you edit) and, where it can be
+// told, the line: `notes/field-log.md:10  broken link: [[nudibranch]]: no such note`.
+// --json prints them as JSON for an agent. Exits 1 when anything is broken.
 
 import fs from "node:fs"
 import path from "node:path"
@@ -14,7 +18,51 @@ import { fromHtml } from "hast-util-from-html"
 import { visit } from "unist-util-visit"
 import { toString } from "hast-util-to-string"
 
-export function check(dist, notes) {
+const ISLAND = /^([a-z0-9][\w-]*)\.(tsx|ts|jsx|js)$/i
+
+/** the islands a site has: islands/<name>.{tsx,ts,jsx,js} */
+export function islandNames(siteDir) {
+  const dir = path.join(siteDir, "islands")
+  if (!fs.existsSync(dir)) return []
+  return fs
+    .readdirSync(dir)
+    .filter((f) => !f.includes(".test."))
+    .map((f) => ISLAND.exec(f)?.[1])
+    .filter(Boolean)
+    .sort()
+}
+
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+const loose = (s) => s.toLowerCase().replace(/\.md$/, "").replace(/[\s_]+/g, "-")
+
+/** Where in a note's source a broken target is written: { line, source } (the [[link]] or path as written). */
+export function locate(text, target) {
+  const lines = text.split("\n")
+  const want = loose(decodeURIComponent(target).replace(/^\//, ""))
+  const last = want.split("/").pop()
+  // [[x]], [[x|alias]], [[x#heading]], ![[x]]
+  for (let i = 0; i < lines.length; i++) {
+    for (const m of lines[i].matchAll(/!?\[\[([^\]|#^]+)[^\]]*\]\]/g)) {
+      const t = loose(m[1].trim())
+      if (t === want || t === last || want.endsWith("/" + t) || t.endsWith("/" + last)) return { line: i + 1, source: m[0] }
+    }
+  }
+  // [text](x), ![alt](x), src="x"
+  for (let i = 0; i < lines.length; i++) {
+    for (const m of lines[i].matchAll(/!?\[[^\]]*\]\(([^)\s]+)[^)]*\)|(?:src|href|data)=["']([^"']+)["']/g)) {
+      const t = loose((m[1] ?? m[2]).split(/[?#]/)[0])
+      if (t.endsWith(last)) return { line: i + 1, source: m[0] }
+    }
+  }
+  const at = lines.findIndex((l) => loose(l).includes(last))
+  return { line: at < 0 ? null : at + 1, source: null }
+}
+
+/**
+ * The problems in a build (dist), for the site's notes: `notes` maps each
+ * note's slug to { file, abs } (file as shown, abs to read its source).
+ */
+export function check(dist, notes, { islands = null } = {}) {
   const pages = []
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -23,12 +71,17 @@ export function check(dist, notes) {
       else if (entry.name.endsWith(".html")) pages.push(abs)
     }
   }
-  walk(dist)
+  if (fs.existsSync(dist)) walk(dist)
   const exists = (url) => {
     const p = decodeURIComponent(url.split(/[?#]/)[0])
     if (p === "/" || p === "") return fs.existsSync(path.join(dist, "index.html"))
     const base = path.join(dist, p)
     return [base, `${base}.html`, path.join(base, "index.html")].some((f) => fs.existsSync(f))
+  }
+  const source = new Map()
+  const textOf = (note) => {
+    if (!source.has(note.abs)) source.set(note.abs, fs.existsSync(note.abs) ? fs.readFileSync(note.abs, "utf8") : "")
+    return source.get(note.abs)
   }
   const problems = []
   const linkedTo = new Set()
@@ -43,10 +96,32 @@ export function check(dist, notes) {
       if (!article && node.tagName === "article") article = node
     })
     if (!article) continue
+    const seenIslands = new Set()
     visit(article, "element", (node) => {
       const cls = [node.properties?.className ?? []].flat()
       if (cls.includes("embed-missing") || cls.includes("transclude-missing")) {
-        problems.push({ kind: "missing embed", note, detail: toString(node).trim().slice(0, 160) })
+        const detail = toString(node).trim().slice(0, 160)
+        const what = /no (?:note|file) called (\S+)/.exec(detail)?.[1]
+        const at = what ? locate(textOf(note), what) : { line: null }
+        problems.push({ kind: "missing embed", note: note.file, line: at.line, detail })
+      }
+      const island = node.properties?.dataIsland
+      if (islands && typeof island === "string" && !islands.includes(island) && !seenIslands.has(island)) {
+        seenIslands.add(island)
+        const line = (() => {
+          const re = new RegExp(`<island\\b[^>]*\\bname=["']${escape(island)}["']`)
+          const at = textOf(note).split("\n").findIndex((l) => re.test(l))
+          return at < 0 ? null : at + 1
+        })()
+        // an island in a note this one embeds is that note's to report
+        if (line !== null) {
+          problems.push({
+            kind: "unknown island",
+            note: note.file,
+            line,
+            detail: `"${island}" (${islands.length ? `have: ${islands.join(", ")}` : "the site's islands/ folder is empty"})`,
+          })
+        }
       }
       for (const attr of ["href", "src", "data"]) {
         const url = node.properties?.[attr]
@@ -54,12 +129,22 @@ export function check(dist, notes) {
         if (attr === "href" && node.tagName !== "a") continue
         if (url.startsWith("/basalt/") || url.startsWith("/_astro/") || url.startsWith("/static/")) continue
         linkedTo.add(decodeURIComponent(url.split(/[?#]/)[0]).replace(/^\//, "") || "index")
-        if (!exists(url)) problems.push({ kind: "broken link", note, detail: `${node.tagName} ${attr}=${url}` })
+        if (exists(url)) continue
+        const target = url.split(/[?#]/)[0]
+        const at = locate(textOf(note), target)
+        const isNote = node.tagName === "a" && !/\.\w+$/.test(target)
+        const said = at.source ?? `${node.tagName} ${attr}=${url}`
+        problems.push({
+          kind: "broken link",
+          note: note.file,
+          line: at.line,
+          detail: `${said}: ${isNote ? "no such note" : "no such file"} (${decodeURIComponent(target)})`,
+        })
       }
     })
   }
   for (const [slug, note] of notes) {
-    if (slug !== "index" && !linkedTo.has(slug)) problems.push({ kind: "orphan", note, detail: "nothing links here", warning: true })
+    if (slug !== "index" && !linkedTo.has(slug)) problems.push({ kind: "orphan", note: note.file, line: null, detail: "nothing links here", warning: true })
   }
   return problems
 }
@@ -67,6 +152,9 @@ export function check(dist, notes) {
 export function report(problems, json) {
   if (json) return console.log(JSON.stringify(problems, null, 2))
   const errors = problems.filter((p) => !p.warning)
-  for (const p of problems) console.log(`${p.warning ? "warn " : "error"}  ${p.note}  ${p.kind}: ${p.detail}`)
+  for (const p of problems) {
+    const where = `${p.note}${p.line ? `:${p.line}${p.col ? `:${p.col}` : ""}` : ""}`
+    console.log(`${p.warning ? "warn " : "error"}  ${where}  ${p.kind}: ${p.detail}`)
+  }
   console.log(`${errors.length} broken, ${problems.length - errors.length} warnings`)
 }
