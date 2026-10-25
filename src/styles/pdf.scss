@@ -21,10 +21,16 @@ figure.embed-pdf {
     }
   }
 
-  // full screen: the viewer is the screen
+  // full screen: the viewer is the screen, with no ring round its edge (the
+  // bar's buttons keep theirs)
   &:fullscreen {
     margin: 0;
     background: var(--light);
+    outline: none;
+
+    .pdf-stage {
+      box-shadow: none !important;
+    }
 
     & > .pdf-viewer {
       height: 100%;

@@ -171,20 +171,40 @@ html:not([data-margin="beside"]) .margin-layer {
   display: none;
 }
 
-// a number and its note light up together, lightly
+// a number and its note light up together, quietly: the number is
+// underlined, the note gets a thin ember rule in the gutter on its left
 article sup a.is-paired {
-  background: var(--highlight);
-  box-shadow: 0 0 0 0.15em var(--highlight);
+  box-shadow: inset 0 -1.5px 0 var(--tertiary);
 }
 
-.margin-layer .in-margin.is-paired,
-.margin-layer .in-margin.is-called {
+// the number's ring is for the keyboard; a tap or a click doesn't draw it
+article a[data-footnote-ref]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.margin-layer .in-margin::before {
+  content: "";
+  position: absolute;
+  top: 0.1rem;
+  bottom: 0.1rem;
+  left: -0.75rem;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--tertiary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.margin-layer .in-margin.is-paired {
   color: var(--dark);
-  background: var(--highlight);
-  box-shadow: 0 0 0 0.3rem var(--highlight);
+
+  &::before {
+    opacity: 1;
+  }
 }
 
-.margin-layer .in-margin.is-called {
+// a number clicked: its note's rule shows, then fades
+.margin-layer .in-margin.is-called::before {
   animation: margin-called 1.2s ease forwards;
 }
 
@@ -305,12 +325,10 @@ html[data-margin="inline"] .margin-resting {
 @keyframes margin-called {
   0%,
   60% {
-    background: var(--highlight);
-    box-shadow: 0 0 0 0.3rem var(--highlight);
+    opacity: 1;
   }
   100% {
-    background: transparent;
-    box-shadow: 0 0 0 0.3rem transparent;
+    opacity: 0;
   }
 }
 
