@@ -31,6 +31,8 @@ Add `|gif` and it plays like one: muted, looping, no controls.
 
 ![[a440.m4a|A440, the note an orchestra tunes to]]
 
+A word can play a clip itself: `<sound src="/assets/a440.m4a" title="A440" artist="a tuning fork">the A an orchestra tunes to</sound>` gives <sound src="/assets/a440.m4a" title="A440" artist="a tuning fork, more or less" label="four seconds">the A an orchestra tunes to</sound>. Click it, and while it plays its card stays in the side content. With `spotify="…"` the song, artist, album and cover come from its Spotify page.
+
 ## Documents
 
 `![[margin.pdf#page=2|560]]` opens a PDF in Basalt's own reader, at page two and 560 pixels tall. This one is the margin page of this tour, printed. Its bar turns pages, zooms, fits the width, goes full screen, opens the browser's own viewer at the page you're on, and downloads it. Its text can be selected and searched. With the reader focused, the arrow keys turn pages, + and − zoom, and F goes full screen.

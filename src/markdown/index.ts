@@ -21,6 +21,7 @@
 
 import { rehypeThemedMedia } from "./themed.ts"
 import { rehypeCopy } from "./copy.ts"
+import { rehypeSound } from "./sound.ts"
 import fs from "node:fs"
 import type { PluggableList } from "unified"
 import { unified } from "unified"
@@ -108,6 +109,8 @@ const basaltRehype: PluggableList = [
   rehypeRaw,
   // <copy>text</copy>, before links are made of what's in it
   rehypeCopy,
+  // <sound src spotify>word</sound>, its song looked up
+  rehypeSound,
   rehypeOfm,
   rehypeSlug,
   [

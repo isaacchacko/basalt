@@ -13,6 +13,7 @@
 
 import { enhanceCopy, isDark, isImageLink, themedPair } from "./embeds"
 import { isBeside, levelWith, lineOf, onPage } from "./margin"
+import { clipsOf } from "./sound"
 
 const SHOW_MS = 90
 const HIDE_MS = 420
@@ -218,6 +219,50 @@ function marked(content: HTMLElement): Item {
   }
 }
 
+/** a <sound>'s clips, a ▶ row each (sound.ts plays them) */
+function clipRows(word: HTMLElement): HTMLElement {
+  const rows = el("div", "sound-rows")
+  for (const clip of clipsOf(word)) {
+    const row = el("span", "sound-play")
+    row.dataset.soundPlay = clip.src
+    row.setAttribute("role", "button")
+    row.tabIndex = 0
+    row.append(el("span", "sound-play-mark", "▶"), clip.label ?? clip.track?.title ?? "play")
+    rows.append(row)
+  }
+  return rows
+}
+
+/**
+ * A <sound>'s card: what the page marks for it (a photo), or else its song's
+ * cover and name; and a ▶ row for each of its clips.
+ */
+function soundCard(word: HTMLElement): Item {
+  const own = word.querySelector<HTMLElement>(":scope > [data-secondary]")
+  return {
+    key: `sound:${word.dataset.sound}`,
+    build: async () => {
+      let box: HTMLElement | null
+      if (own) box = await marked(own).build()
+      else {
+        box = el("div", "margin-marked margin-sound")
+        const t = clipsOf(word).find((c) => c.track)?.track
+        if (t) {
+          box.append(el("span", "margin-tip-title margin-marked-title", [t.title, t.artist].filter(Boolean).join(" · ")))
+          if (t.cover) {
+            const img = el("img", "margin-sound-cover")
+            img.src = t.cover
+            img.alt = ""
+            box.append(img)
+          }
+        }
+      }
+      box?.append(clipRows(word))
+      return box
+    },
+  }
+}
+
 /** What, if anything, the margin has to say about what's under the pointer. */
 function itemFor(target: Element, article: Element): [Item, Element] | null {
   if (!article.contains(target)) return null
@@ -225,6 +270,8 @@ function itemFor(target: Element, article: Element): [Item, Element] | null {
   let inLink = false
   for (let node: Element | null = target; node && node !== article; node = node.parentElement) {
     if (node.matches(".sidenote, .marginnote, sup:has(> a[data-footnote-ref])")) return null
+    // a <sound>: its card, unless it's playing (its now-playing card is up)
+    if (node.matches(".sound")) return node.hasAttribute("data-playing") ? null : [soundCard(node as HTMLElement), node]
     const content = node.querySelector<HTMLElement>(":scope > [data-secondary]")
     if (content) return [marked(content), node]
     if (node instanceof HTMLAnchorElement) {
@@ -298,6 +345,9 @@ onPage((signal) => {
     uncover()
     delete document.documentElement.dataset.marginHover
   }
+
+  // a <sound> starts: its now-playing card takes the place of any card here (sound.ts)
+  document.addEventListener("basalt:sound", hide, { signal })
 
   const hideSoon = () => {
     clearTimeout(showTimer)

@@ -1,0 +1,225 @@
+// <sound>: a word that plays a clip, its rows in its card, and the card for
+// what's playing (src/client/sound.ts, src/markdown/sound.ts)
+
+$ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+
+// the word: itself, with a ♪ after it, in the accent while it plays
+.sound {
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: underline dotted color-mix(in srgb, currentColor 55%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.2em;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+
+  &::after {
+    content: "♪";
+    margin-left: 0.08em;
+    font-size: 0.72em;
+    vertical-align: 0.35em;
+    color: var(--gray);
+    transition: color 0.2s ease;
+  }
+  &:hover {
+    background: var(--highlight);
+  }
+  &[data-playing] {
+    color: var(--tertiary);
+
+    &::after {
+      color: var(--tertiary);
+      animation: sound-beat 0.9s ease-in-out infinite;
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+    outline-offset: 2px;
+  }
+}
+@keyframes sound-beat {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+// a ▶ row for each clip, in its card
+.sound-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.45rem;
+}
+.sound-play {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45em;
+  width: fit-content;
+  padding: 0.1rem 0.35rem 0.1rem 0.2rem;
+  border-radius: 4px;
+  color: var(--darkgray);
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover,
+  &.is-playing {
+    background: var(--highlight);
+    color: var(--dark);
+  }
+  &.is-playing .sound-play-mark {
+    color: var(--tertiary);
+  }
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+  }
+}
+.sound-play-mark {
+  font-size: 0.7em;
+  color: var(--gray);
+}
+.margin-sound-cover {
+  display: block;
+  width: 100%;
+  max-width: 10rem;
+  margin-top: 0.4rem;
+  border-radius: 4px;
+}
+
+// what's playing: beside its word, then held at the top of the side content
+.now-playing-rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 7;
+  pointer-events: none;
+}
+.now-playing {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 0.7rem;
+  // its words line up with the notes', its rule in the gutter, like a card's
+  margin-left: calc(-0.8rem - 2px);
+  margin-right: var(--side-inset, 0.8rem);
+  padding: 0.6rem 0.75rem 0.75rem 0.8rem;
+  border-left: 2px solid var(--tertiary);
+  border-radius: 0 6px 6px 0;
+  background: var(--light);
+  box-shadow: 0 8px 26px -14px rgb(0 0 0 / 0.3);
+  pointer-events: auto;
+  animation: now-playing-in 0.3s $ease;
+
+  &.is-leaving {
+    opacity: 0;
+    translate: 0 4px;
+    transition:
+      opacity 0.2s ease,
+      translate 0.2s ease;
+  }
+
+  // no side content: a bar at the foot of the screen
+  &.is-bar {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    top: auto;
+    z-index: 60;
+    margin: 0;
+    border: 1px solid var(--lightgray);
+    border-left: 2px solid var(--tertiary);
+  }
+}
+@keyframes now-playing-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+.now-playing-cover {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--lightgray);
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+.now-playing-blank {
+  color: var(--gray);
+  font-size: 1.3rem;
+}
+.now-playing-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+
+  & > * {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.now-playing-what {
+  color: var(--gray);
+  font-size: 0.72rem;
+  font-style: italic;
+}
+.now-playing-title {
+  color: var(--dark);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+
+  &:is(a):hover {
+    text-decoration: underline;
+  }
+}
+.now-playing-by {
+  color: var(--darkgray);
+  font-size: 0.8rem;
+}
+.now-playing-stop {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--highlight);
+    color: var(--dark);
+  }
+}
+// the clip's progress, a hairline along the foot of the card
+.now-playing-bar {
+  grid-column: 1 / -1;
+  height: 2px;
+  margin-top: 0.35rem;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--tertiary) var(--done, 0%), var(--lightgray) var(--done, 0%));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .now-playing,
+  .sound[data-playing]::after {
+    animation: none;
+  }
+}

@@ -126,7 +126,8 @@ html[data-margin="inline"] article {
   .in-margin {
     position: absolute;
     left: 0;
-    right: 0;
+    // clear of the column's edge, like the cards (previews.scss)
+    right: var(--side-inset, 0.8rem);
     display: block;
     margin: 0;
     padding: 0;

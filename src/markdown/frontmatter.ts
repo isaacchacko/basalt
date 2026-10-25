@@ -140,8 +140,9 @@ export function describe(tree: HtmlRoot, given?: string): { description: string;
 export function filesUsed(tree: HtmlRoot, has: (slug: string) => boolean): string[] {
   const found = new Set<string>()
   visit(tree, "element", (el) => {
-    for (const value of Object.values(el.properties ?? {})) {
-      if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) continue
+    // an attribute may hold a list (a <sound>'s clips: "/a.mp3, /b.mp3")
+    for (const value of Object.values(el.properties ?? {}).flatMap((v) => (typeof v === "string" ? v.split(/\s*,\s*/) : []))) {
+      if (!value.startsWith("/") || value.startsWith("//")) continue
       let slug: string
       try {
         slug = decodeURIComponent(value.split(/[?#]/)[0].slice(1))
