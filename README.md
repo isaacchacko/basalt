@@ -9,6 +9,7 @@ It's set the way [Edward Tufte](https://www.edwardtufte.com/) sets his books, wi
 - **Remarks in the margin:** sidenotes, margin notes and previews of linked notes, each beside its line
 - **One viewer for every picture:** images, diagrams and pages open full screen, to zoom, pan and swipe through
 - **Its own PDF reader,** with selectable text and the browser's viewer a click away
+- **Screenshots that follow the theme:** save `shot.dark.png` beside `shot.png`, and the page shows whichever matches its theme
 - **Pictures written as text:** graphs, flowcharts, sequences and math
 - **Live components** in a still page, swapped in as you edit them
 - **Saves that land in place,** in under a second, keeping your scroll

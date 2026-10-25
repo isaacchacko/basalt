@@ -19,6 +19,7 @@
 // Notes with `draft: true` or `private: true` render as usual, with
 // data.draft / data.private set: the page route leaves them out.
 
+import { rehypeThemedMedia } from "./themed.ts"
 import fs from "node:fs"
 import type { PluggableList } from "unified"
 import { unified } from "unified"
@@ -116,6 +117,8 @@ const basaltRehype: PluggableList = [
   ],
   rehypeLinks,
   () => rehypeEmbeds({ web: true, files: true, lightbox: true }),
+  // a picture with a dark version beside it follows the theme
+  rehypeThemedMedia,
   rehypeIslands,
   rehypeMargin,
   rehypeNoteData,

@@ -49,6 +49,7 @@ Obsidian-flavoured markdown:
 - **Links and embeds:** `[[wikilinks]]`, `[[note#heading]]`, and `![[embeds]]` of images (`|320` for a width), video, audio, pdfs, code files (`![[hello.py#L3-L9|fullscreen]]`), csv, other notes and their sections or blocks (`#^id`).
 - **Text:** callouts (`> [!note]-` folds), `==highlights==`, `#tags`, `%%comments%%`.
 - **The margin:** a footnote becomes a numbered **sidenote** beside its line. `> [!aside]` after a paragraph becomes an unnumbered **margin note**, and a margin note with an image is a **margin figure**.
+- **Pictures that follow the theme:** save a dark version beside a picture or video (`shot.dark.png` next to `shot.png`) and embed `shot.png` as usual. The page shows whichever matches its theme, and swaps when the theme is toggled; the other loads only when it's needed.
 - **Diagrams:** ```` ```graph ```` (isaacchacko/graph), ```` ```dot ````, ```` ```mermaid ````, ```` ```svg ````, and `$math$` / `$$math$$` / ```` ```math ````.
 - **Islands:** `<island name="counter" start="3" ssr></island>` mounts `islands/counter.tsx`, rendered at build time with `ssr` and hydrated in the browser. `frame` puts it alone in a frame. Editing an island hot-swaps it and keeps its state.
 - **Note lists:** `<note-list folder="blog" limit="4"></note-list>`.

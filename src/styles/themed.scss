@@ -1,0 +1,16 @@
+// Theme-aware media (src/markdown/themed.ts): of a picture's light and dark
+// versions, only the one for the page's theme shows. Printed, it's the light.
+
+:root[saved-theme="dark"] .themed-light,
+:root:not([saved-theme="dark"]) .themed-dark {
+  display: none !important;
+}
+
+@media print {
+  :root[saved-theme="dark"] .themed-dark {
+    display: none !important;
+  }
+  :root[saved-theme="dark"] .themed-light {
+    display: block !important;
+  }
+}

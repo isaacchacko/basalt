@@ -8,9 +8,11 @@ Put a file in your notes folder and embed it with `![[name]]`. Basalt works out 
 
 A picture that's a remark doesn't need room in the text at all. Link to it, `[[phone.png|on a phone]]`, and it appears in the side content while you point at the link: here's the margin page [[phone.png|on a phone]]. Click the link to see it full screen. A picture that should stay beside its paragraph goes in an aside, `> [!aside]`, as a margin figure.
 
-A picture the text is about goes in the main content. A title in the markdown becomes its caption, `![the margin page](dark.png "the margin page, in the dark")`, and `|320` after a name sets its width:
+A picture the text is about goes in the main content. A title in the markdown becomes its caption, and `|320` after a name sets its width:
 
-![the margin page](assets/dark.png "the margin page, in the dark")
+![the margin page](assets/margin-page.png "the margin page: toggle the theme and it changes with the page")
+
+Save a dark version beside a picture, `margin-page.dark.png` next to `margin-page.png`, and the page shows whichever matches its theme. Nothing to write: embed the picture as usual, and Basalt finds its twin.
 
 ## Video
 

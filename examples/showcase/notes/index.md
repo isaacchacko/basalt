@@ -21,6 +21,7 @@ Basalt is set the way [Edward Tufte](https://www.edwardtufte.com/) sets his book
 - [[margin|Remarks in the margin]]: sidenotes, margin notes and previews of linked notes, each beside its line
 - [[media|One viewer for every picture]]: images, diagrams and pages open full screen, to zoom, pan and swipe through
 - [[media|Its own PDF reader]], with selectable text and the browser's viewer a click away
+- [[media|Screenshots that follow the theme]]: save a dark version beside a picture, and it swaps with the page
 - [[diagrams|Pictures written as text]]: graphs, flowcharts, sequences and math
 - [[islands|Live components]] in a still page, swapped in as you edit them
 - [[start|Saves that land in place]], in under a second, keeping your scroll
