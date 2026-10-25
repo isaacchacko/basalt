@@ -99,7 +99,13 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
             <div class="popover-hint">
               {layout.components.breadcrumbs && breadcrumbs && <Breadcrumbs trail={trail} last={crumb} rootName={layout.breadcrumbs.rootName} />}
               <h1 class="article-title">{title}</h1>
-              {(layout.components.meta === "dated" ? dated : layout.components.meta) && <ContentMeta date={date} minutes={minutes} extra={meta} />}
+              {
+                (layout.components.meta === "dated" ? dated : layout.components.meta) ? (
+                  <ContentMeta date={date} minutes={minutes} extra={meta} />
+                ) : (
+                  meta && <ContentMeta extra={meta} />
+                )
+              }
               {layout.components.tags && <TagList tags={tags} />}
             </div>
           </div>

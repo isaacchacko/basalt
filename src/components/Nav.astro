@@ -13,6 +13,8 @@
 import Mark from "basalt:components/Mark"
 import Explorer from "basalt:components/Explorer"
 import Darkmode from "basalt:components/Darkmode"
+import NavExtra from "basalt:components/NavExtra"
+import { words } from "../layouts/words"
 import type { TreeNode } from "../layouts/notes"
 import type { LayoutConfig } from "../lib/config"
 
@@ -23,6 +25,7 @@ interface Props {
   layout: LayoutConfig
 }
 const { title, root, current, layout } = Astro.props
+const t = await words()
 // how the folded navbar looks: "bar" (a thin bar mapping its entries, the
 // default) or "chevron" (one chevron halfway down). basalt.json `layout.nav`.
 const mode = (layout as { nav?: string }).nav === "chevron" ? "chevron" : "bar"
@@ -52,6 +55,7 @@ for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.ch
     <a class="nav-mark" href="/" aria-label={title}><Mark /></a>
   </div>
   <h2 class="page-title"><a href="/">{title}</a></h2>
+  <NavExtra />
   {
     layout.components.explorer && (
       <Explorer
@@ -67,7 +71,7 @@ for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.ch
     (layout.components.darkmode || layout.components.search) && (
       <div class="nav-tray">
         {layout.components.search && (
-          <button class="nav-search" type="button" aria-label="Search">
+          <button class="nav-search" type="button" aria-label={t("search")}>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7"></circle>
               <path d="M20 20l-3.8-3.8"></path>

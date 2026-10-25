@@ -1,8 +1,10 @@
 ---
 // The theme toggle: a ghost icon button. Its script is src/client/darkmode.ts.
+import { words } from "../layouts/words"
+const t = await words()
 ---
 
-<button class="darkmode" type="button" aria-label="Switch theme">
+<button class="darkmode" type="button" aria-label={t("theme")}>
   <svg class="dayIcon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <title>Dark mode</title>
     <circle cx="12" cy="12" r="4" fill="currentColor"></circle>

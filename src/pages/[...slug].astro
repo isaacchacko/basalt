@@ -6,6 +6,7 @@
 // aren't published (layouts/notes.ts).
 import { render } from "astro:content"
 import Page from "../layouts/Page.astro"
+import { words } from "../layouts/words"
 import PageList from "basalt:components/PageList"
 import {
   aliasesOf,
@@ -68,7 +69,8 @@ if (props.kind !== "alias" && props.folder !== undefined) {
   folderNode = findFolder(tree((await notes()).filter((n) => !n.id.startsWith("tags/"))), props.folder)
 }
 const entries = folderNode ? entriesOf(folderNode) : []
-const count = `${entries.length} ${entries.length === 1 ? "item" : "items"} under this folder`
+const t = await words()
+const count = t("folderCount", { n: entries.length })
 const Content = rendered?.Content
 ---
 
@@ -108,7 +110,7 @@ const Content = rendered?.Content
       )}
     </Page>
   ) : (
-    <Page slug={`${props.folder}/index`} title={`Folder: ${folderNode?.name ?? props.folder}`} meta={count}>
+    <Page slug={`${props.folder}/index`} title={folderNode?.name ?? props.folder.split("/").pop()!} meta={count}>
       <div class="page-listing" slot="listing">
         <PageList entries={entries} />
       </div>

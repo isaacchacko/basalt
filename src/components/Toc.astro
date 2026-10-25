@@ -1,17 +1,19 @@
 ---
+import { words } from "../layouts/words"
 // The note's contents, in the margin when the note asks for them: its
 // headings, the one being read lit.
 interface Props {
   headings: { depth: number; slug: string; text: string }[]
   label?: string
 }
-const { headings, label = "Contents" } = Astro.props
+const { headings, label } = Astro.props
+const t = await words()
 const shown = headings.filter((h) => h.depth > 1 && h.depth <= 4)
 const top = Math.min(...shown.map((h) => h.depth))
 ---
 
 <nav class="toc margin-part" aria-label="contents">
-  <p class="margin-label">{label}</p>
+  <p class="margin-label">{label ?? t("contents")}</p>
   <ol>
     {
       shown.map((h) => (

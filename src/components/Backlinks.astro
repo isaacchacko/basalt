@@ -1,15 +1,17 @@
 ---
+import { words } from "../layouts/words"
 // The notes that link here, in the margin when the note asks for them.
 interface Props {
   backlinks: { slug: string; title: string }[]
   label?: string
 }
-const { backlinks, label = "Linked from" } = Astro.props
+const { backlinks, label } = Astro.props
+const t = await words()
 const href = (slug: string) => "/" + slug.replace(/(^|\/)index$/, "")
 ---
 
 <nav class="backlinks margin-part" aria-label="backlinks">
-  <p class="margin-label">{label}</p>
+  <p class="margin-label">{label ?? t("backlinks")}</p>
   <ul>
     {
       backlinks.map((b) => (

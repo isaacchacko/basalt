@@ -448,15 +448,16 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
     background-color: var(--light);
     z-index: 20;
 
-    // the bar's paper and rule run the whole width, past the column
-    &::before {
-      content: "";
-      position: absolute;
-      inset: 0 -100vw;
-      z-index: -1;
-      background-color: var(--light);
-      border-bottom: 1px solid var(--lightgray);
-    }
+    // the bar's paper and rule run the whole width, past the column: drawn
+    // as shadows, which (unlike a wider box) never make the page scroll
+    // sideways, or a phone zoom out to fit it
+    box-shadow:
+      0 1px 0 var(--lightgray),
+      100vmax 1px 0 var(--lightgray),
+      -100vmax 1px 0 var(--lightgray),
+      100vmax 0 0 var(--light),
+      -100vmax 0 0 var(--light);
+    clip-path: inset(0 -100vmax -1px);
   }
 
   .page-title {

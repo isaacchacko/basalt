@@ -1,13 +1,16 @@
 ---
 // The foot of every page: Basalt's credit and the site's own links.
+import { words } from "../layouts/words"
+
 interface Props {
   links: Record<string, string>
 }
 const { links } = Astro.props
+const t = await words()
 ---
 
 <footer>
-  <p>Made with <a href="https://basalt.isaacchacko.com">Basalt</a> © {new Date().getFullYear()}</p>
+  <p>{t("madeWith")} <a href="https://basalt.isaacchacko.com">Basalt</a> © {new Date().getFullYear()}</p>
   {
     Object.keys(links).length > 0 && (
       <ul>

@@ -2,22 +2,24 @@
 // Search: ⌘F / ctrl+F opens it (a second ⌘F, with it open, is the browser's
 // own find). Its button only shows below desktop width, where there's no ⌘F.
 // The index is /static/contentIndex.json; the script is src/client/search.ts.
+import { words } from "../layouts/words"
+const t = await words()
 ---
 
 <div class="search" data-find-shortcut="true" data-button="mobile">
   <button class="search-button" type="button">
     <svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7">
-      <title>Search</title>
+      <title>{t("search")}</title>
       <g class="search-path" fill="none">
         <path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4"></path>
         <circle cx="8" cy="8" r="7"></circle>
       </g>
     </svg>
-    <p>Search</p>
+    <p>{t("search")}</p>
   </button>
   <div class="search-container">
     <div class="search-space">
-      <input autocomplete="off" class="search-bar" name="search" type="text" aria-label="Search for something" placeholder="Search for something" />
+      <input autocomplete="off" class="search-bar" name="search" type="text" aria-label={t("searchPlaceholder")} placeholder={t("searchPlaceholder")} />
       <div class="search-layout" data-preview="true"></div>
     </div>
   </div>

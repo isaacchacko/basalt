@@ -1,8 +1,10 @@
 ---
 // A page that isn't there.
 import Page from "../layouts/Page.astro"
+import { words } from "../layouts/words"
+const t = await words()
 ---
 
-<Page slug="404" title="Not here" breadcrumbs={false} noindex>
-  <p>Either this page is private or it doesn't exist. <a href="/" class="internal">Back to the start.</a></p>
+<Page slug="404" title={t("notFound")} breadcrumbs={false} noindex>
+  <p>{t("notFoundBody")} <a href="/" class="internal">{t("backToStart")}</a></p>
 </Page>
