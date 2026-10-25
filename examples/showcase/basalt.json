@@ -1,3 +1,11 @@
 {
-  "content": [{ "from": "notes", "to": "" }]
+  "title": "Basalt",
+  "baseUrl": "basalt.isaacchacko.com",
+  "description": "Hypertext gardens that publish in a second and read like a good textbook.",
+  "content": [
+    {
+      "from": "notes",
+      "to": ""
+    }
+  ]
 }
