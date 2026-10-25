@@ -12,8 +12,10 @@ figure.diagram-mermaid {
   cursor: zoom-in;
 }
 
-// a diagram or a frame shows a way into the viewer when you reach for it
-:is(figure.diagram, figure.embed-frame, figure.diagram-mermaid) {
+// a diagram, a frame or a long code block shows a way into the viewer when
+// you reach for it: on a wide screen beside its top right corner, in the
+// gutter, never over the drawing; on a phone, just inside it
+:is(figure.diagram, figure.embed-frame, figure.diagram-mermaid, [data-viewer-code]) {
   position: relative;
 
   & > .viewer-expand {
@@ -32,6 +34,12 @@ figure.diagram-mermaid {
   @media (hover: none) {
     & > .viewer-expand {
       opacity: 1;
+    }
+  }
+  @media (min-width: 1000px) {
+    & > .viewer-expand {
+      top: 0;
+      right: calc(-2.25rem - 0.5rem);
     }
   }
 }
@@ -166,6 +174,28 @@ dialog.basalt-viewer {
       width: 100%;
       height: 100%;
       max-width: none;
+    }
+    // code: the block itself, at a reading size, scrolling inside the stage
+    &[data-kind="code"] {
+      overflow: auto;
+      box-sizing: border-box;
+      border: 1px solid var(--lightgray);
+      border-radius: 8px;
+      background: var(--light);
+      cursor: auto;
+      touch-action: pan-x pan-y;
+      overscroll-behavior: contain;
+
+      pre {
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+      }
+      pre > code {
+        font-size: 0.95rem;
+        line-height: 1.65;
+      }
     }
     &[data-kind="frame"] {
       border: 1px solid var(--lightgray);

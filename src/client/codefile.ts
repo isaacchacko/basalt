@@ -1,6 +1,8 @@
 // A code file's bar (figure.code-file, from ![[file.py]]): copy its code, see
-// the raw file, and show it on the whole screen if it asked for that.
-import { PATHS, fullscreenButton, icon, toggleFullscreen } from "./embeds"
+// the raw file, and, if it asked for that, open it in Basalt's viewer, the
+// same full screen as every other kind of media (viewer.ts).
+import { PATHS, icon } from "./embeds"
+import { openCode } from "./viewer"
 
 export function startCodeFiles(signal: AbortSignal) {
   for (const figure of document.querySelectorAll<HTMLElement>("figure.code-file")) {
@@ -29,9 +31,6 @@ export function startCodeFiles(signal: AbortSignal) {
       },
       { signal },
     )
-    if (full) {
-      full.addEventListener("click", () => toggleFullscreen(figure), { signal })
-      fullscreenButton(full, figure, signal, 16, 2)
-    }
+    full?.addEventListener("click", () => openCode(figure), { signal })
   }
 }

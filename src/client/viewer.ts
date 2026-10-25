@@ -1,5 +1,6 @@
 // Basalt's viewer: any picture on the page, full screen. Images, diagrams
-// (graphviz, svg, mermaid) and pages in a frame open in one viewer that grows
+// (graphviz, svg, mermaid), pages in a frame and code (a code file that
+// asked for `fullscreen`, a long code block) open in one viewer that grows
 // out of where they sit, with the caption under them, zoom and pan (click, z,
 // the wheel, a pinch), ←/→ (or a swipe) through the page's others, and the
 // original a click away. A link to a picture opens it here too, growing out
@@ -20,7 +21,7 @@ import {
   toggleFullscreen,
 } from "./embeds"
 
-type Kind = "image" | "svg" | "frame"
+type Kind = "image" | "svg" | "frame" | "code"
 type Item = {
   kind: Kind
   origin: HTMLElement
@@ -37,6 +38,11 @@ const button = (cls: string, label: string, svg: string) => makeButton(`viewer-b
 const link = (cls: string, label: string, svg: string) => makeLink(`viewer-button ${cls}`, label, svg)
 
 const DIAGRAMS = "figure.diagram-graphviz, figure.diagram-svg, figure.diagram-mermaid"
+// code that opens here: a code file with a full-screen button, or a code
+// block long enough to have been given one (addExpands)
+const CODE = "figure.code-file:has(.code-file-full), [data-viewer-code]"
+/** a code block taller than this many lines gets a way into the viewer */
+const LONG_CODE = 20
 // link previews show a copy of another note: its pictures aren't this page's.
 // (A margin figure's copy in .margin-layer is this page's, and opens.)
 const ELSEWHERE = ".margin-preview, .margin-hover, .popover, a, .basalt-viewer"
@@ -76,7 +82,7 @@ const ownLink = (a: Element) => isImageLink(a) && !a.closest(".margin-preview, .
 function collect(): Item[] {
   const found: Item[] = []
   const candidates = document.querySelectorAll<HTMLElement>(
-    `img.zoomable, ${DIAGRAMS}, figure.embed-frame, ${IMAGE_LINKS}`,
+    `img.zoomable, ${DIAGRAMS}, figure.embed-frame, ${CODE}, ${IMAGE_LINKS}`,
   )
   for (const el of candidates) {
     if (el instanceof HTMLAnchorElement) {
@@ -96,6 +102,10 @@ function collect(): Item[] {
     if (el instanceof HTMLImageElement) {
       // of a light and dark pair only the one showing is collected (the other is display: none)
       found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.currentSrc || el.src, pair: themedPair(el) })
+    } else if (el.matches(CODE)) {
+      const name = el.querySelector(".code-file-name, [data-rehype-pretty-code-title]")?.textContent?.trim() ?? ""
+      const raw = el.querySelector<HTMLAnchorElement>(".code-file-raw")?.href
+      found.push({ kind: "code", origin: el, caption: name, src: raw })
     } else if (el.matches("figure.embed-frame")) {
       const frame = el.querySelector("iframe")
       if (frame) found.push({ kind: "frame", origin: el, caption: captionOf(frame), src: frame.src })
@@ -151,11 +161,12 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
   openOriginal.rel = "noopener"
   const download = link("viewer-download", "download", ICON("download"))
   const close = button("viewer-close", "close (esc)", ICON("close"))
+  const copyCode = button("viewer-copy", "copy the code", ICON("copy"))
   // a picture with a light and a dark version: see the other one, in place
   const themeSwitch = button("viewer-theme", "the other theme's version (t)", ICON("moon"))
   const spacer = document.createElement("span")
   spacer.className = "viewer-spacer"
-  bar.append(counter, spacer, themeSwitch, zoom, openOriginal, download, close)
+  bar.append(counter, spacer, themeSwitch, zoom, copyCode, openOriginal, download, close)
 
   const stage = document.createElement("div")
   stage.className = "viewer-stage"
@@ -244,6 +255,18 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
       maxScale = 6
       el = document.createElement("div")
       el.append(svg)
+    } else if (item.kind === "code") {
+      // a copy of the code, highlighting and line numbers and all, at a
+      // reading size, scrolling inside the stage when it's long
+      const source = item.origin.matches("pre") ? item.origin : item.origin.querySelector("pre")!
+      const pre = source.cloneNode(true) as HTMLElement
+      pre.querySelectorAll(".clipboard-button, .viewer-expand").forEach((n) => n.remove())
+      pre.removeAttribute("tabindex")
+      el = document.createElement("div")
+      el.append(pre)
+      w = Math.min(room.width, 1040)
+      h = 0
+      maxScale = 1
     } else {
       const frame = document.createElement("iframe")
       frame.src = item.src!
@@ -258,7 +281,9 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     el.classList.add("viewer-media")
     el.dataset.kind = item.kind
     el.style.width = `${w}px`
-    el.style.height = `${h}px`
+    // code is as tall as it is, up to the stage, and scrolls past that
+    if (item.kind === "code") el.style.maxHeight = `${room.height}px`
+    else el.style.height = `${h}px`
     fitW = w
     fitH = h
     return el
@@ -278,7 +303,8 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     caption.textContent = item.caption
     caption.hidden = !item.caption
     prev.hidden = next.hidden = all.length < 2
-    zoom.hidden = item.kind === "frame"
+    zoom.hidden = item.kind === "frame" || item.kind === "code"
+    copyCode.hidden = item.kind !== "code"
     themeSwitch.hidden = !item.pair
     if (item.pair) {
       const dark = item.src === item.pair.dark
@@ -355,6 +381,21 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     img.src = want
     describe(item)
   }
+  copyCode.addEventListener("click", async () => {
+    const code = media?.querySelector("code")
+    if (!code) return
+    try {
+      await navigator.clipboard.writeText(code.innerText.replace(/\n$/, ""))
+    } catch {
+      return
+    }
+    copyCode.innerHTML = ICON("check")
+    copyCode.dataset.done = "true"
+    setTimeout(() => {
+      copyCode.innerHTML = ICON("copy")
+      delete copyCode.dataset.done
+    }, 1400)
+  })
   themeSwitch.addEventListener("click", () => {
     const item = all[index]
     if (item.pair) showVersion(item.src !== item.pair.dark)
@@ -467,8 +508,33 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     pinch?: { d: number; scale: number }
   } | null = null
   let lastTap = 0
+  // code scrolls and selects as text: only a touch swipe (sideways for the
+  // next, down from its top to close) and a tap beside it act on the viewer
+  // (touch events, not pointer ones: the browser takes a pointer that scrolls)
+  let codeSwipe: { x: number; y: number; top: number } | null = null
+  stage.addEventListener(
+    "touchstart",
+    (e) => {
+      if (media?.dataset.kind !== "code" || e.touches.length !== 1) return void (codeSwipe = null)
+      codeSwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY, top: media.scrollTop }
+    },
+    { passive: true },
+  )
+  stage.addEventListener("touchend", (e) => {
+    if (media?.dataset.kind !== "code" || !codeSwipe) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - codeSwipe.x
+    const dy = t.clientY - codeSwipe.y
+    const top = codeSwipe.top
+    codeSwipe = null
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && media.scrollWidth <= media.clientWidth) step(dx < 0 ? 1 : -1)
+    else if (dy > 90 && top <= 0) shut()
+  })
+  stage.addEventListener("click", (e) => {
+    if (media?.dataset.kind === "code" && e.target === stage) shut()
+  })
   stage.addEventListener("pointerdown", (e) => {
-    if (!media || media.dataset.kind === "frame") return
+    if (!media || media.dataset.kind === "frame" || media.dataset.kind === "code") return
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
     stage.setPointerCapture(e.pointerId)
     if (pointers.size === 2) {
@@ -535,7 +601,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
   stage.addEventListener(
     "wheel",
     (e) => {
-      if (!media || media.dataset.kind === "frame") return
+      if (!media || media.dataset.kind === "frame" || media.dataset.kind === "code") return
       e.preventDefault()
       if (e.ctrlKey || scale <= 1.01) {
         // a pinch on a trackpad, or the wheel at fit: zoom about the pointer
@@ -579,7 +645,29 @@ function addExpands(root: ParentNode, signal: AbortSignal) {
     el.append(b)
     if (el.matches("figure.diagram-graph")) fullscreenButton(b, el, signal)
   }
+  // a long code block (not a code file, whose bar has its own button)
+  for (const pre of root.querySelectorAll<HTMLElement>("article pre")) {
+    if (pre.closest(`figure.code-file, figure.diagram, ${ELSEWHERE}, .mermaid-source`) || pre.matches(":has(> code.mermaid)")) continue
+    const block = pre.closest<HTMLElement>("figure[data-rehype-pretty-code-figure]") ?? pre
+    if (block.hasAttribute("data-viewer-code")) continue
+    const lines = pre.querySelectorAll("[data-line], .line").length || (pre.textContent ?? "").split("\n").length
+    if (lines <= LONG_CODE) continue
+    block.dataset.viewerCode = ""
+    const b = button("viewer-expand", "full screen", ICON("expand"))
+    b.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation()
+        openViewer(block)
+      },
+      { signal },
+    )
+    block.append(b)
+  }
 }
+
+/** A code file's full-screen button opens it here (codefile.ts). */
+export const openCode = (figure: HTMLElement) => openViewer(figure)
 
 // a link to a picture opens it here rather than going to the file (⌘/ctrl
 // still does). In capture, before Astro's router takes the click.
