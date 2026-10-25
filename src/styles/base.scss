@@ -5,8 +5,8 @@
 // centred in the window. Below that it's one column under a bar across the top.
 
 $mobile: "(max-width: 800px)";
-$narrow: "(max-width: 999.98px)";
-$desktop: "(min-width: 1000px)";
+$narrow: "(max-width: 1055.98px)";
+$desktop: "(min-width: 1056px)";
 $topSpacing: 6rem;
 $semiBoldWeight: 600;
 $boldWeight: 700;
@@ -19,7 +19,7 @@ $boldWeight: 700;
   // the room kept left of the main content: the folded navbar's hover zone
   // (5.5rem, nav.scss) and a gap, so the zone never sits over the text
   // at least the navbar's hover zone (nav.scss $zone), so it never lies over the text
-  --gutter-left: 11.5rem;
+  --gutter-left: 11.5rem; /* with the text (36rem) and the side content (15rem) the desktop layout needs 62.5rem: it starts at 1056px (66rem), leaving a right gutter */
   --gutter-right: 2rem;
 }
 

@@ -164,7 +164,7 @@ document.addEventListener("transitionend", (e) => {
 const navbar = () => document.querySelector<HTMLElement>(".sidebar.left")
 document.addEventListener("pointerdown", (e) => {
   const nav = navbar()
-  if (!nav || e.pointerType === "mouse" || !matchMedia("(min-width: 1000px)").matches) return
+  if (!nav || e.pointerType === "mouse" || !matchMedia("(min-width: 1056px)").matches) return
   nav.classList.toggle("is-open", nav.contains(e.target as Node))
 })
 

@@ -36,7 +36,7 @@ figure.diagram-mermaid {
       opacity: 1;
     }
   }
-  @media (min-width: 1000px) {
+  @media (min-width: 1056px) {
     & > .viewer-expand {
       top: 0;
       right: calc(-2.25rem - 0.5rem);
@@ -45,7 +45,7 @@ figure.diagram-mermaid {
 }
 
 // there, the box doesn't clip it (what's inside is at most its width anyway)
-@media (min-width: 1000px) {
+@media (min-width: 1056px) {
   html :is(figure.diagram, figure.embed-frame, figure.diagram-mermaid, [data-viewer-code]) {
     overflow: visible;
   }
