@@ -1,9 +1,9 @@
-import { ForceSimulation } from "graph/packages/renderer/src/simulation"
-import { buildSvg } from "graph/packages/renderer/src/export"
-import { DEFAULT_OPTIONS } from "graph/packages/renderer/src/defaults"
-import type { SceneLink, SceneNode } from "graph/packages/renderer/src/scene"
-import type { GraphData, RendererOptions } from "graph/packages/renderer/src/types"
-import * as graphLanguage from "graph/apps/web/src/lib/parse"
+import { ForceSimulation } from "graph/packages/graph-view/src/simulation"
+import { buildSvg } from "graph/packages/graph-view/src/export"
+import { DEFAULT_OPTIONS } from "graph/packages/graph-view/src/defaults"
+import type { SceneLink, SceneNode } from "graph/packages/graph-view/src/scene"
+import type { GraphData, RendererOptions } from "graph/packages/graph-view/src/types"
+import * as graphLanguage from "graph/packages/graph-view/src/parse"
 
 /**
  * Basalt draws graphs with isaacchacko/graph (graph.isaacchacko.com): its

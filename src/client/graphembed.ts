@@ -2,7 +2,7 @@
 // from the same layout, so nothing jumps. Drawn by isaacchacko/graph's
 // renderer, in the page's theme, and kept in it. Full screen (the viewer's
 // expand control) and back, it reframes itself to its new room.
-import type { GraphData, Theme } from "graph/packages/renderer/src/types"
+import type { GraphData, Theme } from "graph/packages/graph-view/src/types"
 import { onTheme } from "./embeds"
 
 function cssVar(name: string, fallback: string): string {
@@ -21,7 +21,7 @@ export function pageTheme(): Theme {
 }
 
 async function drawGraph(el: HTMLElement, data: GraphData, signal: AbortSignal) {
-  const { GraphRenderer } = await import("graph/packages/renderer/src/renderer")
+  const { GraphRenderer } = await import("graph/packages/graph-view/src/renderer")
   if (signal.aborted) return
   const svg = el.querySelector(":scope > svg")
   const renderer = new GraphRenderer(el, {

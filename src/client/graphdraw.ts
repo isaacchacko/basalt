@@ -3,8 +3,8 @@
 // the notes and their links, in the page's theme, a node going to its note.
 
 import { navigate } from "astro:transitions/client"
-import { GraphRenderer } from "graph/packages/renderer/src/renderer"
-import type { GraphData, Theme } from "graph/packages/renderer/src/types"
+import { GraphRenderer } from "graph/packages/graph-view/src/renderer"
+import type { GraphData, Theme } from "graph/packages/graph-view/src/types"
 
 export type Note = { id: string; title: string; links: string[] }
 

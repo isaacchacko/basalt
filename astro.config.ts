@@ -70,6 +70,9 @@ export default defineConfig({
   },
   vite: {
     plugins: vitePlugins,
+    // Vite's own cache (its prebundled dependencies) per site too: shared, two
+    // sites served at once re-bundle over each other and their pages get 504s
+    cacheDir: path.join(site.work, "vite"),
     // a site's root links to Basalt's src and packages (bin/basalt.mjs):
     // keep their paths inside the root, so Vite treats them as the project's
     resolve: {
@@ -85,6 +88,6 @@ export default defineConfig({
       },
     },
     // found up front, so a lazy import of one doesn't fail after Vite re-optimises
-    optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact", "graph/packages/renderer/src/renderer"] },
+    optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact", "graph/packages/graph-view/src/renderer"] },
   },
 })
