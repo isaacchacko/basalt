@@ -18,7 +18,12 @@ export default defineConfig({
   integrations: [preact({ compat: true }), agentApi()],
   markdown: {
     syntaxHighlight,
-    processor: unified({ remarkPlugins, rehypePlugins, ...processorOptions }),
+    // unified's PluggableList and Astro's plugin types describe the same thing
+    processor: unified({
+      remarkPlugins: remarkPlugins as never,
+      rehypePlugins: rehypePlugins as never,
+      ...processorOptions,
+    }),
   },
   vite: {
     plugins: vitePlugins,
