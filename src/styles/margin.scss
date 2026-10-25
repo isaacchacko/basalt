@@ -249,6 +249,9 @@ html[data-margin="beside"] .margin:not(:has(.margin-layer > .in-margin)):has(.ma
   .margin-resting {
     position: static;
     height: 100%;
+    // level with the note's first line, as margin.ts measures it
+    padding-top: var(--resting-start, 0);
+    box-sizing: border-box;
 
     // (over the tops margin.ts gives each part to step aside for notes)
     & > .margin-part {
