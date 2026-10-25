@@ -1,7 +1,7 @@
 // What an agent (or anyone) polls to know whether its change is live, while
 // `astro dev` serves a Basalt site:
 //
-//   GET /__basalt/status   { pid, buildId, state, change, trigger, startedAt, at, ms,
+//   GET /__basalt/status   { pid, url, buildId, state, change, trigger, startedAt, at, ms,
 //                            error, errors, warnings, restarts }
 //   GET /__basalt/wait     answers with the first finished build that matches:
 //       ?after=<buildId>     a build after that one (default: the build after now)
@@ -41,6 +41,8 @@ type Change = "swap" | "hot" | "reload" | "restart" | "none" | "error"
 
 export interface Status {
   pid: number
+  /** where the site is served, e.g. http://localhost:4321 */
+  url: string | null
   buildId: number
   state: State
   change: Change | null
@@ -129,6 +131,7 @@ function agent(work: string): Agent {
   g[KEY] = {
     status: {
       pid: process.pid,
+      url: null,
       buildId,
       state: "starting",
       change: null,
@@ -685,6 +688,11 @@ function setup(server: ViteDevServer) {
     status.state = "restarting"
   }
   write()
+  server.httpServer?.once("listening", () => {
+    const address = server.httpServer?.address()
+    if (typeof address === "object" && address) status.url = `http://localhost:${address.port}`
+    write()
+  })
 
   const stop = () => {
     status.state = "stopped"

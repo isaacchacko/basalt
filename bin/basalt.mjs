@@ -3,6 +3,7 @@
 //
 //   basalt new <dir> [--title "My garden"]   start a site
 //   basalt dev [dir] [--port 4321]           serve it, live (in the background; `basalt stop` ends it)
+//   basalt edit [dir] <file> [--port 4321]   serve it, and say where a note's page is and what edits it
 //   basalt build [dir]                       build it into <dir>/.basalt/astro/dist (exit 1 if a note failed)
 //   basalt check [dir] [--json]              build it and list what's broken, with files and lines
 //   basalt status [dir]                      what the dev server is doing (JSON)
@@ -37,9 +38,11 @@ for (let i = 0; i < rest.length; i++) {
   if (rest[i].startsWith("--")) flags[rest[i].slice(2)] = rest[i + 1] === undefined || rest[i + 1].startsWith("--") ? true : rest[++i]
   else positional.push(rest[i])
 }
-const dir = path.resolve(command === "help" ? "." : (positional[0] ?? "."))
+// `basalt edit <file>` is the note in the site here; `basalt edit <dir> <file>`, in that one
+const siteNamed = command === "help" || (command === "edit" && positional.length < 2) ? undefined : positional[0]
+const dir = path.resolve(siteNamed ?? ".")
 const work = path.join(dir, ".basalt", "astro")
-const named = positional[0] ?? "."
+const named = siteNamed ?? "."
 
 /**
  * The site's own Astro root: links to Basalt's config, source and packages,
@@ -174,6 +177,8 @@ function scaffold() {
     "components/README.md":
       "A file here named like one of Basalt's components (src/components/*.astro) replaces it.\n",
     ".gitignore": ".basalt/\n",
+    "AGENTS.md": "A Basalt site. Read `basalt help agents` before editing, and `basalt help editing` when a person is editing with you.\n",
+    "CLAUDE.md": "@AGENTS.md\n",
   }
   for (const [name, text] of Object.entries(files)) {
     const file = path.join(dir, name)
@@ -183,8 +188,8 @@ function scaffold() {
   console.log(`made a Basalt site in ${dir}\nserve it with: basalt dev ${named}`)
 }
 
-/** Astro prints a JSON line about the background server; say it plainly, with Basalt's commands */
-function dev() {
+/** start the background server (or find the one running): what Astro said, its URL and pid */
+function serve() {
   const result = run(["dev", ...(flags.port ? ["--port", String(flags.port)] : [])], ["ignore", "pipe", "inherit"])
   const said = []
   for (const line of (result.stdout ?? "").split("\n")) {
@@ -196,14 +201,37 @@ function dev() {
     }
   }
   const text = said.join("\n")
-  const url = /https?:\/\/\S+/.exec(text)?.[0]
+  const url = /https?:\/\/\S+/.exec(text)?.[0]?.replace(/[).,/]+$/, "")
   const pid = /\(pid (\d+)\)/.exec(text)?.[1]
+  const serving = url && `${/already running/i.test(text) ? "Already serving" : "Serving"} ${shown(dir) || "."} at ${url}${pid ? ` (pid ${pid})` : ""}`
+  return { status: result.status ?? 1, text, url, serving }
+}
+
+/** Astro prints a JSON line about the background server; say it plainly, with Basalt's commands */
+function dev() {
+  const { status, text, url, serving } = serve()
   if (url) {
-    const again = /already running/i.test(text)
-    console.log(`${again ? "Already serving" : "Serving"} ${shown(dir) || "."} at ${url.replace(/[).,]+$/, "")}${pid ? ` (pid ${pid})` : ""}`)
+    console.log(serving)
     console.log(`  basalt status ${named}   what it's doing\n  basalt wait ${named}     block until your last save is live\n  basalt logs ${named}     its log\n  basalt stop ${named}     stop it`)
   } else if (text) console.log(text.replace(/astro dev (stop|status|logs)/g, (_, c) => `basalt ${c} ${named}`))
-  process.exit(result.status ?? 1)
+  process.exit(status)
+}
+
+/** serve the site, then say where the note's page is and the person's own editor on it */
+async function edit() {
+  const file = positional.at(-1)
+  if (!file) fail("which note? basalt edit [dir] <file>")
+  prepare()
+  const { loadSite, pageOf } = await libModule("site")
+  const page = pageOf(loadSite(dir), file)
+  if (!page) fail(`${file} isn't one of ${shown(dir) || "."}'s notes (basalt.json's content says where they come from)`)
+  const { status, text, url, serving } = serve()
+  if (!url) fail(text || "the dev server didn't start", status || 1)
+  const quoted = (s) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`)
+  const editor = process.env.VISUAL || process.env.EDITOR
+  console.log(serving)
+  console.log(`${shown(path.resolve(file))} is at ${url}${page}`)
+  console.log(editor ? `edit it with: ${editor} ${quoted(shown(path.resolve(file)))}` : "no $VISUAL or $EDITOR: ask what they edit with")
 }
 
 /** the dev log (JSON lines), as plain lines, with repeats collapsed */
@@ -244,7 +272,7 @@ function help() {
   const doc = fs.readFileSync(path.join(basalt, "BASALT.md"), "utf8")
   const topic = positional[0]
   if (!topic) {
-    console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 16).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"))
+    console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 17).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"))
     const sections = [...doc.matchAll(/^## (.+)$/gm)].map((m) => m[1])
     return console.log(`\nbasalt help <topic>, from BASALT.md: ${sections.map((s) => s.toLowerCase()).join(", ")}`)
   }
@@ -260,6 +288,9 @@ switch (command) {
     break
   case "dev":
     dev()
+    break
+  case "edit":
+    await edit()
     break
   case "build": {
     const started = Date.now()
