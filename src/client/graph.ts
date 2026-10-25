@@ -86,7 +86,7 @@ function draw(el: HTMLElement, data: () => GraphData, signal: AbortSignal, small
     // in the margin, nodes sit closer and their labels are set larger, so
     // the graph reads at a column's width
     textSize: small ? 1.5 : 1,
-    ...(small ? { forces: { centerForce: 0.5, repelForce: 6, linkForce: 1, linkDistance: 60 } } : {}),
+    ...(small ? { forces: { centerForce: 0.4, repelForce: 10, linkForce: 1, linkDistance: 90 } } : {}),
     nodeSize: 1,
     // a graph in the margin is small: keep its labels at the zoom it starts at
     textFadeThreshold: -2,

@@ -239,6 +239,29 @@ html[data-margin="beside"] .margin-resting {
   }
 }
 
+// with no notes in the side content, there's nothing for the parts to step
+// aside for: they stack at its top, and the contents follow you down the
+// page, its section lit as you read
+html[data-margin="beside"] .margin:not(:has(.margin-layer > .in-margin)):has(.margin-resting > .toc) {
+  height: 100%;
+
+  .margin-resting {
+    position: static;
+    height: 100%;
+
+    // (over the tops margin.ts gives each part to step aside for notes)
+    & > .margin-part {
+      position: static;
+    }
+
+    & > .toc {
+      order: 1;
+      position: sticky;
+      top: 2rem !important;
+    }
+  }
+}
+
 // not beside the note: the parts are set under it
 html[data-margin="inline"] .margin-resting {
   margin-top: 2.5rem;
