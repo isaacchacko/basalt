@@ -22,9 +22,13 @@ function control(cls: string, label: string, glyph: string) {
   return button
 }
 
-/** the title in a span of its own, so a long one gives way to the controls (code.scss) */
+/**
+ * the title (its text, or a code file's name) in a span of its own, so a long
+ * one gives way to the controls (code.scss); what else is in the bar (a diff's
+ * stat) stays beside it
+ */
 function setTitleApart(titleBar: HTMLElement) {
-  const words = [...titleBar.childNodes].filter((n) => !(n instanceof Element && n.matches(".code-file-actions")))
+  const words = [...titleBar.childNodes].filter((n) => n instanceof Text || (n instanceof Element && n.matches(".code-file-name")))
   const title = document.createElement("span")
   title.className = "code-title"
   const text = document.createElement("span")
