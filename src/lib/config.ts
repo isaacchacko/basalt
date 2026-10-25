@@ -53,6 +53,12 @@ export interface LayoutConfig {
      * Home, if the explorer lists it, is always first.
      */
     order: string[]
+    /**
+     * Folders whose entries list newest first, by their notes' dates (the
+     * undated after, by name), the way a folder's own page lists them:
+     * ["blog"]. Entries `order` lists still come first.
+     */
+    byDate?: string[]
   }
   breadcrumbs: { rootName: string }
   footer: { links: Record<string, string> }

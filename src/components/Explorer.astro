@@ -3,10 +3,11 @@
 // open and close where you click their chevron, and stay the way you left
 // them (localStorage); the whole explorer folds under its title. On a phone
 // it's a drawer behind the menu button.
-// Entries the site's `layout.explorer.order` lists come first.
+// Entries the site's `layout.explorer.order` lists come first; in a folder
+// `layout.explorer.byDate` lists, the rest go newest first.
 import ExplorerTree from "./ExplorerTree.astro"
 import { words } from "../layouts/words"
-import type { TreeNode } from "../layouts/notes"
+import { dateOf, type TreeNode } from "../layouts/notes"
 import { layout, ordered } from "../lib/config"
 
 interface Props {
@@ -20,9 +21,16 @@ interface Props {
 }
 const { root, current, open = "collapsed", fixed = false, home } = Astro.props
 const { explorer } = await layout()
-// the tree comes sorted folders first, by name; a stable sort keeps that for what the order doesn't list
-const sort = ordered<TreeNode>(explorer.order, () => 0)
-const arrange = (n: TreeNode): TreeNode => ({ ...n, children: [...n.children].sort(sort).map(arrange) })
+// the tree comes sorted folders first, by name; a stable sort keeps that for
+// what the order doesn't list, or, in a folder listed by date, newest first
+const byName = ordered<TreeNode>(explorer.order, () => 0)
+const when = (n: TreeNode) => (n.note ? (dateOf(n.note)?.getTime() ?? -Infinity) : -Infinity)
+const byDate = ordered<TreeNode>(explorer.order, (a, b) => when(b) - when(a) || 0)
+const dated = new Set((explorer.byDate ?? []).map((f) => f.replace(/^\/+|\/+$/g, "")))
+const arrange = (n: TreeNode): TreeNode => ({
+  ...n,
+  children: [...n.children].sort(dated.has(n.slug) ? byDate : byName).map(arrange),
+})
 const tree = arrange(root)
 const t = await words()
 ---
