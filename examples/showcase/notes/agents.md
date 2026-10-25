@@ -1,5 +1,5 @@
 ---
-title: Building with an agent
+title: Agents
 ---
 
 Basalt is made to be built by an agent as well as by hand. An agent can write a note, save it, and know for certain whether its change reached the page or what broke.

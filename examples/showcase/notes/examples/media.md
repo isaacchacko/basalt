@@ -1,5 +1,5 @@
 ---
-title: Pictures, sound and documents
+title: Media
 aliases: [media]
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: Start a garden
+title: Start
 ---
 
 <island name="born">Basalt is young.</island> It publishes [Isaac Chacko's garden](https://isaacchacko.com) and this site, and it's [on GitHub](https://github.com/isaacchacko/basalt), though not yet on npm. This is how it works today.

@@ -1,5 +1,5 @@
 ---
-title: Live components
+title: Islands
 aliases: [islands]
 ---
 

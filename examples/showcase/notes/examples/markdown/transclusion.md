@@ -1,5 +1,5 @@
 ---
-title: Notes inside notes
+title: Embedded notes
 aliases: [transclusion]
 ---
 

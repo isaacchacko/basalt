@@ -1,5 +1,5 @@
 ---
-title: Code and data
+title: Files
 aliases: [files]
 ---
 

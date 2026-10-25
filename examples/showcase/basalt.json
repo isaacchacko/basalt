@@ -25,16 +25,16 @@
         "start",
         "agents",
         "examples",
-        "markdown",
-        "diagrams",
-        "media",
-        "embeds",
-        "margin",
-        "files",
-        "transclusion",
-        "gardens",
-        "web",
-        "islands"
+        "examples/markdown",
+        "examples/diagrams",
+        "examples/media",
+        "examples/embeds",
+        "examples/markdown/margin",
+        "examples/markdown/files",
+        "examples/markdown/transclusion",
+        "examples/markdown/gardens",
+        "examples/embeds/web",
+        "examples/embeds/islands"
       ]
     }
   }

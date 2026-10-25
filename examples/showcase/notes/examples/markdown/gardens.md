@@ -1,5 +1,5 @@
 ---
-title: Why a garden
+title: Gardens
 tags: [gardens]
 aliases: [gardens]
 ---

@@ -1,5 +1,5 @@
 ---
-title: Notes in the margin
+title: Margin notes
 aliases: [secondary, margin]
 ---
 

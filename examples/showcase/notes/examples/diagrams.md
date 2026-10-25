@@ -1,5 +1,5 @@
 ---
-title: Pictures written as text
+title: Diagrams
 aliases: [diagrams]
 ---
 

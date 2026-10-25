@@ -1,5 +1,5 @@
 ---
-title: The web, embedded
+title: Web
 aliases: [web]
 ---
 
