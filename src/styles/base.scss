@@ -18,7 +18,8 @@ $boldWeight: 700;
   --margin-width: 22rem;
   // the room kept left of the main content: the folded navbar's hover zone
   // (5.5rem, nav.scss) and a gap, so the zone never sits over the text
-  --gutter-left: 7rem;
+  // at least the navbar's hover zone (nav.scss $zone), so it never lies over the text
+  --gutter-left: 11.5rem;
   --gutter-right: 2rem;
 }
 

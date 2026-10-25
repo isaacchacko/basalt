@@ -11,7 +11,7 @@
 
 // the folded hover zone: a strip from the window's left edge, inside the
 // page's left gutter (--gutter-left, base.scss)
-$zone: 5.5rem;
+$zone: 11rem;
 $open: 300px;
 $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 $narrow: "(max-width: 999.98px)";
@@ -94,25 +94,25 @@ $semiBoldWeight: 600;
     }
   }
 
-  // layout.nav "bar": folded, a thin bar at the strip's right edge, a map of
-  // the entries at their own heights (nav.ts draws them): dotted where
-  // there's none, dark where one is, ember for the page you're on
+  // layout.nav "bar": folded, a thin muted bar at the strip's right edge,
+  // with the page you're on marked in ember at its entry's height (nav.ts)
   .nav-bar {
     position: absolute;
     top: 0;
     bottom: 0;
     right: 6px;
-    width: 3px;
-    background: linear-gradient(to bottom, var(--gray) 0 1px, transparent 1px 5px) center top / 1px 5px repeat-y;
-    opacity: 0.9;
+    width: 3pt;
+    border-radius: 1.5pt;
+    background: color-mix(in srgb, var(--gray) 28%, transparent);
   }
 
+  // only the page you're on shows on the bar, in the accent
   .nav-bar-seg {
     position: absolute;
     left: 0;
     right: 0;
-    border-radius: 1.5px;
-    background: var(--darkgray);
+    border-radius: 1.5pt;
+    background: transparent;
 
     &.is-current {
       background: var(--tertiary);
