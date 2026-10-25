@@ -176,7 +176,9 @@ article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li
 
 // ---------- links: the underline draws itself ----------
 
-article a.internal:not(.tag-link, .transclude-src),
+// :where() keeps it no more specific than `article a.internal`, so a site's
+// own rule for its links (styles/custom.scss) wins without matching this one
+article a.internal:where(:not(.tag-link, .transclude-src)),
 .popover a.internal {
   background: linear-gradient(currentColor, currentColor) 0 100% / 0% 1.5px no-repeat;
   transition:
