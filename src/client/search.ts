@@ -3,8 +3,6 @@
 // searches tags ("#tag query" narrows a search to a tag). The index is
 // built from /static/contentIndex.json the first time search opens.
 
-import FlexSearch from "flexsearch"
-
 interface Details {
   slug: string
   title: string
@@ -12,14 +10,6 @@ interface Details {
   tags: string[]
 }
 type ContentIndex = Record<string, Details>
-interface Item {
-  id: number
-  slug: string
-  title: string
-  content: string
-  tags: string[]
-}
-
 type SearchType = "basic" | "tags"
 let searchType: SearchType = "basic"
 let currentSearchTerm = ""
@@ -63,26 +53,30 @@ const encoder = (str: string): string[] => {
   return tokens
 }
 
-const index = new FlexSearch.Document<Item>({
-  encode: encoder,
-  document: {
-    id: "id",
-    tag: "tags",
-    index: [
-      { field: "title", tokenize: "forward" },
-      { field: "content", tokenize: "forward" },
-      { field: "tags", tokenize: "forward" },
-    ],
-  },
-} as any)
+// flexsearch loads the first time search opens, not with every page
+let index: any
+async function makeIndex() {
+  const { default: FlexSearch } = await import("flexsearch")
+  index = new FlexSearch.Document({
+    encode: encoder,
+    document: {
+      id: "id",
+      tag: "tags",
+      index: [
+        { field: "title", tokenize: "forward" },
+        { field: "content", tokenize: "forward" },
+        { field: "tags", tokenize: "forward" },
+      ],
+    },
+  } as any)
+}
 
 let data: ContentIndex = {}
 let slugs: string[] = []
 let ready: Promise<void> | undefined
 function fill(): Promise<void> {
-  ready ??= fetch("/static/contentIndex.json")
-    .then((r) => r.json())
-    .then(async (d: ContentIndex) => {
+  ready ??= Promise.all([fetch("/static/contentIndex.json").then((r) => r.json()), makeIndex()])
+    .then(async ([d]: [ContentIndex, void]) => {
       data = d
       slugs = Object.keys(d)
       await Promise.all(
@@ -383,3 +377,5 @@ function setup() {
 
 const root = document.documentElement
 document.addEventListener("astro:page-load", setup)
+
+export {}

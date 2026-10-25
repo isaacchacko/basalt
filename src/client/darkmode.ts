@@ -31,3 +31,5 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
   } catch {}
   if (!chosen) setTheme(e.matches ? "dark" : "light", false)
 })
+
+export {}

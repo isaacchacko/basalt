@@ -372,6 +372,14 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
   transform: rotate(-90deg);
 }
 
+// a quiet ring for the keyboard, in the accent
+.sidebar.left a:focus-visible,
+.sidebar.left button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 // ---------- narrow: a bar across the top ----------
 
 @media all and ($narrow) {

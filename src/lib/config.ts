@@ -16,6 +16,7 @@
 import fs from "node:fs"
 import path from "node:path"
 // the site's basalt.config.ts, or {} (see vite.ts)
+// @ts-ignore: a virtual module
 import siteConfig from "basalt:config"
 import { siteDir } from "./site"
 

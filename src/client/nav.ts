@@ -103,3 +103,5 @@ document.addEventListener("astro:before-swap", (e) => {
   const next = e.newDocument.querySelector<HTMLElement>(".sidebar.left[data-tree]")
   if (old && next && old.dataset.tree !== next.dataset.tree) old.removeAttribute("data-astro-transition-persist")
 })
+
+export {}

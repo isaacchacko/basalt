@@ -25,3 +25,5 @@ document.addEventListener("astro:before-swap", () => {
 document.addEventListener("astro:after-swap", () => {
   delete root.dataset.navigating
 })
+
+export {}
