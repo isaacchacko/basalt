@@ -56,3 +56,89 @@ dialog.garden-graph {
   position: relative;
   min-height: 0;
 }
+
+// the kinds of file in the graph, each a dot in its colour
+.garden-graph-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.8rem;
+  font-family: var(--titleFont);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--gray);
+
+  &[hidden] {
+    display: none;
+  }
+}
+.garden-graph-kind::before {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.35em;
+  border-radius: 50%;
+  background: var(--kind);
+  vertical-align: 0.05em;
+}
+// files in the graph, on or off
+.garden-graph-files {
+  margin-left: auto;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--lightgray);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gray);
+  font: italic 0.85rem var(--titleFont);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+
+  &[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--tertiary) 45%, var(--lightgray));
+    background: var(--highlight);
+    color: var(--dark);
+  }
+  & + .garden-graph-hint {
+    margin-left: 0;
+  }
+}
+// the file under the pointer, in the corner: a picture, or its name
+.garden-graph-peek {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  width: min(15rem, 40vw);
+  padding: 0.5rem 0.6rem 0.45rem;
+  border-left: 2px solid var(--kind);
+  background: var(--light);
+  pointer-events: none;
+  animation: garden-graph-in 0.18s ease;
+
+  img {
+    display: block;
+    width: 100%;
+    max-height: 10rem;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+    border-radius: 3px;
+  }
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.35;
+  }
+  &[hidden] {
+    display: none;
+  }
+}
+.garden-graph-peek-name {
+  color: var(--dark);
+  overflow-wrap: anywhere;
+}
+.garden-graph-peek-what {
+  color: var(--gray);
+  font-style: italic;
+}

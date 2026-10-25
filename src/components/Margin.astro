@@ -47,12 +47,15 @@ const linksOf = (n: CollectionEntry<"notes">): string[] => {
 const titleOf = (n: CollectionEntry<"notes">) =>
   ((n.data as Record<string, unknown>).title as string | undefined) ?? n.id.split("/").pop()!
 
-let all: { id: string; title: string; links: string[] }[] = []
+let all: { id: string; title: string; links: string[]; files: string[] }[] = []
 if (showGraph || (wantBacklinks && !given?.length)) {
   const notes = await getCollection("notes")
   all = notes
     .filter((n) => !(n.data as Record<string, unknown>).draft && !(n.data as Record<string, unknown>).private)
-    .map((n) => ({ id: n.id, title: titleOf(n), links: linksOf(n) }))
+    .map((n) => {
+      const files = (n.data as Record<string, unknown>).files
+      return { id: n.id, title: titleOf(n), links: linksOf(n), files: Array.isArray(files) ? (files as string[]) : [] }
+    })
 }
 const backlinks = wantBacklinks
   ? given?.length

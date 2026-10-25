@@ -32,6 +32,8 @@ type Item = {
   pair?: { light: string; dark: string }
   /** a live embed's stand-in in the page while it's in the viewer */
   home?: HTMLElement
+  /** an origin made just to grow it from (viewSrc), gone when the viewer closes */
+  made?: boolean
 }
 
 const ICON = (k: keyof typeof PATHS) => icon(PATHS[k])
@@ -169,9 +171,23 @@ export function viewerButton(b: HTMLElement, el: HTMLElement, signal: AbortSigna
   )
 }
 
-export async function openViewer(start: HTMLElement, opener: { key?: boolean; from?: HTMLElement } = {}) {
+/**
+ * A file that isn't on the page (a graph's node for it), alone in the viewer,
+ * growing out of the point it was clicked at: a picture, or a page (a pdf) in a frame.
+ */
+export function viewSrc(src: string, kind: "image" | "frame", caption: string, at: { x: number; y: number }) {
+  const origin = document.createElement("span")
+  origin.style.cssText = `position:fixed;left:${at.x - 12}px;top:${at.y - 12}px;width:24px;height:24px;pointer-events:none`
+  document.body.append(origin)
+  return openViewer(origin, { only: { kind, origin, caption, src, made: true } })
+}
+
+export async function openViewer(
+  start: HTMLElement,
+  opener: { key?: boolean; from?: HTMLElement; only?: Item } = {},
+) {
   current?.close(true)
-  const all = items()
+  const all = opener.only ? [opener.only] : items()
   if (!all.length) return
   let index = Math.max(
     0,
@@ -491,6 +507,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     finished = true
     if (hidden) hidden.style.visibility = ""
     for (const holder of [...live.keys()]) goHome(holder)
+    for (const item of all) if (item.made) item.origin.remove()
     resize.disconnect()
     document.removeEventListener("themechange", followTheme)
     if (dialog.open) dialog.close()

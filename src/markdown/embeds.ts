@@ -488,7 +488,12 @@ function fileEmbed(
     return embedError(`couldn't read ${file}`)
   }
 
-  if (ext === "csv") return csvTable(parseCsv(src))
+  if (ext === "csv") {
+    // the table says which file it's from (a note's files, for the graph)
+    const table = csvTable(parseCsv(src))
+    table.data = { hProperties: { dataSrc: "/" + slugifyFilePath(file) } }
+    return table
+  }
 
   let lines = src.replace(/\n$/, "").split("\n")
   const total = lines.length

@@ -7,11 +7,12 @@
 // sets there becomes the note's entry data.
 //
 // rehypeNoteData runs after the links, embeds and margin notes: it adds the
-// note's description, reading time and the slugs it links to.
+// note's description, reading time, and the files it uses (its pictures,
+// sounds, videos, pdfs, code and data, from any attribute that points at one).
 //
 // The data contract (what the page can count on):
-//   title, links, tags, aliases, description, readingTime, date, draft,
-//   private, transcludes (set by transclude.ts)
+//   title, links, files, tags, aliases, description, readingTime, date,
+//   draft, private, transcludes (set by transclude.ts)
 
 import fs from "node:fs"
 import type { Root as HtmlRoot } from "hast"
@@ -130,6 +131,30 @@ export function describe(tree: HtmlRoot, given?: string): { description: string;
   return { description: desc.length > 300 ? desc.slice(0, 300) + "…" : desc, readingTime: minutes }
 }
 
+/**
+ * The site's files a note uses, other notes aside: whatever an attribute points
+ * at, in its markdown or its raw html (an embed's src, a link's href, a pdf's
+ * data-pdf, a sound's data-sound), if it's a file in the site. A picture's dark
+ * version counts as the picture.
+ */
+export function filesUsed(tree: HtmlRoot, has: (slug: string) => boolean): string[] {
+  const found = new Set<string>()
+  visit(tree, "element", (el) => {
+    for (const value of Object.values(el.properties ?? {})) {
+      if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) continue
+      let slug: string
+      try {
+        slug = decodeURIComponent(value.split(/[?#]/)[0].slice(1))
+      } catch {
+        continue
+      }
+      slug = slug.replace(/\.dark(\.[^./]+)$/, "$1")
+      if (slug && has(slug)) found.add(slug)
+    }
+  })
+  return [...found].sort()
+}
+
 export function rehypeNoteData() {
   return (tree: HtmlRoot, file: VFile) => {
     const fm = file.data.frontmatter
@@ -138,5 +163,7 @@ export function rehypeNoteData() {
     Object.assign(fm, describe(tree, given))
     fm.links ??= [] as FullSlug[]
     fm.transcludes ??= []
+    const { bySlug } = reg()
+    fm.files = filesUsed(tree, (slug) => bySlug.get(slug as FullSlug)?.isNote === false)
   }
 }

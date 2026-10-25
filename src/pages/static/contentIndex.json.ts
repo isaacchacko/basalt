@@ -12,6 +12,8 @@ export const GET: APIRoute = async () => {
       filePath: data.rel,
       title: titleOf(note),
       links: Array.isArray(data.links) ? data.links : [],
+      // the site's files it uses (its pictures, sounds, pdfs…), for the graph
+      files: Array.isArray(data.files) ? data.files : [],
       tags: tagsOf(note),
       content: textOf(note),
       date: dateOf(note)?.toISOString(),

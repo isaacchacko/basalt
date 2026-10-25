@@ -7,8 +7,8 @@ import "../styles/graph.scss"
 interface Props {
   /** this note's slug */
   here: string
-  /** every published note: its slug, title and the slugs it links to */
-  notes: { id: string; title: string; links: string[] }[]
+  /** every published note: its slug, title, the slugs it links to and the files it uses */
+  notes: { id: string; title: string; links: string[]; files?: string[] }[]
   /** how many links out from this note the graph reaches */
   depth?: number
   label?: string
