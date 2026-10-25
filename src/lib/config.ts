@@ -7,7 +7,7 @@
 //   // basalt.json
 //   { "layout": { "toc": true, "footer": { "links": { "GitHub": "https://…" } } } }
 //
-//   // basalt.config.ts
+//   // basalt.config.ts (beside its markdown plugins, if it has any)
 //   export default { layout: { components: { breadcrumbs: false } } }
 //
 // A page turns an opt-in part on (or off) for itself in its frontmatter:
@@ -15,9 +15,8 @@
 
 import fs from "node:fs"
 import path from "node:path"
-// the site's basalt.config.ts, or {} (see vite.ts)
-// @ts-ignore: a virtual module
-import siteConfig from "basalt:config"
+import { pathToFileURL } from "node:url"
+import { nativeImport } from "../markdown/siteconfig"
 import { siteDir } from "./site"
 
 export interface LayoutConfig {
@@ -82,14 +81,33 @@ function merge<T>(base: T, over: unknown): T {
   return out as T
 }
 
-/** The site's layout, read fresh each call (basalt.json can change while serving). */
-export function layout(): LayoutConfig {
-  const file = path.join(siteDir(), "basalt.json")
+/**
+ * The site's basalt.config.ts, imported by node as the markdown plugins are
+ * (src/markdown/siteconfig.ts: the same file, the same resolution), afresh
+ * whenever it's saved.
+ */
+async function siteConfig(dir: string): Promise<BasaltConfig> {
+  const file = ["basalt.config.ts", "basalt.config.js", "basalt.config.mjs"]
+    .map((f) => path.join(dir, f))
+    .find((f) => fs.existsSync(f))
+  if (!file) return {}
+  try {
+    const mod = await nativeImport(pathToFileURL(file).href + `?t=${fs.statSync(file).mtimeMs}`)
+    return { layout: (mod.layout ?? (mod.default as BasaltConfig | undefined)?.layout) as BasaltConfig["layout"] }
+  } catch (err) {
+    console.error(`basalt: ${file}: ${(err as Error).message}`)
+    return {}
+  }
+}
+
+/** The site's layout, read fresh each page (basalt.json and basalt.config.ts can change while serving). */
+export async function layout(): Promise<LayoutConfig> {
+  const dir = siteDir()
   let json: { layout?: unknown } = {}
   try {
-    json = JSON.parse(fs.readFileSync(file, "utf8"))
+    json = JSON.parse(fs.readFileSync(path.join(dir, "basalt.json"), "utf8"))
   } catch {}
-  return merge(merge(defaults, json.layout), (siteConfig as BasaltConfig).layout)
+  return merge(merge(defaults, json.layout), (await siteConfig(dir)).layout)
 }
 
 export interface Features {
@@ -99,7 +117,7 @@ export interface Features {
 }
 
 /** Which opt-in parts a page shows: its frontmatter, else the site's layout. */
-export function features(data: Record<string, unknown>, cfg = layout()): Features {
+export function features(data: Record<string, unknown>, cfg: LayoutConfig): Features {
   const pick = (key: keyof Features) => {
     const v = data[key]
     if (v === true || v === "true") return true

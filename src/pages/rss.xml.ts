@@ -10,7 +10,7 @@ const esc = (s: string) =>
 export async function feed(): Promise<string> {
   const { config } = registry().site
   const base = `https://${(config.baseUrl ?? "example.com").replace(/\/$/, "")}`
-  const limit = layout().rssLimit
+  const limit = (await layout()).rssLimit
   const items = (await notes())
     .map((n) => ({ n, date: dateOf(n) }))
     .sort((a, b) =>

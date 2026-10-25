@@ -8,11 +8,11 @@
 //                         dropping a file of the same name in components/.
 //                         The site's file can still import Basalt's own
 //                         (by path, or as @basalt/components/X.astro).
-//   basalt:config         the default export of <site>/basalt.config.ts, or {}
 //   basalt:site-styles    <site>/styles/custom.scss, if there is one
 //
-// A component, config or stylesheet added to or removed from the site while
-// serving reloads the page with the new resolution.
+// A component or stylesheet added to or removed from the site while serving
+// reloads the page with the new resolution, and so does a save of
+// basalt.json or basalt.config.ts (the layout is read as each page renders).
 
 import fs from "node:fs"
 import path from "node:path"
@@ -21,12 +21,12 @@ import { siteDir } from "./site"
 
 const BASALT_COMPONENTS = path.resolve("src/components")
 const PREFIX = "basalt:components/"
-const VIRTUAL = { config: "basalt:config", styles: "basalt:site-styles" }
+const VIRTUAL = { styles: "basalt:site-styles" }
 
 function shadowing(): Plugin {
   const site = siteDir()
   const own = path.join(site, "components")
-  const configFile = path.join(site, "basalt.config.ts")
+  const configFiles = ["basalt.json", "basalt.config.ts", "basalt.config.js", "basalt.config.mjs"].map((f) => path.join(site, f))
   const customStyles = path.join(site, "styles", "custom.scss")
   const siteHas = (name: string) => {
     const file = path.join(own, `${name}.astro`)
@@ -38,7 +38,7 @@ function shadowing(): Plugin {
     name: "basalt:shadowing",
     enforce: "pre",
     async resolveId(id, importer, opts) {
-      if (id === VIRTUAL.config || id === VIRTUAL.styles) return "\0" + id
+      if (id === VIRTUAL.styles) return "\0" + id
       if (id.startsWith(PREFIX)) {
         const name = id.slice(PREFIX.length).replace(/\.astro$/, "")
         return (!fromSite(importer) && siteHas(name)) || path.join(BASALT_COMPONENTS, `${name}.astro`)
@@ -50,29 +50,23 @@ function shadowing(): Plugin {
       return siteHas(path.basename(resolved.id, ".astro")) ?? null
     },
     load(id) {
-      if (id === "\0" + VIRTUAL.config) {
-        return fs.existsSync(configFile)
-          ? `export { default } from ${JSON.stringify(configFile)}`
-          : "export default {}"
-      }
       if (id === "\0" + VIRTUAL.styles) {
         return fs.existsSync(customStyles) ? `import ${JSON.stringify(customStyles)}` : ""
       }
     },
     configureServer(server: ViteDevServer) {
-      const watched = [own, configFile, path.dirname(customStyles)]
-      server.watcher.add(watched)
+      server.watcher.add([own, path.dirname(customStyles), ...configFiles])
       const restructure = (file: string) => {
-        const hit =
-          file === configFile ||
-          file === customStyles ||
-          (file.startsWith(own + path.sep) && file.endsWith(".astro"))
+        const hit = file === customStyles || (file.startsWith(own + path.sep) && file.endsWith(".astro"))
         if (!hit) return
         for (const env of Object.values(server.environments)) env.moduleGraph.invalidateAll()
         server.ws.send({ type: "full-reload" })
       }
       server.watcher.on("add", restructure)
       server.watcher.on("unlink", restructure)
+      server.watcher.on("change", (file) => {
+        if (configFiles.includes(file)) server.ws.send({ type: "full-reload" })
+      })
     },
   }
 }

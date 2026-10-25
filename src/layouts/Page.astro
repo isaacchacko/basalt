@@ -60,7 +60,7 @@ const {
 } = Astro.props
 
 const { site } = registry()
-const layout = siteLayout()
+const layout = await siteLayout()
 const all = await notes()
 const root: TreeNode = tree(all)
 const trail = ancestry(root, crumb ? "" : slug)
