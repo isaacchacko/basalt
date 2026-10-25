@@ -43,16 +43,50 @@ let ids = 0
 async function draw(figures: HTMLElement[]) {
   const m = await load()
   const dark = isDark()
+  const font = css("--bodyFont") || "system-ui, sans-serif"
   m.initialize({
     startOnLoad: false,
     securityLevel: "strict",
     theme: "base",
     darkMode: dark,
-    fontFamily: css("--bodyFont") || "system-ui, sans-serif",
+    fontFamily: font,
+    // drawn about as wide as the column holds, so it isn't shrunk to fit and
+    // its words stay the size of a Graphviz diagram's
+    flowchart: { nodeSpacing: 34, rankSpacing: 42, padding: 12, curve: "basis", useMaxWidth: true },
+    sequence: {
+      // a message's words wrap to the room between its actors, so the
+      // drawing fits the measure at its own size
+      wrap: true,
+      width: 100,
+      height: 44,
+      actorMargin: 34,
+      boxMargin: 8,
+      messageMargin: 30,
+      mirrorActors: false,
+      actorFontFamily: font,
+      messageFontFamily: font,
+      noteFontFamily: font,
+      actorFontSize: 15,
+      messageFontSize: 14,
+      noteFontSize: 14,
+      useMaxWidth: true,
+    },
     themeVariables: {
       darkMode: dark,
-      fontFamily: css("--bodyFont") || "system-ui, sans-serif",
+      fontFamily: font,
       fontSize: "15px",
+      actorBkg: css("--light"),
+      actorBorder: css("--secondary"),
+      actorTextColor: css("--dark"),
+      actorLineColor: css("--lightgray"),
+      signalColor: css("--gray"),
+      signalTextColor: css("--darkgray"),
+      noteBkgColor: css("--light"),
+      noteBorderColor: css("--tertiary"),
+      noteTextColor: css("--darkgray"),
+      activationBorderColor: css("--secondary"),
+      activationBkgColor: css("--lightgray"),
+      sequenceNumberColor: css("--light"),
       background: css("--light"),
       primaryColor: css("--light"),
       primaryTextColor: css("--darkgray"),

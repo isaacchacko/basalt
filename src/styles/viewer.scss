@@ -44,6 +44,13 @@ figure.diagram-mermaid {
   }
 }
 
+// there, the box doesn't clip it (what's inside is at most its width anyway)
+@media (min-width: 1000px) {
+  html :is(figure.diagram, figure.embed-frame, figure.diagram-mermaid, [data-viewer-code]) {
+    overflow: visible;
+  }
+}
+
 img.zoomable:focus-visible {
   outline: 2px solid var(--secondary);
   outline-offset: 3px;

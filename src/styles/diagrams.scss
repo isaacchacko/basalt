@@ -105,6 +105,13 @@ figure.diagram-mermaid {
   .mermaid-drawing:empty {
     display: none;
   }
+  // its boxes rounded like a Graphviz diagram's, its arrows' words in the
+  // page's ink
+  .mermaid-drawing svg :is(rect.actor, .node rect, .node polygon) {
+    rx: 9px;
+    ry: 9px;
+    stroke-width: 1.2px;
+  }
   // mermaid's nodes cast a shadow, which in the dark reads as a glow
   .mermaid-drawing svg :is(rect, polygon, circle, path) {
     filter: none !important;
