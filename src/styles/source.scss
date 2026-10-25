@@ -1,0 +1,41 @@
+// A page as its file (src/client/source.ts): the highlighted markdown in place
+// of the page's header, note and listing, and the margin's notes hidden, since
+// the source has them where they were written.
+
+.page-source {
+  display: none;
+
+  // long lines wrap, hanging under their first line, clear of its number
+  // (--digits is how many the last line's number has)
+  pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  pre > code > [data-line] {
+    --gutter: calc(var(--digits) * 1ch + 1rem);
+    padding-left: calc(0.25rem + var(--gutter));
+    text-indent: calc(-1 * var(--gutter));
+
+    &::before {
+      width: calc(var(--digits) * 1ch);
+      text-indent: 0;
+    }
+  }
+}
+
+:root[data-source] {
+  .center > .page-header > .popover-hint,
+  .center > article,
+  .center > .page-listing {
+    display: none;
+  }
+
+  .page-source {
+    display: block;
+  }
+
+  .sidebar.right {
+    visibility: hidden;
+  }
+}

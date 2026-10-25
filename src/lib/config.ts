@@ -35,6 +35,8 @@ export interface LayoutConfig {
     explorer: boolean
     search: boolean
     darkmode: boolean
+    /** the toggle that shows a page as its markdown */
+    source: boolean
     /** the date and reading time: on every note, only on notes with a date of their own ("dated"), or none */
     meta: boolean | "dated"
     tags: boolean
@@ -124,6 +126,7 @@ export const defaults: LayoutConfig = {
     explorer: true,
     search: true,
     darkmode: true,
+    source: true,
     meta: true,
     tags: true,
     footer: true,

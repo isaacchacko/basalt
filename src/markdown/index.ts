@@ -35,6 +35,7 @@ import rehypeSlug from "rehype-slug"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import rehypeKatex from "rehype-katex"
 import rehypePrettyCode from "rehype-pretty-code"
+import { prettyCode } from "./source.ts"
 import { parseFrontmatter } from "@astrojs/markdown-remark"
 import type { Root } from "hast"
 import { VFile } from "vfile"
@@ -102,10 +103,7 @@ const AUTOLINK_ICON = {
 
 const basaltRehype: PluggableList = [
   // Quartz highlighted first, before raw html is parsed
-  [
-    rehypePrettyCode,
-    { theme: { light: "github-light", dark: "github-dark" }, keepBackground: false },
-  ],
+  [rehypePrettyCode, prettyCode],
   rehypeRaw,
   // <copy>text</copy>, before links are made of what's in it
   rehypeCopy,

@@ -177,7 +177,7 @@ $semiBoldWeight: 600;
     justify-content: space-between;
   }
 
-  // the bottom tray: the theme toggle, under everything else
+  // the bottom tray: the theme and source toggles, under everything else
   .nav-tray {
     display: flex;
     gap: 0.25rem;
@@ -222,6 +222,7 @@ $semiBoldWeight: 600;
 // ---------- the tray's buttons: ghost icon buttons (shadcn's size="icon" variant="ghost") ----------
 
 .darkmode,
+.source-toggle,
 .nav-search {
   display: grid;
   place-items: center;
@@ -247,6 +248,18 @@ $semiBoldWeight: 600;
   &:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
     outline-offset: 2px;
+  }
+}
+
+.source-toggle {
+  &[aria-pressed="true"] {
+    color: var(--tertiary);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+    background: transparent;
   }
 }
 

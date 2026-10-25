@@ -1,0 +1,16 @@
+---
+// The source toggle: a ghost icon button, beside the theme toggle, that shows
+// each page as the markdown it's made from. Its script is src/client/source.ts.
+import { words } from "../layouts/words"
+const t = await words()
+---
+
+<button class="source-toggle" type="button" aria-label={t("source")} aria-pressed="false">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M8 7l-5 5 5 5M16 7l5 5-5 5"></path>
+  </svg>
+</button>
+
+<script>
+  import "../client/source"
+</script>
