@@ -1,10 +1,8 @@
-// A ```tree block (src/markdown/tree.ts): a directory, drawn in the frame a
-// code block has. Each row is indented by its depth (--d), so a mark's tint
-// runs the block's full width, and a guide runs down from each open folder.
+// A ```tree block (src/markdown/tree.ts). Rows indent themselves by --d, not
+// by nesting, so a mark's tint runs the block's full width.
 
 figure.tree {
-  // the marks' colours are the diffs' (--basalt-added and the rest, from
-  // diff.scss), with these where a page has no diffs' styles
+  // diff.scss defines these; the fallbacks are for a page without it
   --tree-added: var(--basalt-added, #1a7f37);
   --tree-removed: var(--basalt-removed, #cf222e);
   --tree-changed: var(--basalt-changed, #9a6700);
@@ -21,7 +19,6 @@ figure.tree {
   font-size: 0.85rem;
   line-height: 1.75;
   color: var(--darkgray);
-  // folders open to their height, not in a jump, where the browser can
   interpolate-size: allow-keywords;
 
   & > .tree-list {
@@ -40,7 +37,7 @@ figure.tree {
     padding: 0;
   }
 
-  // a folder's guide, under its chevron, the length of what's in it
+  // a folder's guide runs down from its chevron
   details > ul.tree-list::before {
     content: "";
     position: absolute;
@@ -79,12 +76,10 @@ figure.tree > figcaption.tree-title {
   gap: 0.3rem;
   padding: 0 0.85rem 0 calc(var(--tree-gutter) + var(--d) * var(--tree-step));
   border-left: 3px solid transparent;
-  margin-left: 0;
 
   & > svg,
   & > .tree-chevron {
     flex: none;
-    // level with the first line of the name
     margin-top: calc((1.75em - 16px) / 2);
   }
 }
@@ -105,12 +100,14 @@ figure.tree > figcaption.tree-title {
   color: var(--secondary);
 }
 
-// a folder shows its open icon while it's open, and its shut one when not
-// (or when there's nothing in it to open)
-.tree-dir > details[open]:not(:where([data-empty] > *)) > summary .tree-icon-shut,
+.tree-dir > details[open] > summary .tree-icon-shut,
 .tree-dir > details:not([open]) > summary .tree-icon-open,
 .tree-dir[data-empty] .tree-icon-open {
   display: none;
+}
+
+.tree-dir[data-empty] > details > summary .tree-icon-shut {
+  display: block;
 }
 
 .tree-label {
@@ -144,7 +141,10 @@ figure.tree a.tree-name {
   }
 }
 
-// a note beside its entry, quiet, set as prose
+.tree-elided {
+  color: var(--gray);
+}
+
 .tree-note {
   color: var(--gray);
   font-family: var(--bodyFont);
@@ -159,7 +159,6 @@ figure.tree a.tree-name {
   }
 }
 
-// said to a screen reader; the colour and the sign say it to the eye
 .tree-said {
   position: absolute;
   width: 1px;
@@ -174,7 +173,6 @@ figure.tree a.tree-name {
 figure.tree summary.tree-row {
   cursor: pointer;
   list-style: none;
-  border-radius: 0;
   transition: background 0.15s ease;
 
   &::-webkit-details-marker {
@@ -224,18 +222,7 @@ figure.tree summary.tree-row {
   }
 }
 
-// ---------- marks: added, removed, changed, looked at ----------
-
-.tree-entry[data-mark] > .tree-row,
-.tree-entry[data-mark] > details > .tree-row {
-  &::before {
-    position: absolute;
-    left: 0.3rem;
-    width: 0.7rem;
-    text-align: center;
-    font-weight: 600;
-  }
-}
+// ---------- marks ----------
 
 @each $mark, $sign in (added: "+", removed: "−", changed: "~") {
   .tree-entry[data-mark="#{$mark}"] > .tree-row,
@@ -245,6 +232,11 @@ figure.tree summary.tree-row {
 
     &::before {
       content: "#{$sign}";
+      position: absolute;
+      left: 0.3rem;
+      width: 0.7rem;
+      text-align: center;
+      font-weight: 600;
       color: var(--tree-#{$mark});
     }
   }
@@ -256,31 +248,20 @@ figure.tree summary.tree-row {
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--tree-removed) 70%, transparent);
   }
+
   .tree-icon,
   .tree-name {
     opacity: 0.75;
   }
 }
 
-// looked at: the way a code block highlights a line
-.tree-entry[data-mark="marked"] > .tree-row,
-.tree-entry[data-mark="marked"] > details > .tree-row {
+// as a code block highlights a line
+.tree-entry[data-mark="highlighted"] > .tree-row,
+.tree-entry[data-mark="highlighted"] > details > .tree-row {
   border-left-color: var(--secondary);
   background: var(--highlight);
 
   .tree-name {
     color: var(--secondary);
   }
-}
-
-// ---------- more, not shown ----------
-
-.tree-more > .tree-row {
-  color: var(--gray);
-  letter-spacing: 0.1em;
-}
-
-.tree-elided {
-  color: var(--gray);
-  font-weight: 400;
 }
