@@ -556,10 +556,21 @@ function setup(server: ViteDevServer) {
   // a site's markdown plugins (in basalt.config.ts) are loaded with Astro's
   // config, outside Vite's reach. A change to one restarts this server (and
   // only this one): Astro restarts on a change it sees to its config file.
-  const buildTime = [path.join(basaltSrc, "markdown"), path.join(basaltSrc, "lib"), path.join(basaltSrc, "integrations")]
+  // Basalt's code that runs as the site is built, not in the page: a change to
+  // it restarts the server. As real paths, so a site outside Basalt's checkout
+  // (whose src is a link to it) sees them too.
+  const realSrc = (() => {
+    try {
+      return fs.realpathSync(basaltSrc)
+    } catch {
+      return basaltSrc
+    }
+  })()
+  const buildTime = [path.join(realSrc, "markdown"), path.join(realSrc, "lib"), path.join(realSrc, "integrations")]
+  const buildTimeFiles = [path.join(realSrc, "loader.ts")]
   const markdownOf = async () => signature(await loadSiteMarkdown(site.dir, path.dirname(basaltSrc)))
   if (a.markdownSignature === undefined) void markdownOf().then((s) => (a.markdownSignature ??= s)).catch(() => {})
-  server.watcher.add([...buildTime, ...siteConfigs])
+  server.watcher.add([...buildTime, ...buildTimeFiles, ...siteConfigs])
   const restart = () => {
     a.restarting = true
     a.restartedServer = false
@@ -599,7 +610,7 @@ function setup(server: ViteDevServer) {
     try {
       real = fs.realpathSync(p)
     } catch {}
-    if (buildTime.some((d) => real.startsWith(d + path.sep))) restart()
+    if (buildTime.some((d) => real.startsWith(d + path.sep)) || buildTimeFiles.includes(real)) restart()
   })
 
   // first, before Vite's own listeners (and Basalt's in vite.ts) send the pages anything for it

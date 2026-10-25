@@ -19,6 +19,7 @@ import { refreshRegistry, registry } from "./lib/registry"
 import { linkOne, linkPublic, sourceDirs, type SiteFile } from "./lib/site"
 import { textTransforms } from "./markdown"
 import { findIslands } from "./markdown/islands"
+import { resolveFile } from "./markdown/embeds"
 import { nativeImport } from "./markdown/siteconfig"
 import { begin, end, lineOf, noteFailed, noteGone, noteWarned, bus, type Problem } from "./integrations/bus"
 
@@ -124,6 +125,13 @@ export function basaltLoader(): Loader {
       const islandsDir = path.join(reg.site.dir, "islands")
 
       const code = codeDigest(reg.site.dir)
+      /** the site files a note's islands read (<island data="cool.json">) */
+      const islandData = (raw: string): SiteFile[] => {
+        const rels = registry().files.map((f) => f.rel)
+        return [...raw.matchAll(/<island\b[^>]*?\bdata=["']([^"']+)["']/g)]
+          .map((m) => resolveFile(rels, m[1]))
+          .flatMap((found) => registry().files.filter((f) => f.rel === found))
+      }
       /** renders a note (if it changed): whether the store changed */
       const sync = async (file: SiteFile, force = false): Promise<boolean> => {
         const raw = fs.readFileSync(file.abs, "utf8")
@@ -138,7 +146,11 @@ export function basaltLoader(): Loader {
         const listed = /<note-list\b/.test(raw)
           ? reg.files.filter((f) => f.isNote && f !== file).map((f) => fs.statSync(f.abs, { throwIfNoEntry: false })?.mtimeMs ?? 0).join(",")
           : ""
-        const digest = ctx.generateDigest(raw + reg.slugs.length + code + embeds.join(",") + others + listed)
+        // and on the files its islands read: a change there is a change to it
+        const read = islandData(raw)
+          .map((f) => fs.statSync(f.abs, { throwIfNoEntry: false })?.mtimeMs ?? 0)
+          .join(",")
+        const digest = ctx.generateDigest(raw + reg.slugs.length + code + embeds.join(",") + others + listed + read)
         if (!force && existing && existing.digest === digest && !bus().noteErrors.has(file.abs)) {
           noteWarned(file.abs, unknownIslands(existing.rendered?.html ?? "", raw, rel(file), findIslands(islandsDir)))
           return false
@@ -241,6 +253,22 @@ export function basaltLoader(): Loader {
       const dirs = sourceDirs(reg.site)
       watcher.add([...dirs, islandsDir])
       const inSite = (p: string) => dirs.some((d) => p === d || p.startsWith(d + path.sep))
+      // a file an island reads (data="cool.json") changed: the notes that read it
+      watcher.on("change", (p) => {
+        if (!inSite(p)) return
+        const file = registry().byAbs.get(p)
+        if (!file || file.isNote) return
+        const readers = registry().files.filter(
+          (f) => f.isNote && fs.existsSync(f.abs) && islandData(fs.readFileSync(f.abs, "utf8")).includes(file),
+        )
+        if (!readers.length) return
+        logger.info(`${rel(file)}: read by ${readers.map(rel).join(", ")}, rendered again`)
+        void round(async () => {
+          let changed = false
+          for (const f of readers) if (await sync(f)) changed = true
+          return changed
+        })
+      })
       watcher.on("change", (p) => {
         if (!inSite(p)) return
         const file = registry().byAbs.get(p)
