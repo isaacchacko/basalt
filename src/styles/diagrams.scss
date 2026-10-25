@@ -23,6 +23,9 @@ figure.diagram {
 
 // graphviz's text is drawn in the theme's ink, its edges a step lighter
 figure.diagram-graphviz svg {
+  text:not([fill]) {
+    fill: currentColor;
+  }
   .edge path,
   .edge polygon {
     stroke: var(--gray);
@@ -101,6 +104,10 @@ figure.diagram-mermaid {
   }
   .mermaid-drawing:empty {
     display: none;
+  }
+  // mermaid's nodes cast a shadow, which in the dark reads as a glow
+  .mermaid-drawing svg :is(rect, polygon, circle, path) {
+    filter: none !important;
   }
   .mermaid-drawing svg {
     display: block;

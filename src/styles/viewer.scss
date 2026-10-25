@@ -153,6 +153,12 @@ dialog.basalt-viewer {
         0 0 0 1px color-mix(in srgb, var(--darkgray) 14%, transparent),
         0 18px 50px rgb(0 0 0 / 0.16);
     }
+    &[data-kind="svg"] svg text:not([fill]) {
+      fill: currentColor;
+    }
+    &[data-kind="svg"] svg :is(rect, polygon, circle, path) {
+      filter: none !important;
+    }
     &[data-kind="svg"] svg {
       display: block;
       width: 100%;

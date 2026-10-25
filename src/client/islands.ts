@@ -22,8 +22,34 @@ type IslandModule = {
 const found = import.meta.glob<IslandModule>(["@site/islands/*.{tsx,ts,jsx,js}", "!@site/islands/*.test.*"])
 const islands = new Map(Object.entries(found).map(([file, load]) => [file.split("/").pop()!.replace(/\.\w+$/, ""), load]))
 
-// every island mounted, so a hot swap can unmount the lot
-let running: AbortController | null = null
+// ---- hot swaps (dev) ----
+// A changed island's module comes back with a new ?t= in its import. One that
+// takes the update itself (a Preact component, through fast refresh) keeps its
+// state, and its island is left alone; anything else reaches this module,
+// whose new copy mounts again just the islands whose code changed.
+type Hot = {
+  /** every island on the page, and how to stop it */
+  mounted: Map<HTMLElement, AbortController>
+  /** island name -> the hot-swap time of the code its islands are running */
+  live: Map<string, number>
+}
+const hot: Hot = (import.meta.hot?.data as Partial<Hot> | undefined)?.mounted
+  ? (import.meta.hot!.data as Hot)
+  : { mounted: new Map(), live: new Map() }
+if (import.meta.hot) {
+  Object.assign(import.meta.hot.data, hot)
+  import.meta.hot.on("vite:afterUpdate", (payload: { updates: { path: string; acceptedPath: string; timestamp: number }[] }) => {
+    for (const u of payload.updates) {
+      // swapped in place, by the island's module itself
+      if (u.path === u.acceptedPath && islands.has(nameOf(u.path))) hot.live.set(nameOf(u.path), u.timestamp)
+    }
+  })
+}
+function nameOf(file: string) {
+  return file.split("?")[0].split("/").pop()!.replace(/\.\w+$/, "")
+}
+/** when this copy of the module's import of the island was last swapped (0: never) */
+const versionOf = (name: string) => Number(/[?&]t=(\d+)/.exec(String(islands.get(name)))?.[1] ?? 0)
 
 async function mountIsland(el: HTMLElement, signal: AbortSignal) {
   if (el.dataset.islandMounted === "true" || signal.aborted) return
@@ -31,6 +57,7 @@ async function mountIsland(el: HTMLElement, signal: AbortSignal) {
   const load = islands.get(name)
   if (!load) return console.error(`basalt: no island called "${name}" (islands/${name}.tsx, say)`)
   el.dataset.islandMounted = "true"
+  hot.live.set(name, versionOf(name))
   // a frame page (<island frame>) carries the props in its address
   let props: object = {}
   try {
@@ -131,13 +158,19 @@ function liveHtml(signal: AbortSignal) {
 }
 
 export function startIslands(signal: AbortSignal) {
-  running?.abort()
-  const mine = new AbortController()
-  running = mine
-  signal.addEventListener("abort", () => mine.abort())
-  document.querySelectorAll<HTMLElement>(".island[data-island], [data-island-frame]").forEach((el) => schedule(el, mine.signal))
-  liveHtml(mine.signal)
+  for (const el of document.querySelectorAll<HTMLElement>(".island[data-island], [data-island-frame]")) {
+    const name = el.dataset.island!
+    const running = hot.mounted.get(el)
+    // the same page again, after a hot swap of something else: leave it be
+    if (running && !running.signal.aborted && hot.live.get(name) === versionOf(name)) continue
+    running?.abort()
+    const mine = new AbortController()
+    hot.mounted.set(el, mine)
+    signal.addEventListener("abort", () => {
+      mine.abort()
+      hot.mounted.delete(el)
+    })
+    schedule(el, mine.signal)
+  }
+  liveHtml(signal)
 }
-
-// a hot swap: the old module unmounts what it mounted; MediaScripts starts the new one
-if (import.meta.hot) import.meta.hot.dispose(() => running?.abort())
