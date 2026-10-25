@@ -16,12 +16,12 @@ article > figure.compare {
   max-width: var(--compare-width, var(--measure, 34rem));
 }
 
-// over the side content it covers what's there (the contents, which follow
-// you down the page), as reaching code does
-article > figure.compare[style*="--compare-width"] {
-  z-index: 6;
-  background: var(--light);
-  box-shadow: 0 0 0 0.75rem var(--light);
+// what's in the side content beside a block that has taken its width steps
+// aside until it has passed (client/compare.ts)
+[data-under-compare] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.2s ease !important;
 }
 
 // one column under the bar on a narrower screen: the whole of it
@@ -194,7 +194,7 @@ figure.compare[data-reader] {
   .compare-column {
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0 1.5rem 45vh;
+    padding: 0 1.5rem 70vh;
 
     & + .compare-column {
       padding-left: 1.5rem;
@@ -260,7 +260,7 @@ figure.compare[data-reader] {
     }
     .compare-column {
       grid-area: 1 / 1;
-      padding: 0 1rem 45vh;
+      padding: 0 1rem 70vh;
       border: none;
 
       &:not([data-active]) {

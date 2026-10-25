@@ -20,6 +20,8 @@ import { toggleViewer, viewerButton } from "./viewer"
 const SIDE_PAD = 16
 /** in the reader, how far down a column its reading line is */
 const READING_LINE = 0.3
+/** how far either side of a pair, in column heights, the columns keep it level */
+const HOLD = 0.35
 // link previews show a copy of another note: its compare blocks stay as they are
 const ELSEWHERE = ".margin-preview, .margin-hover, .popover"
 
@@ -135,8 +137,13 @@ function reach(figure: HTMLElement) {
 
 // ---------- the reader ----------
 
-/** `y` (a point in column `from`'s content) in column `to`'s, through the partners. */
-function carry(y: number, from: number, to: number, rows: Row[], columns: HTMLElement[]): number {
+/**
+ * `y` (a point in column `from`'s content) in column `to`'s, through the
+ * partners. Near a pair (within `hold` of it) the columns move together, so
+ * the pair stays level while it's read; the difference in length between
+ * two pairs is taken up in the stretch between them.
+ */
+function carry(y: number, from: number, to: number, rows: Row[], columns: HTMLElement[], hold: number): number {
   const a = columns[from]
   const b = columns[to]
   const knots: [number, number][] = [[0, 0]]
@@ -148,7 +155,11 @@ function carry(y: number, from: number, to: number, rows: Row[], columns: HTMLEl
   for (let i = 1; i < knots.length; i++) {
     const [x0, y0] = knots[i - 1]
     const [x1, y1] = knots[i]
-    if (y <= x1) return y0 + ((y - x0) / (x1 - x0)) * (y1 - y0)
+    if (y > x1) continue
+    const band = Math.min(hold, (x1 - x0) / 3, (y1 - y0) / 3)
+    if (y - x0 <= band) return y0 + (y - x0)
+    if (x1 - y <= band) return y1 - (x1 - y)
+    return y0 + band + ((y - x0 - band) / (x1 - x0 - 2 * band)) * (y1 - y0 - 2 * band)
   }
   return knots.at(-1)![1]
 }
@@ -160,12 +171,13 @@ function reader(figure: HTMLElement, columns: HTMLElement[], rows: Row[]): () =>
   let driver = columns[0]
   let follow = 0
   const line = (c: HTMLElement) => c.clientHeight * READING_LINE
+  const carryTo = (y: number, from: number, to: number) => carry(y, from, to, rows, columns, columns[from].clientHeight * HOLD)
   const followFrom = (lead: HTMLElement) => {
     const from = columns.indexOf(lead)
     const y = lead.scrollTop + line(lead)
     columns.forEach((c, to) => {
       if (c === lead) return
-      c.scrollTop = carry(y, from, to, rows, columns) - line(c)
+      c.scrollTop = carryTo(y, from, to) - line(c)
     })
   }
   for (const column of columns) {
@@ -188,7 +200,7 @@ function reader(figure: HTMLElement, columns: HTMLElement[], rows: Row[]): () =>
   tabs.className = "compare-tabs"
   const show = (i: number, keep = true) => {
     const from = columns.findIndex((c) => c.dataset.active !== undefined)
-    const y = from >= 0 && keep ? carry(columns[from].scrollTop + line(columns[from]), from, i, rows, columns) : 0
+    const y = from >= 0 && keep ? carryTo(columns[from].scrollTop + line(columns[from]), from, i) : 0
     columns.forEach((c, j) => {
       c.toggleAttribute("data-active", j === i)
       tabs.children[j]?.setAttribute("aria-pressed", String(j === i))
@@ -311,9 +323,45 @@ function startBlock(figure: HTMLElement, signal: AbortSignal) {
   lay()
 }
 
+const SIDE_OCCUPANTS = ".margin-layer > *, .margin-resting > *, .basalt-now-playing"
+
+/** What rests in the side content beside a block that has taken its width fades until the block has passed (a preview, which was asked for, stays). */
+function clearSide(signal: AbortSignal) {
+  const side = document.querySelector<HTMLElement>("aside.margin")
+  if (!side) return
+  let frame = 0
+  const check = () => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(() => {
+      const wide = [...document.querySelectorAll<HTMLElement>("article > figure.compare[style*='--compare-width']")].map((f) =>
+        f.getBoundingClientRect(),
+      )
+      for (const el of side.querySelectorAll<HTMLElement>(SIDE_OCCUPANTS)) {
+        const r = el.getBoundingClientRect()
+        const under = wide.some((f) => r.height && r.top < f.bottom + 8 && r.bottom > f.top - 8 && r.left < f.right)
+        el.toggleAttribute("data-under-compare", under)
+      }
+    })
+  }
+  addEventListener("scroll", check, { signal, passive: true })
+  addEventListener("resize", check, { signal })
+  document.addEventListener("margin:placed", check, { signal })
+  const mo = new MutationObserver(check)
+  mo.observe(side, { childList: true, subtree: true })
+  for (const figure of document.querySelectorAll("article > figure.compare"))
+    mo.observe(figure, { attributes: true, attributeFilter: ["style"] })
+  signal.addEventListener("abort", () => {
+    mo.disconnect()
+    cancelAnimationFrame(frame)
+    for (const el of side.querySelectorAll("[data-under-compare]")) el.removeAttribute("data-under-compare")
+  })
+  check()
+}
+
 export function startCompare(signal: AbortSignal) {
   for (const figure of document.querySelectorAll<HTMLElement>("figure.compare")) {
     if (figure.closest(ELSEWHERE) || figure.querySelector(":scope > .compare-actions")) continue
     startBlock(figure, signal)
   }
+  if (document.querySelector("article > figure.compare")) clearSide(signal)
 }

@@ -8,7 +8,9 @@ Some things are easier to understand next to each other: two versions of the sam
 
 ## Two columns
 
-Anything goes in a column: prose, lists, code, pictures. Leave a blank line between the callouts, and nothing else.
+Anything goes in a column: prose, lists, code, pictures.[^columns] Leave a blank line between the callouts, and nothing else.
+
+[^columns]: Two is what it's made for; three fit when there's room.
 
 > [!compare] Basalt
 > One component. The handlers sit on the tiles they belong to, and the page runs it in the browser.
