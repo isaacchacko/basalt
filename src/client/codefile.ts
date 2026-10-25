@@ -1,6 +1,6 @@
 // A code file's bar (figure.code-file, from ![[file.py]]): copy its code, see
 // the raw file, and show it on the whole screen if it asked for that.
-import { PATHS, icon, toggleFullscreen } from "./embeds"
+import { PATHS, fullscreenButton, icon, toggleFullscreen } from "./embeds"
 
 export function startCodeFiles(signal: AbortSignal) {
   for (const figure of document.querySelectorAll<HTMLElement>("figure.code-file")) {
@@ -29,6 +29,9 @@ export function startCodeFiles(signal: AbortSignal) {
       },
       { signal },
     )
-    full?.addEventListener("click", () => toggleFullscreen(figure), { signal })
+    if (full) {
+      full.addEventListener("click", () => toggleFullscreen(figure), { signal })
+      fullscreenButton(full, figure, signal, 16, 2)
+    }
   }
 }

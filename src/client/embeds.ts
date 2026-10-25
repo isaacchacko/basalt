@@ -91,6 +91,22 @@ export function toggleFullscreen(el: HTMLElement) {
     .catch(() => {})
 }
 
+/** A full-screen control that says "leave" while its element is full screen. */
+export function fullscreenButton(b: HTMLElement, el: HTMLElement, signal: AbortSignal, size = 18, stroke = 1.8) {
+  const label = b.getAttribute("aria-label") ?? "full screen"
+  const title = b.title
+  document.addEventListener(
+    "fullscreenchange",
+    () => {
+      const full = document.fullscreenElement === el
+      b.innerHTML = icon(full ? PATHS.collapse : PATHS.expand, size, stroke)
+      b.setAttribute("aria-label", full ? "leave full screen" : label)
+      b.title = full ? "leave full screen (esc)" : title
+    },
+    { signal },
+  )
+}
+
 function playFacade(facade: HTMLAnchorElement) {
   const iframe = document.createElement("iframe")
   iframe.src = facade.dataset.embedSrc!

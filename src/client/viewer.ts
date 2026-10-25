@@ -4,7 +4,16 @@
 // the wheel, a pinch), ←/→ (or a swipe) through the page's others, and the
 // original a click away. Without this script an image is an image and a
 // diagram is a diagram.
-import { EASE, PATHS, button as makeButton, icon, link as makeLink, still, toggleFullscreen } from "./embeds"
+import {
+  EASE,
+  PATHS,
+  button as makeButton,
+  fullscreenButton,
+  icon,
+  link as makeLink,
+  still,
+  toggleFullscreen,
+} from "./embeds"
 
 type Kind = "image" | "svg" | "frame"
 type Item = { kind: Kind; origin: HTMLElement; caption: string; src?: string }
@@ -475,18 +484,7 @@ function addExpands(root: ParentNode, signal: AbortSignal) {
       { signal },
     )
     el.append(b)
-    if (el.matches("figure.diagram-graph")) {
-      document.addEventListener(
-        "fullscreenchange",
-        () => {
-          const full = document.fullscreenElement === el
-          b.innerHTML = ICON(full ? "collapse" : "expand")
-          b.title = full ? "leave full screen (esc)" : "full screen"
-          b.setAttribute("aria-label", b.title)
-        },
-        { signal },
-      )
-    }
+    if (el.matches("figure.diagram-graph")) fullscreenButton(b, el, signal)
   }
 }
 

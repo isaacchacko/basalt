@@ -6,7 +6,7 @@
 // this script the <object> it replaces stays, with its link.
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist"
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
-import { button as makeButton, icon, toggleFullscreen } from "./embeds"
+import { button as makeButton, fullscreenButton, icon, toggleFullscreen } from "./embeds"
 
 const ico = (d: string) => icon(d, 16, 2)
 const ICONS = {
@@ -72,17 +72,19 @@ async function mount(viewer: HTMLElement, signal: AbortSignal) {
   const name = viewer.dataset.pdfName ?? "document.pdf"
   let lib: PdfJs
   let doc: PDFDocumentProxy
+  let loading: ReturnType<PdfJs["getDocument"]>
   try {
     lib = await loadPdfJs()
-    doc = await lib.getDocument({ url }).promise
+    loading = lib.getDocument({ url })
+    doc = await loading.promise
   } catch (err) {
     // the <object> and its link stay
     console.error("basalt: the pdf viewer couldn't open", url, err)
     viewer.dataset.ready = "failed"
     return
   }
-  if (signal.aborted) return void doc.destroy()
-  signal.addEventListener("abort", () => doc.destroy())
+  if (signal.aborted) return void loading.destroy()
+  signal.addEventListener("abort", () => loading.destroy())
 
   // ---- the viewer's parts ----
   const stage = document.createElement("div")
@@ -334,6 +336,7 @@ async function mount(viewer: HTMLElement, signal: AbortSignal) {
   zoomOut.addEventListener("click", () => rezoom(zoom / 1.25), { signal })
   fit.addEventListener("click", () => rezoom(1), { signal })
   full.addEventListener("click", () => toggleFullscreen(figure), { signal })
+  fullscreenButton(full, figure, signal, 16, 2)
   // into full screen and out: fit again, at the page you were on
   document.addEventListener("fullscreenchange", () => rezoom(1), { signal })
   // the page fits whatever it's in: the column, or the whole screen
