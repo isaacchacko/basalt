@@ -279,6 +279,7 @@ function list(entries: Entry[], depth: number, base: string, foldBelow: number, 
  */
 export function treeHtml(source: string, meta?: string | null): string {
   const top = parseTree(source)
+  if (!top.length) return ""
   const caption = /title=(?:"([^"]*)"|'([^']*)'|(\S+))/.exec(meta ?? "")?.slice(1).find(Boolean)
   const openTo = /\bopen=(\d+)/.exec(meta ?? "")?.[1]
   const foldBelow = openTo === undefined ? Infinity : Number(openTo)
