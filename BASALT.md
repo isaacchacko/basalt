@@ -21,10 +21,18 @@ my-garden/
   "title": "My garden",
   "baseUrl": "garden.example.com",
   "content": [{ "from": "notes" }, { "from": "../posts", "to": "blog" }],
-  "theme": { "colors": { "lightMode": { "tertiary": "#c8482b" }, "darkMode": {} } },
+  "theme": {
+    "colors": { "lightMode": { "tertiary": "#c8482b" }, "darkMode": {} },
+    "fonts": {
+      "title": "Fraunces, serif", "body": "'Instrument Sans', sans-serif",
+      "load": ["https://fonts.googleapis.com/css2?family=Fraunces&family=Instrument+Sans&display=swap"]
+    }
+  },
   "layout": { "toc": false, "components": { "meta": "dated" }, "footer": { "links": { "GitHub": "https://github.com/me" } } }
 }
 ```
+
+Basalt sets everything in Palatino (and code in JetBrains Mono). A site picks its own type with `theme.fonts`: `title` (titles and labels), `header` (headings), `body` and `code`, each a CSS font-family, and `load`, stylesheets that bring in fonts visitors may not have. `theme.colors` does the same for the palette.
 
 Basalt writes only under `<site>/.basalt/astro`. That folder holds the site's own Astro root, which is links to Basalt's files plus its cache, its content store and its build (`dist/`).
 

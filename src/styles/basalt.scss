@@ -2,8 +2,7 @@
 // (ported from quartz/styles/basalt.scss).
 //
 // The palette is stone paper, basalt ink and an ember accent, with a dark
-// mode. Type is Fraunces over Instrument Sans: a soft, optically sized serif
-// for anything that names something, a plain sans for reading. Small labels
+// mode. Type is Palatino throughout, as a book is set. Small labels
 // (a sidebar section, a date) are set like the titles, in italic, never in
 // small caps or monospace. Lists are hung on hexagons, basalt's columns.
 // A site changes any of it in its styles/custom.scss.
@@ -19,9 +18,14 @@
   --highlight: rgba(212, 87, 42, 0.12);
   --textHighlight: #f2c14e66;
 
-  --titleFont: "Fraunces", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --headerFont: "Fraunces", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --bodyFont: "Instrument Sans", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  // Palatino, Zapf's book face, for everything but code: on a Mac it's
+  // Palatino, on Windows Palatino Linotype or Book Antiqua, elsewhere one of
+  // its free clones. A site sets its own in basalt.json's theme.fonts.
+  --palatino: Palatino, "Palatino Linotype", "Book Antiqua", "TeX Gyre Pagella", "URW Palladio L", P052,
+    Georgia, serif;
+  --titleFont: var(--palatino);
+  --headerFont: var(--palatino);
+  --bodyFont: var(--palatino);
   --codeFont: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
   color-scheme: light;
@@ -45,7 +49,8 @@
 $hex: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
 
 :root {
-  // how soft Fraunces' corners are: 0 is sharp, 100 is round
+  // how soft a variable face's corners are, where it has the axis (Fraunces'
+  // SOFT): 0 is sharp, 100 is round
   --basalt-soft: 50;
   --basalt-ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 }

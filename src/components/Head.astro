@@ -24,11 +24,12 @@ const url = base ? `${base}${path === "/" ? "/" : path}` : undefined
 // stylesheets land in the head)
 const palette = paletteCss(await layout()).replaceAll(":root", ":root:root")
 
-// Fraunces with its optical size, weight, softness and wonk axes; Instrument
-// Sans to read; JetBrains Mono only for code
-const fonts =
-  "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1" +
-  "&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=JetBrains+Mono:wght@400;600&display=swap"
+// Basalt's type is Palatino, which visitors have (or a clone of it); only the
+// code face is fetched. A site's theme.fonts.load brings in its own.
+const fontSheets = [
+  "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap",
+  ...((await layout()).theme.fonts?.load ?? []),
+]
 
 // the mark, as the tab's icon
 const icon =
@@ -63,7 +64,7 @@ const icon =
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href={fonts} />
+{fontSheets.map((href) => <link rel="stylesheet" href={href} />)}
 
 <!--
   The theme, before anything paints: the reader's choice, else their system's.

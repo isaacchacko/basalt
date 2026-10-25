@@ -69,7 +69,16 @@ export interface LayoutConfig {
    * light, lightgray, gray, darkgray, dark, secondary, tertiary, highlight,
    * textHighlight, for each mode. In basalt.json it's a top-level "theme".
    */
-  theme: { colors: { lightMode: Record<string, string>; darkMode: Record<string, string> } }
+  theme: {
+    colors: { lightMode: Record<string, string>; darkMode: Record<string, string> }
+    /**
+     * The site's type, over Basalt's (Palatino for everything but code): a
+     * CSS font-family for `title` (the page's title and labels), `header`
+     * (headings), `body` and `code`, and `load`, stylesheets that bring in
+     * fonts the visitor may not have (a Google Fonts link, say).
+     */
+    fonts: { title?: string; header?: string; body?: string; code?: string; load?: string[] }
+  }
 }
 
 export interface BasaltConfig {
@@ -97,7 +106,7 @@ export const defaults: LayoutConfig = {
   rssLimit: 10,
   feed: { folders: [] },
   strings,
-  theme: { colors: { lightMode: {}, darkMode: {} } },
+  theme: { colors: { lightMode: {}, darkMode: {} }, fonts: {} },
 }
 
 function merge<T>(base: T, over: unknown): T {
@@ -187,17 +196,23 @@ export function features(data: Record<string, unknown>, cfg: LayoutConfig): Feat
   return { graph: pick("graph"), toc: pick("toc"), backlinks: pick("backlinks") }
 }
 
-/** The site's palette as css, to follow Basalt's own (empty when it has none). */
+/** The site's palette and type as css, to follow Basalt's own (empty when it has none). */
 export function paletteCss(cfg: LayoutConfig): string {
   const block = (sel: string, colors: Record<string, string>) => {
     const decls = Object.entries(colors)
-      .filter(([k, v]) => /^[a-zA-Z]+$/.test(k) && /^[#\w(),.\s%-]+$/.test(v))
+      .filter(([k, v]) => /^[a-zA-Z]+$/.test(k) && /^[#\w(),.\s%"'-]+$/.test(v))
       .map(([k, v]) => `--${k}: ${v};`)
       .join(" ")
     return decls ? `${sel} { ${decls} }` : ""
   }
+  const fonts = cfg.theme.fonts ?? {}
+  const type = Object.fromEntries(
+    (["title", "header", "body", "code"] as const)
+      .filter((k) => typeof fonts[k] === "string" && /^[\w\s",'-]+$/.test(fonts[k]!))
+      .map((k) => [`${k}Font`, fonts[k]!]),
+  )
   return [
-    block(":root", cfg.theme.colors.lightMode ?? {}),
+    block(":root", { ...(cfg.theme.colors.lightMode ?? {}), ...type }),
     block(':root[saved-theme="dark"]', cfg.theme.colors.darkMode ?? {}),
   ]
     .filter(Boolean)
