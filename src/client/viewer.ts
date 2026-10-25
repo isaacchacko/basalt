@@ -44,10 +44,9 @@ const DIAGRAMS = "figure.diagram-graphviz, figure.diagram-svg, figure.diagram-me
 // code that opens here: a code file with a full-screen button, or a code
 // block long enough to have been given one (addExpands)
 const CODE = "figure.code-file:has(.code-file-full), [data-viewer-code]"
-// embeds that are alive (a graph you drag, a pdf's pages, a compare block's
-// columns): they can't be copied, so they come into the viewer themselves and
-// go back after
-const LIVE = "figure.diagram-graph, figure.embed-pdf, figure.compare"
+// embeds that are alive (a graph you drag, a pdf's pages): they can't be
+// copied, so they come into the viewer themselves and go back after
+const LIVE = "figure.diagram-graph, figure.embed-pdf"
 /** a code block taller than this many lines gets a way into the viewer */
 const LONG_CODE = 20
 // link previews show a copy of another note: its pictures aren't this page's.

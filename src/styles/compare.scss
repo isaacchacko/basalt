@@ -45,7 +45,8 @@ html:not([data-margin="beside"]) article > figure.compare {
   }
 
   & > :first-child,
-  & > .compare-label + * {
+  & > .compare-label + *,
+  & > .compare-label + .compare-gap + * {
     margin-top: 0;
   }
   & > :last-child {
@@ -74,7 +75,7 @@ html:not([data-margin="beside"]) article > figure.compare {
   padding-right: 2.25rem;
 }
 
-@container (max-width: 36rem) {
+@container (max-width: 32rem) {
   .compare-columns {
     grid-auto-flow: row;
     gap: 1.25rem 0;
@@ -120,7 +121,7 @@ html:not([data-margin="beside"]) article > figure.compare {
 
 .compare-actions {
   position: absolute;
-  top: -0.2rem;
+  top: 0;
   right: 0;
   display: flex;
   z-index: 2;
@@ -180,8 +181,9 @@ figure.compare[data-reader] {
   background: var(--light);
   overflow: hidden;
 
-  // the viewer has its own close
-  & > .compare-actions {
+  // the viewer has its own close; a code block's own full screen would leave the comparison
+  & > .compare-actions,
+  .code-file-full {
     display: none;
   }
 
@@ -220,7 +222,7 @@ figure.compare[data-reader] {
 }
 
 // no room for columns: one at a time, under a switch between them
-@container (max-width: 36rem) {
+@container (max-width: 32rem) {
   figure.compare[data-reader] {
     .compare-tabs {
       display: flex;

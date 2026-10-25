@@ -14,7 +14,7 @@
 // Hovering an anchored block (or line) lights its partners.
 
 import { PATHS, icon, button } from "./embeds"
-import { toggleViewer, viewerButton } from "./viewer"
+import { openViewer, toggleViewer, viewerButton } from "./viewer"
 
 /** room kept clear of the side content's right edge, as code reach keeps (codereach.ts) */
 const SIDE_PAD = 16
@@ -91,6 +91,14 @@ function partners(columns: HTMLElement[]): Row[] {
 const offsetIn = (el: HTMLElement, column: HTMLElement) =>
   el.getBoundingClientRect().top - column.getBoundingClientRect().top + column.scrollTop
 
+/** A block with the sentence that leads into it ("…on the page:") before it: they move as one. */
+function leadOf(el: HTMLElement): HTMLElement {
+  let lead = el
+  while (lead.previousElementSibling?.matches("p:not(.compare-label)") && lead.previousElementSibling.textContent!.trimEnd().endsWith(":"))
+    lead = lead.previousElementSibling as HTMLElement
+  return lead
+}
+
 function makeGap(): HTMLElement {
   const gap = document.createElement("div")
   gap.className = "compare-gap"
@@ -110,7 +118,7 @@ function level(figure: HTMLElement, columns: HTMLElement[], rows: Row[]) {
     if (row.some((el) => el.dataset.compareLine !== undefined)) continue
     const gaps = row.map((el) => {
       const gap = makeGap()
-      el.before(gap)
+      leadOf(el).before(gap)
       return gap
     })
     // an empty gap lets the margins around it collapse as before; one with a
@@ -216,12 +224,26 @@ function reader(figure: HTMLElement, columns: HTMLElement[], rows: Row[]): () =>
     tabs.append(tab)
   })
   figure.prepend(tabs)
+
+  // the first pair level from the start: the column it's higher in starts lower
+  const first = rows[0]
+  const tops = first?.map((el, i) => offsetIn(el, columns[i])) ?? []
+  const lowest = Math.max(...tops)
+  first?.forEach((el, i) => {
+    if (lowest - tops[i] < 1) return
+    const gap = makeGap()
+    gap.style.height = `${lowest - tops[i]}px`
+    const label = columns[i].querySelector(":scope > .compare-label")
+    if (label) label.after(gap)
+    else columns[i].prepend(gap)
+  })
   show(0, false)
 
   return () => {
     ctrl.abort()
     cancelAnimationFrame(follow)
     tabs.remove()
+    for (const gap of figure.querySelectorAll(".compare-gap")) gap.remove()
     for (const c of columns) delete c.dataset.active
   }
 }
@@ -260,7 +282,15 @@ function startBlock(figure: HTMLElement, signal: AbortSignal) {
   const actions = document.createElement("span")
   actions.className = "code-actions compare-actions"
   const full = button("code-action compare-full", "full screen", icon(PATHS.expand, 16))
-  full.addEventListener("click", () => toggleViewer(figure), { signal })
+  // the reader holds this comparison alone, not a gallery of the page's
+  full.addEventListener(
+    "click",
+    (e) =>
+      figure.dataset.inViewer !== undefined
+        ? toggleViewer(figure)
+        : openViewer(figure, { key: e.detail === 0, only: { kind: "live", origin: figure, caption: "" } }),
+    { signal },
+  )
   viewerButton(full, figure, signal, 16)
   actions.append(full)
   figure.dataset.quietControls = ""
