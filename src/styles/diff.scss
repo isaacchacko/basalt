@@ -38,8 +38,6 @@ figure.diff {
   }
 
   & > pre > code {
-    padding: 0.35rem 0;
-
     & > [data-line] {
       --diff-tint: transparent;
       padding: 0 1rem 0 0;
@@ -145,10 +143,6 @@ figure.diff {
     background: color-mix(in srgb, var(--lightgray) 38%, var(--light));
     color: var(--gray);
 
-    &:first-child {
-      margin-top: -0.35rem;
-    }
-
     [data-diff="file"] + & {
       margin-top: 0;
     }
@@ -181,7 +175,6 @@ figure.diff {
     font-weight: 600;
 
     &:first-child {
-      margin-top: -0.35rem;
       border-top: none;
     }
 
