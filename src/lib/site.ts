@@ -102,6 +102,13 @@ export function walkSite(site: Site): SiteFile[] {
   return [...seen.values()].sort((a, b) => a.rel.localeCompare(b.rel))
 }
 
+/** Where one of the site's notes is served ("/blog/a-post", "/" for the home page); null for a file that isn't one. */
+export function pageOf(site: Site, file: string): string | null {
+  const abs = path.resolve(file)
+  const note = walkSite(site).find((f) => f.isNote && f.abs === abs)
+  return note ? `/${encodeURI(note.slug.replace(/(^|\/)index$/, ""))}` : null
+}
+
 /** The folders the site's notes come from, to watch while serving. */
 export function sourceDirs(site: Site): string[] {
   return site.config.content.map(({ from }) => path.resolve(site.dir, from))

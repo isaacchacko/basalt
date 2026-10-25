@@ -43,6 +43,7 @@ Basalt writes only under `<site>/.basalt/astro`. That folder holds the site's ow
 ```sh
 basalt new <dir> [--title "My garden"]   # start a site
 basalt dev [dir] [--port 4321]           # serve it, live, in the background
+basalt edit [dir] <file>                 # serve it, and print the note's page and the editor on it
 basalt build [dir]                       # build it into <dir>/.basalt/astro/dist (exits 1 on a broken note)
 basalt check [dir] [--json]              # build it and list what's broken, with files and lines
 basalt status [dir]                      # what the dev server is doing (JSON)
@@ -103,6 +104,23 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 - **Errors keep the last good page up.** A note whose frontmatter or markdown doesn't parse keeps its last good version, and the rest of the site builds; notes that embed or list it still render. A broken component or stylesheet leaves the open page as it was, under the error overlay; the fix swaps the page back in and clears the error at once. Each problem stays in `errors` until it's fixed.
 - **`basalt build`** exits 1 when a note failed, naming its file and line (the rest of the site is still built). **`basalt check`** builds, then lists notes that failed, broken links, missing embeds and unknown islands with their file and line (`notes/field-log.md:10  broken link: [[nudibranch]]: no such note`), and orphans as warnings. `--json` gives the same as JSON. It exits 1 when anything is broken.
 - **`basalt logs <dir>`** prints the dev server's log as plain lines, with repeats collapsed (`--raw` for its JSON lines). `basalt help <topic>` prints a section of this file.
+
+## Editing with a person
+
+Someone wants to edit; you set the table.
+
+- **Serve and find the page:** `basalt edit <file>`, or `basalt edit <dir> <file>` from outside the site. It serves the site if it isn't already, then prints the note's page and the person's own editor on it, `$VISUAL`, else `$EDITOR`:
+
+  ```
+  Already serving garden at http://localhost:4322 (pid 4180)
+  content/pages/about.md is at http://localhost:4322/about
+  edit it with: nvim content/pages/about.md
+  ```
+
+  With neither set it says so: ask what they edit with, never pick one for them. `basalt status` has the site's `url` too.
+- **Show it:** a browser pane beside you under Superset (`$SUPERSET_WORKSPACE_ID` is set), with `superset browser open --workspace "$SUPERSET_WORKSPACE_ID" --url <page>`; else `open <page>`, or give them the URL.
+- **Their editor on the note, in a split beside you:** `superset panes split --workspace "$SUPERSET_WORKSPACE_ID" --direction right --command "<the edit it with command>"`. Outside Superset, tell them the command.
+- **Then keep watch:** `basalt wait`, `basalt check`. Their saves land in the open page as yours do. `basalt wait --after <buildId>`, with the `buildId` from `basalt status`, blocks until their next save is live (`--timeout` up to 600), then says it's ready or names the file and line that broke; `basalt check` finds broken links and embeds. Say what broke and where, and wait again. Don't write to the note while it's open in their editor, which holds its own copy.
 
 ## Inside
 
