@@ -1,0 +1,489 @@
+// Basalt's navbar (Nav.astro), its explorer and its theme toggle, ported
+// from quartz/components/styles/{nav,explorer,darkmode}.scss.
+//
+// On a wide screen the navbar folds away to its 56px margin, leaving one
+// chevron halfway down it. Reach into the margin, or tab into it, and after a
+// beat it opens to 300px, taking room from the note instead of covering it.
+// Below desktop width it's a bar across the top: the menu (the explorer, as
+// a drawer), the site's title, and the theme toggle.
+
+$margin: 56px;
+$open: 300px;
+$ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+$narrow: "(max-width: 1199.98px)";
+$desktop: "(min-width: 1200px)";
+$semiBoldWeight: 600;
+
+@keyframes nav-beckon {
+  0%,
+  70%,
+  100% {
+    transform: translateX(0);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+  90% {
+    transform: translateX(-1px);
+  }
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.75rem;
+
+  & a {
+    color: var(--secondary);
+  }
+}
+
+// ---------- wide: folded to the margin ----------
+
+@media all and ($desktop) {
+  html .page > #quartz-body {
+    transition: grid-template-columns 0.45s $ease;
+  }
+
+  html .page > #quartz-body:has(> .sidebar.left:hover),
+  html .page > #quartz-body:has(> .sidebar.left:focus-within) {
+    grid-template-columns: $open minmax(0, 3fr) minmax(280px, 1fr);
+  }
+
+  // a pointer passing through the margin on its way somewhere doesn't move the page
+  html .page > #quartz-body:has(> .sidebar.left:hover) {
+    transition-delay: 0.15s;
+  }
+
+  .sidebar.left {
+    width: 100%;
+    min-width: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow: hidden;
+    border-right: 1px solid transparent;
+    transition:
+      border-color 0.4s ease,
+      padding 0.45s $ease;
+
+    // folded, the column is only its margin: everything waits for it to open
+    & > :not(.nav-rail) {
+      min-width: calc(#{$open} - 4rem);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(-10px);
+      transition:
+        opacity 0.25s ease,
+        transform 0.35s $ease,
+        visibility 0.25s;
+    }
+  }
+
+  // the one thing a folded navbar shows: a chevron, halfway down the margin
+  .nav-rail {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    inset: 0;
+    width: $margin;
+    color: var(--gray);
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+
+    .nav-chevron {
+      opacity: 0.6;
+      animation: nav-beckon 5s ease-in-out infinite 2s;
+    }
+  }
+
+  // open: hovered, or focused into
+  .sidebar.left:hover,
+  .sidebar.left:focus-within {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    border-right-color: var(--lightgray);
+
+    & > :not(.nav-rail) {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      transition-delay: 0.15s;
+    }
+
+    .nav-rail {
+      opacity: 0;
+    }
+  }
+
+  .nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  // the bottom tray: the theme toggle, under everything else
+  .nav-tray {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: auto;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--lightgray);
+  }
+}
+
+// Basalt's mark: three pillars in line, the middle one tallest
+.nav-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: -4px;
+  border-radius: 6px;
+  color: var(--dark);
+  text-decoration: none;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: var(--highlight);
+  }
+
+  .nav-mark-body {
+    stroke: var(--dark);
+    stroke-width: 1.3;
+  }
+
+  .nav-mark-top {
+    stroke: var(--tertiary);
+    stroke-width: 1.4;
+  }
+
+  g {
+    transition: transform 0.45s $ease;
+  }
+  &:hover g:nth-child(1) {
+    transform: translateY(-1.5px);
+  }
+  &:hover g:nth-child(2) {
+    transform: translateY(1.5px);
+    transition-delay: 0.05s;
+  }
+  &:hover g:nth-child(3) {
+    transform: translateY(-1px);
+    transition-delay: 0.1s;
+  }
+}
+
+// ---------- the theme toggle: a ghost icon button (shadcn's size="icon" variant="ghost") ----------
+
+.darkmode {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: var(--dark);
+    background: var(--highlight);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  & > .nightIcon {
+    display: none;
+  }
+}
+
+:root[saved-theme="dark"] .darkmode {
+  & > .dayIcon {
+    display: none;
+  }
+  & > .nightIcon {
+    display: block;
+  }
+}
+
+// ---------- the explorer ----------
+
+.explorer {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  min-height: 1.2rem;
+  flex: 0 1 auto;
+
+  &.collapsed {
+    flex: 0 1 1.2rem;
+
+    & .fold {
+      transform: rotateZ(-90deg);
+    }
+  }
+
+  & .fold {
+    margin-left: 0.5rem;
+    transition: transform 0.3s ease;
+    opacity: 0.8;
+  }
+
+  button.mobile-explorer {
+    display: none;
+  }
+
+  button.desktop-explorer {
+    display: flex;
+  }
+
+  svg {
+    pointer-events: all;
+    transition: transform 0.35s ease;
+
+    & > polyline {
+      pointer-events: none;
+    }
+  }
+}
+
+button.mobile-explorer,
+button.desktop-explorer {
+  background-color: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+
+  & h2 {
+    font-size: 1rem;
+    display: inline-block;
+    margin: 0;
+  }
+}
+
+.explorer.collapsed > .explorer-content {
+  display: none;
+}
+
+.explorer-content {
+  list-style: none;
+  overflow: hidden;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+
+  & ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    &.explorer-ul {
+      overscroll-behavior: contain;
+    }
+
+    & li > a {
+      color: var(--dark);
+      opacity: 0.75;
+      pointer-events: all;
+
+      &:hover {
+        opacity: 1;
+      }
+
+      &.active {
+        opacity: 1;
+        color: var(--tertiary);
+      }
+    }
+  }
+
+  .folder-outer {
+    visibility: collapse;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition-property: grid-template-rows, visibility;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in-out;
+  }
+
+  .folder-outer.open {
+    visibility: visible;
+    grid-template-rows: 1fr;
+  }
+
+  .folder-outer > ul {
+    overflow: hidden;
+    margin-left: 6px;
+    padding-left: 0.8rem;
+    border-left: 1px solid var(--lightgray);
+  }
+}
+
+.folder-container {
+  flex-direction: row;
+  display: flex;
+  align-items: center;
+  user-select: none;
+
+  & div > a {
+    color: var(--secondary);
+    font-family: var(--headerFont);
+    font-size: 0.95rem;
+    font-weight: $semiBoldWeight;
+    line-height: 1.5rem;
+    display: inline-block;
+  }
+
+  & div > a:hover {
+    color: var(--tertiary);
+  }
+
+  &.active div > a {
+    color: var(--tertiary);
+  }
+}
+
+.folder-icon {
+  margin-right: 5px;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  backface-visibility: visible;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--tertiary);
+  }
+}
+
+li:has(> .folder-outer:not(.open)) > .folder-container > svg {
+  transform: rotate(-90deg);
+}
+
+// a quiet ring for the keyboard, in the accent
+.sidebar.left a:focus-visible,
+.sidebar.left button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+// ---------- narrow: a bar across the top ----------
+
+@media all and ($narrow) {
+  .nav-rail,
+  .nav-head {
+    display: none;
+  }
+
+  html .page > #quartz-body > .sidebar.left {
+    position: sticky;
+    top: 0;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 -1rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--light);
+    z-index: 20;
+
+    // the bar's paper and rule run the whole width, past the column
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 -100vw;
+      z-index: -1;
+      background-color: var(--light);
+      border-bottom: 1px solid var(--lightgray);
+    }
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    flex: 1;
+  }
+
+  .nav-tray {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .explorer {
+    order: -1;
+    flex: 0 0 34px !important;
+    overflow: visible;
+
+    button.mobile-explorer {
+      display: flex;
+      margin: 0;
+      padding: 5px;
+      position: relative;
+      z-index: 101;
+
+      .lucide-menu {
+        stroke: var(--darkgray);
+      }
+    }
+
+    button.desktop-explorer {
+      display: none;
+    }
+
+    // the drawer, over the whole page
+    & > .explorer-content {
+      display: block !important;
+      box-sizing: border-box;
+      z-index: 100;
+      position: fixed;
+      inset: 0;
+      margin: 0;
+      padding: 4.5rem 1.5rem 2rem;
+      background-color: var(--light);
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow-y: auto;
+      transform: translateX(-100vw);
+      visibility: hidden;
+      transition:
+        transform 200ms ease,
+        visibility 200ms ease;
+    }
+
+    &:not(.collapsed) > .explorer-content {
+      transform: translateX(0);
+      visibility: visible;
+    }
+
+    & .explorer-content ul li {
+      line-height: 2rem;
+    }
+  }
+
+  // the menu button sits on top of its open drawer
+  html.mobile-no-scroll {
+    overflow: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html .page > #quartz-body,
+  .sidebar.left,
+  .sidebar.left > *,
+  .nav-chevron {
+    transition: none !important;
+    animation: none !important;
+  }
+}

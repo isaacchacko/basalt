@@ -1,34 +1,116 @@
 ---
-// The page every note is set in: navigation, the note, and its margin.
+// Every page Basalt makes is set in this: the navbar, the note (or a folder's
+// or tag's listing), and the margin. On a wide screen the three sit side by
+// side, 56px | 3 parts | 1 part, and the navbar opens out of its 56px.
+//
+// Each part is a component a site can replace (src/lib/vite.ts), and which
+// ones show is the site's layout (src/lib/config.ts).
 import type { CollectionEntry } from "astro:content"
 import { registry } from "../lib/registry"
-import Margin from "../components/Margin.astro"
-import MediaScripts from "../components/MediaScripts.astro"
+import { layout as siteLayout } from "../lib/config"
+import { ancestry, backlinksOf, notes, tree, type TreeNode } from "./notes"
+import Head from "basalt:components/Head"
+import Nav from "basalt:components/Nav"
+import Search from "basalt:components/Search"
+import Breadcrumbs from "basalt:components/Breadcrumbs"
+import ContentMeta from "basalt:components/ContentMeta"
+import TagList from "basalt:components/TagList"
+import Footer from "basalt:components/Footer"
+import Motion from "basalt:components/Motion"
+import Margin from "basalt:components/Margin"
+import MediaScripts from "basalt:components/MediaScripts"
+// KaTeX's own stylesheet and fonts, the installed version rehype-katex renders with
+import "katex/dist/katex.min.css"
+import "../styles/base.scss"
+import "../styles/basalt.scss"
+import "../styles/nav.scss"
+import "../styles/search.scss"
+// the site's own styles/custom.scss, last, over Basalt's
+import "basalt:site-styles"
 
 interface Props {
-  note: CollectionEntry<"notes">
-  headings: { depth: number; slug: string; text: string }[]
+  /** the note the page shows, if it shows one (a folder's index note counts) */
+  note?: CollectionEntry<"notes">
+  headings?: { depth: number; slug: string; text: string }[]
+  /** the page's slug: "blog/a-post", "blog/index", "tags/x", "404" */
+  slug: string
+  title: string
+  description?: string
+  date?: Date
+  minutes?: number
+  /** said after the date in the note's header (a folder's count) */
+  meta?: string
+  tags?: string[]
+  /** the page's own breadcrumb, when it isn't in the folder tree (a tag) */
+  crumb?: string
+  breadcrumbs?: boolean
+  noindex?: boolean
 }
-const { note, headings } = Astro.props
+const {
+  note,
+  headings = [],
+  slug,
+  title,
+  description,
+  date,
+  minutes,
+  meta,
+  tags = [],
+  crumb,
+  breadcrumbs = slug !== "index",
+  noindex,
+} = Astro.props
+
 const { site } = registry()
-const title = (note.data.title as string | undefined) ?? note.id.split("/").pop()
+const layout = await siteLayout()
+const all = await notes()
+const root: TreeNode = tree(all)
+const trail = ancestry(root, crumb ? "" : slug)
+const backlinks = note ? backlinksOf(note.id, all) : []
+const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.replace(/\/$/, "") || "/"
 ---
 
 <!doctype html>
 <html lang={site.config.locale}>
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title === site.config.title ? title : `${title} · ${site.config.title}`}</title>
+    <Head title={title} description={description} path={path} noindex={noindex} />
   </head>
-  <body>
-    <main>
-      <article>
-        <h1>{title}</h1>
-        <slot />
-      </article>
-      <Margin note={note} headings={headings} backlinks={[]} />
-    </main>
+  <body data-slug={slug}>
+    <div id="quartz-root" class="page">
+      <div id="quartz-body">
+        <Nav title={site.config.title} root={root} current={slug} layout={layout} />
+        <div class="center">
+          <div class="page-header">
+            {
+              layout.components.search && (
+                <header>
+                  <Search />
+                </header>
+              )
+            }
+            <div class="popover-hint">
+              {layout.components.breadcrumbs && breadcrumbs && <Breadcrumbs trail={trail} last={crumb} rootName={layout.breadcrumbs.rootName} />}
+              <h1 class="article-title">{title}</h1>
+              {layout.components.meta && <ContentMeta date={date} minutes={minutes} extra={meta} />}
+              {layout.components.tags && <TagList tags={tags} />}
+            </div>
+          </div>
+          <article class="popover-hint">
+            <slot />
+          </article>
+          <slot name="listing" />
+          <div class="page-footer"></div>
+        </div>
+        <div class="right sidebar">
+          {note && <Margin note={note} headings={headings} backlinks={backlinks} />}
+        </div>
+        {layout.components.footer && <Footer links={layout.footer.links} />}
+      </div>
+    </div>
     <MediaScripts />
+    <Motion />
+    <script>
+      import "../client/router"
+    </script>
   </body>
 </html>

@@ -1,0 +1,329 @@
+// Basalt's look: what makes a Basalt site not look like a Quartz one
+// (ported from quartz/styles/basalt.scss).
+//
+// The palette is stone paper, basalt ink and an ember accent, with a dark
+// mode. Type is Fraunces over Instrument Sans: a soft, optically sized serif
+// for anything that names something, a plain sans for reading. Small labels
+// (a sidebar section, a date) are set like the titles, in italic, never in
+// small caps or monospace. Lists are hung on hexagons, basalt's columns.
+// A site changes any of it in its styles/custom.scss.
+
+:root {
+  --light: #f4f1ec;
+  --lightgray: #e2ddd4;
+  --gray: #9a948a;
+  --darkgray: #3a3835;
+  --dark: #1d1c1a;
+  --secondary: #2f4a5a;
+  --tertiary: #d4572a;
+  --highlight: rgba(212, 87, 42, 0.12);
+  --textHighlight: #f2c14e66;
+
+  --titleFont: "Fraunces", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --headerFont: "Fraunces", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bodyFont: "Instrument Sans", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --codeFont: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  color-scheme: light;
+}
+
+:root[saved-theme="dark"] {
+  --light: #141413;
+  --lightgray: #2a2926;
+  --gray: #6f6b64;
+  --darkgray: #d6d2ca;
+  --dark: #f0ece4;
+  --secondary: #8fb0c2;
+  --tertiary: #ef7a45;
+  --highlight: rgba(239, 122, 69, 0.15);
+  --textHighlight: #b8862b66;
+
+  color-scheme: dark;
+}
+
+// a hexagon, flat sides left and right, like a basalt column seen from above
+$hex: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+
+:root {
+  // how soft Fraunces' corners are: 0 is sharp, 100 is round
+  --basalt-soft: 50;
+  --basalt-ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+}
+
+body {
+  font-optical-sizing: auto;
+}
+
+// ---------- titles and headings ----------
+
+.page-title,
+h1.article-title,
+article h1,
+article h2,
+article h3,
+article h4,
+.popover h1 {
+  font-family: var(--titleFont);
+  font-optical-sizing: auto;
+  font-variation-settings:
+    "SOFT" var(--basalt-soft),
+    "WONK" 0;
+  letter-spacing: -0.01em;
+}
+
+.page-title {
+  font-weight: 600;
+}
+
+h1.article-title {
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+
+article h2 {
+  font-weight: 600;
+}
+
+article h3,
+article h4 {
+  font-weight: 550;
+}
+
+// ---------- labels: italic serif, in sentence case ----------
+
+.sidebar h2:not(.page-title),
+.sidebar h3,
+.explorer .title-button h2,
+.graph-view > h3,
+.toc .toc-header h3,
+.backlinks > h3 {
+  font-family: var(--titleFont);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.05rem;
+  font-variation-settings: "SOFT" 100;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.content-meta,
+.note-list-date,
+figure.embed figcaption,
+figure.diagram figcaption {
+  font-family: var(--titleFont);
+  font-style: italic;
+  font-variation-settings: "SOFT" 100;
+}
+
+// ---------- lists hung on hexagons ----------
+
+article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li {
+  list-style: none;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -1.15em;
+    top: 0.5em;
+    width: 0.7em;
+    height: 0.62em;
+    clip-path: $hex;
+    background: var(--tertiary);
+    opacity: 0.75;
+    transition:
+      transform 0.3s var(--basalt-ease),
+      opacity 0.3s ease;
+  }
+
+  &:hover::before {
+    opacity: 1;
+    transform: rotate(60deg) scale(1.15);
+  }
+}
+
+// the note you're on, in the explorer, gets a column too
+.explorer .explorer-content ul.explorer-ul li > a.active {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -0.85em;
+    top: 0.55em;
+    width: 0.45em;
+    height: 0.4em;
+    clip-path: $hex;
+    background: currentColor;
+  }
+}
+
+// ---------- links: the underline draws itself ----------
+
+article a.internal:not(.tag-link, .transclude-src),
+.popover a.internal {
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0% 1.5px no-repeat;
+  transition:
+    background-size 0.35s var(--basalt-ease),
+    color 0.2s ease;
+
+  &:hover {
+    background-size: 100% 1.5px;
+  }
+}
+
+// ---------- note lists: a date column, then the title ----------
+
+article .note-list {
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 7.5em minmax(0, 1fr);
+    gap: 0.5rem;
+    margin: 0.25rem 0;
+  }
+}
+
+.note-list-date {
+  color: var(--gray);
+  font-variant-numeric: tabular-nums;
+}
+
+// ---------- code is shown as written ----------
+
+// JetBrains Mono draws -> as an arrow and != as ≠; in a page that shows
+// source (and says where it's wrong), what's shown should be what was typed
+code,
+pre,
+kbd,
+.diagram-error pre {
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0;
+}
+
+// ---------- a titled code block is one thing: a bar, then the code ----------
+
+// Quartz floats a code block's title as its own little box above the block,
+// where it reads as something else on the page. Basalt joins them: the title
+// is the frame's header bar.
+figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-title] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 1rem;
+  width: auto;
+  margin: 0;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--lightgray);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: color-mix(in srgb, var(--lightgray) 45%, transparent);
+  color: var(--dark);
+  font-size: 0.85rem;
+
+  & + pre {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}
+
+// a code file, embedded with ![[file.py]]: its name, then what you can do
+// with it: see the raw file, copy the code, and (if it asked) go full screen
+figure.code-file {
+  margin: 1.5rem 0;
+
+  & > figcaption[data-rehype-pretty-code-title] {
+    align-items: center;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .code-file-name {
+    font-family: var(--codeFont);
+    font-weight: 600;
+  }
+
+  .code-file-actions {
+    display: flex;
+    gap: 0.15rem;
+    margin-left: auto;
+  }
+
+  .code-file-action {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gray);
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      background 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--dark);
+      background: var(--light);
+    }
+
+    &[data-done] {
+      color: var(--tertiary);
+    }
+  }
+
+  // the copy button lives in the bar; Quartz's own floats over the code
+  pre > .clipboard-button {
+    display: none;
+  }
+
+  &:fullscreen {
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 3rem;
+    background: var(--light);
+    overflow: auto;
+
+    & > pre {
+      flex: 1;
+      max-height: none;
+      font-size: 1rem;
+    }
+  }
+}
+
+// ---------- a textbook's measure ----------
+
+// prose keeps to about 65 characters a line, the way a book's does; figures,
+// code, tables and diagrams keep the whole column. Beside the text, in the
+// gutter, go its margin notes (Component.Secondary lays them out).
+article
+  > :is(
+    p,
+    ul,
+    ol,
+    dl,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    blockquote:not(.transclude),
+    .callout,
+    aside,
+    .note-list-block,
+    .katex-display
+  ) {
+  max-width: var(--measure, 34em);
+}

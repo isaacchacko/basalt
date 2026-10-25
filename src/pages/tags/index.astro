@@ -1,0 +1,30 @@
+---
+// Every tag, each with the first of its notes.
+import Page from "../../layouts/Page.astro"
+import PageList from "basalt:components/PageList"
+import { notes, tagIndex, toEntry } from "../../layouts/notes"
+
+const index = tagIndex(await notes())
+const LIMIT = 10
+---
+
+<Page slug="tags/index" title="Tags" meta={`${index.size} ${index.size === 1 ? "tag" : "tags"} in all`} crumb="Tags">
+  <div class="page-listing tag-index" slot="listing">
+    {
+      [...index].map(([tag, list]) => (
+        <section>
+          <h2>
+            <a class="internal tag-link" href={`/tags/${tag}`}>
+              {tag}
+            </a>
+          </h2>
+          <p class="tag-count">
+            {list.length} {list.length === 1 ? "item" : "items"} with this tag
+            {list.length > LIMIT && `, showing the first ${LIMIT}`}
+          </p>
+          <PageList entries={list.map(toEntry)} limit={LIMIT} />
+        </section>
+      ))
+    }
+  </div>
+</Page>

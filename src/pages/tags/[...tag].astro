@@ -1,0 +1,32 @@
+---
+// One tag's page: its notes, newest first, and the words of a tags/<tag>.md
+// note if the site has one.
+import { render } from "astro:content"
+import Page from "../../layouts/Page.astro"
+import PageList from "basalt:components/PageList"
+import { descriptionOf, notes, tagIndex, toEntry, type Note } from "../../layouts/notes"
+
+export async function getStaticPaths() {
+  const all = await notes()
+  return [...tagIndex(all)].map(([tag, list]) => ({
+    params: { tag },
+    props: { tag, list, about: all.find((n) => n.id === `tags/${tag}`) },
+  }))
+}
+
+const { tag, list, about } = Astro.props as { tag: string; list: Note[]; about?: Note }
+const Content = about ? (await render(about)).Content : undefined
+---
+
+<Page
+  slug={`tags/${tag}`}
+  title={`Tag: ${tag}`}
+  description={about && descriptionOf(about)}
+  meta={`${list.length} ${list.length === 1 ? "item" : "items"} with this tag`}
+  crumb={`#${tag}`}
+>
+  {Content && <Content />}
+  <div class="page-listing" slot="listing">
+    <PageList entries={list.map(toEntry)} />
+  </div>
+</Page>

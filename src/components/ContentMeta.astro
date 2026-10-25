@@ -1,0 +1,22 @@
+---
+// A page's date and reading time, in italic Fraunces under its title.
+import { formatDate } from "../layouts/notes"
+
+interface Props {
+  date?: Date
+  minutes?: number
+  /** in place of the reading time (a folder's or tag's count) */
+  extra?: string
+}
+const { date, minutes, extra } = Astro.props
+---
+
+{
+  (date || minutes || extra) && (
+    <p show-comma="true" class="content-meta">
+      {date && <time datetime={date.toISOString()}>{formatDate(date)}</time>}
+      {minutes && <span>{minutes} min read</span>}
+      {extra && <span>{extra}</span>}
+    </p>
+  )
+}

@@ -1,0 +1,737 @@
+// The page under everything: Quartz's base styles (quartz/styles/base.scss),
+// on Basalt's grid. On a wide screen a page is three parts side by side,
+// 56px | 3 parts | 1 part: the navbar folded to its margin, the note, and the
+// margin column. Below that it's one column under a bar across the top.
+
+$mobile: "(max-width: 800px)";
+$narrow: "(max-width: 1199.98px)";
+$desktop: "(min-width: 1200px)";
+$topSpacing: 6rem;
+$semiBoldWeight: 600;
+$boldWeight: 700;
+
+html {
+  scroll-behavior: smooth;
+  text-size-adjust: none;
+  overflow-x: hidden;
+  // a short page and a long one sit at the same x: no jump when the scrollbar comes and goes
+  scrollbar-gutter: stable;
+
+  @media all and ($narrow) {
+    scroll-padding-top: 4.5rem;
+  }
+}
+
+body {
+  margin: 0;
+  box-sizing: border-box;
+  background-color: var(--light);
+  font-family: var(--bodyFont);
+  color: var(--darkgray);
+}
+
+.text-highlight {
+  background-color: var(--textHighlight);
+  padding: 0 0.1rem;
+  border-radius: 5px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--tertiary) 60%, rgba(255, 255, 255, 0));
+  color: var(--darkgray);
+}
+
+p,
+ul,
+text,
+a,
+tr,
+td,
+li,
+ol,
+.katex,
+.math {
+  color: var(--darkgray);
+  fill: var(--darkgray);
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+.math.math-display {
+  text-align: center;
+}
+
+strong {
+  font-weight: $semiBoldWeight;
+}
+
+a {
+  font-weight: $semiBoldWeight;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  color: var(--secondary);
+
+  &:hover {
+    color: var(--tertiary);
+  }
+
+  &.internal {
+    text-decoration: none;
+    background-color: var(--highlight);
+    padding: 0 0.1rem;
+    border-radius: 5px;
+    line-height: 1.4rem;
+
+    &.broken {
+      color: var(--secondary);
+      opacity: 0.5;
+      transition: opacity 0.2s ease;
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+
+    &:has(> img) {
+      background-color: transparent;
+      border-radius: 0;
+      padding: 0;
+    }
+
+    &.tag-link::before {
+      content: "#";
+    }
+  }
+
+  &.external .external-icon {
+    height: 1ex;
+    margin: 0 0.15em;
+
+    > path {
+      fill: var(--dark);
+    }
+  }
+}
+
+.flex-component {
+  display: flex;
+}
+
+.desktop-only {
+  @media all and ($mobile) {
+    display: none !important;
+  }
+}
+
+.mobile-only {
+  display: none;
+  @media all and ($mobile) {
+    display: initial;
+  }
+}
+
+// ---------- the grid ----------
+
+.page {
+  max-width: 1500px;
+  margin: 0 auto;
+
+  & article {
+    & > h1 {
+      font-size: 2rem;
+    }
+
+    & li:has(> input[type="checkbox"]) {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    & li:has(> input[type="checkbox"]:checked) {
+      text-decoration: line-through;
+      text-decoration-color: var(--gray);
+      color: var(--gray);
+    }
+
+    & li > * {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+
+    p > strong {
+      color: var(--dark);
+    }
+  }
+
+  & > #quartz-body {
+    position: relative;
+    display: grid;
+    grid-template-columns: 56px minmax(0, 3fr) minmax(280px, 1fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 5px;
+
+    & > .sidebar.left {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+
+    & > .center {
+      grid-column: 2;
+      grid-row: 1;
+      min-width: 0;
+    }
+
+    // the margin: it scrolls with the note, its notes beside their lines
+    & > .sidebar.right {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      position: relative;
+      min-width: 0;
+      box-sizing: border-box;
+      padding: $topSpacing 2rem 2rem 1.5rem;
+    }
+
+    & > footer {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    & .sidebar.left {
+      z-index: 3;
+      top: 0;
+      box-sizing: border-box;
+      padding: $topSpacing 2rem 2rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      height: 100vh;
+      position: sticky;
+    }
+
+    & .page-header {
+      margin: $topSpacing 0 0 0;
+    }
+
+    @media all and ($narrow) {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto;
+      max-width: 50rem;
+      margin: 0 auto;
+      padding: 0 1rem;
+
+      & > .sidebar.left,
+      & > .center,
+      & > .sidebar.right,
+      & > footer {
+        grid-column: 1;
+        grid-row: auto;
+      }
+
+      & > .sidebar.right {
+        padding: 0;
+      }
+
+      & .page-header {
+        margin-top: 1rem;
+      }
+    }
+  }
+}
+
+// ---------- the note's header: breadcrumbs, title, date, tags ----------
+
+.breadcrumb-container {
+  margin: 0;
+  margin-top: 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.breadcrumb-element {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  p {
+    margin: 0;
+    margin-left: 0.5rem;
+    padding: 0;
+    line-height: normal;
+    color: var(--gray);
+    font-size: 0.8em;
+  }
+
+  a[aria-current] {
+    color: var(--darkgray);
+    font-weight: 500;
+  }
+}
+
+.article-title {
+  margin: 2rem 0 0 0;
+}
+
+.breadcrumb-container + .article-title {
+  margin-top: 1.5rem;
+}
+
+.content-meta {
+  margin-top: 0;
+  color: var(--darkgray);
+
+  &[show-comma="true"] > *:not(:last-child) {
+    margin-right: 8px;
+
+    &::after {
+      content: ",";
+    }
+  }
+}
+
+.tags {
+  list-style: none;
+  display: flex;
+  padding-left: 0;
+  gap: 0.4rem;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+
+  & > li {
+    display: inline-block;
+    white-space: nowrap;
+    margin: 0;
+    overflow-wrap: normal;
+  }
+}
+
+a.internal.tag-link {
+  border-radius: 8px;
+  background-color: var(--highlight);
+  padding: 0.2rem 0.4rem;
+  margin: 0 0.1rem;
+}
+
+// ---------- a folder's or tag's list of notes ----------
+
+ul.section-ul {
+  list-style: none;
+  margin-top: 2em;
+  padding-left: 0;
+}
+
+li.section-li {
+  margin-bottom: 1em;
+
+  & > .section {
+    display: grid;
+    grid-template-columns: fit-content(8em) 3fr 1fr;
+    align-items: baseline;
+
+    @media all and ($mobile) {
+      & > .tags {
+        display: none;
+      }
+    }
+
+    & h3 {
+      margin: 0;
+    }
+
+    & > .tags {
+      margin: 0;
+      justify-content: flex-end;
+    }
+
+    & > .desc > h3 > a {
+      background-color: transparent;
+    }
+
+    & .meta {
+      margin: 0 1em 0 0;
+      color: var(--gray);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+.page-listing {
+  max-width: 48em;
+}
+
+.tag-index > section {
+  margin-bottom: 2.5rem;
+
+  & > h2 {
+    margin-bottom: 0.25rem;
+  }
+
+  & > .tag-count {
+    margin: 0;
+    color: var(--gray);
+  }
+}
+
+// ---------- the foot of the page ----------
+
+.page-footer {
+  margin-top: 1rem;
+}
+
+footer {
+  text-align: left;
+  margin: 3rem 0 4rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--lightgray);
+  color: var(--gray);
+  font-size: 0.9rem;
+
+  & p {
+    margin: 0;
+    color: var(--gray);
+  }
+
+  & ul {
+    list-style: none;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  & a {
+    color: var(--gray);
+    font-weight: 500;
+  }
+}
+
+// ---------- Quartz's prose ----------
+
+.footnotes {
+  margin-top: 2rem;
+  border-top: 1px solid var(--lightgray);
+}
+
+input[type="checkbox"] {
+  transform: translateY(2px);
+  color: var(--secondary);
+  border: 1px solid var(--lightgray);
+  border-radius: 3px;
+  background-color: var(--light);
+  position: relative;
+  margin-inline-end: 0.2rem;
+  margin-inline-start: -1.4rem;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+
+  &:checked {
+    border-color: var(--secondary);
+    background-color: var(--secondary);
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 4px;
+      height: 8px;
+      display: block;
+      border: solid var(--light);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+}
+
+blockquote {
+  margin: 1rem 0;
+  border-left: 3px solid var(--secondary);
+  padding-left: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+thead {
+  font-family: var(--headerFont);
+  color: var(--dark);
+  font-weight: revert;
+  margin-bottom: 0;
+
+  article > & > a[role="anchor"] {
+    color: var(--dark);
+    background-color: transparent;
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  &[id] > a[href^="#"] {
+    margin: 0 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    transform: translateY(-0.1rem);
+    font-family: var(--codeFont);
+    user-select: none;
+  }
+
+  &[id]:hover > a {
+    opacity: 1;
+  }
+
+  &:not([id]) > a[role="anchor"] {
+    display: none;
+  }
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin-top: 2.25rem;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 1.4rem;
+  margin-top: 1.9rem;
+  margin-bottom: 1rem;
+}
+
+h3 {
+  font-size: 1.12rem;
+  margin-top: 1.62rem;
+  margin-bottom: 1rem;
+}
+
+h4,
+h5,
+h6 {
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+figure[data-rehype-pretty-code-figure] {
+  margin: 0;
+  position: relative;
+  line-height: 1.6rem;
+
+  & > [data-rehype-pretty-code-title] {
+    font-family: var(--codeFont);
+    font-size: 0.9rem;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--lightgray);
+    width: fit-content;
+    border-radius: 5px;
+    margin-bottom: -0.5rem;
+    color: var(--darkgray);
+  }
+
+  & > pre {
+    padding: 0;
+  }
+}
+
+pre {
+  font-family: var(--codeFont);
+  padding: 0 0.5rem;
+  border-radius: 5px;
+  overflow-x: auto;
+  border: 1px solid var(--lightgray);
+  position: relative;
+
+  &:has(> code.mermaid) {
+    border: none;
+  }
+
+  & > code {
+    background: none;
+    padding: 0;
+    font-size: 0.85rem;
+    counter-reset: line;
+    counter-increment: line 0;
+    display: grid;
+    padding: 0.5rem 0;
+    overflow-x: auto;
+
+    & [data-highlighted-chars] {
+      background-color: var(--highlight);
+      border-radius: 5px;
+    }
+
+    & > [data-line] {
+      padding: 0 0.25rem;
+      box-sizing: border-box;
+      border-left: 3px solid transparent;
+
+      &[data-highlighted-line] {
+        background-color: var(--highlight);
+        border-left: 3px solid var(--secondary);
+      }
+
+      &::before {
+        content: counter(line);
+        counter-increment: line;
+        width: 1rem;
+        margin-right: 1rem;
+        display: inline-block;
+        text-align: right;
+        color: rgba(115, 138, 148, 0.6);
+      }
+    }
+
+    &[data-line-numbers-max-digits="2"] > [data-line]::before {
+      width: 2rem;
+    }
+
+    &[data-line-numbers-max-digits="3"] > [data-line]::before {
+      width: 3rem;
+    }
+  }
+}
+
+code {
+  font-size: 0.9em;
+  color: var(--dark);
+  font-family: var(--codeFont);
+  border-radius: 5px;
+  padding: 0.1rem 0.2rem;
+  background: var(--lightgray);
+}
+
+// highlighted code follows the theme: rehype-pretty-code's (Quartz) and
+// Astro's own shiki, both with a light and a dark theme
+code[data-theme*=" "] {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+code[data-theme*=" "] span {
+  color: var(--shiki-light);
+}
+
+[saved-theme="dark"] code[data-theme*=" "] {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+[saved-theme="dark"] code[data-theme*=" "] span {
+  color: var(--shiki-dark);
+}
+
+[saved-theme="dark"] .astro-code,
+[saved-theme="dark"] .astro-code span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+tbody,
+li,
+p {
+  line-height: 1.6rem;
+}
+
+.table-container {
+  overflow-x: auto;
+
+  & > table {
+    margin: 1rem;
+    padding: 1.5rem;
+    border-collapse: collapse;
+
+    th,
+    td {
+      min-width: 75px;
+    }
+
+    & > * {
+      line-height: 2rem;
+    }
+  }
+}
+
+th {
+  text-align: left;
+  padding: 0.4rem 0.7rem;
+  border-bottom: 2px solid var(--gray);
+}
+
+td {
+  padding: 0.2rem 0.7rem;
+}
+
+tr {
+  border-bottom: 1px solid var(--lightgray);
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+img {
+  max-width: 100%;
+  border-radius: 5px;
+  margin: 1rem 0;
+  content-visibility: auto;
+}
+
+p > img + em {
+  display: block;
+  transform: translateY(-1rem);
+}
+
+hr {
+  width: 100%;
+  margin: 2rem auto;
+  height: 1px;
+  border: none;
+  background-color: var(--lightgray);
+}
+
+audio,
+video {
+  width: 100%;
+  border-radius: 5px;
+}
+
+.spacer {
+  flex: 2 1 auto;
+}
+
+div:has(> .overflow) {
+  max-height: 100%;
+  overflow-y: hidden;
+}
+
+ul.overflow,
+ol.overflow {
+  max-height: 100%;
+  overflow-y: auto;
+  width: 100%;
+  margin-bottom: 0;
+
+  & > li.overflow-end {
+    height: 0.5rem;
+    margin: 0;
+  }
+}
+
+.transclude ul {
+  padding-left: 1rem;
+}
+
+.katex-display {
+  display: initial;
+  overflow-x: auto;
+  overflow-y: hidden;
+}

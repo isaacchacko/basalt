@@ -1,20 +1,115 @@
 ---
-import { getCollection, render } from "astro:content"
+// Every note's page, every folder's page, and a redirect for each alias.
+//
+// A folder's page is its index.md (if it has one) above a list of what's in
+// it; a folder with no index.md still gets the list. Drafts and private notes
+// aren't published (layouts/notes.ts).
+import { render } from "astro:content"
 import Page from "../layouts/Page.astro"
+import PageList from "basalt:components/PageList"
+import {
+  aliasesOf,
+  dateOf,
+  descriptionOf,
+  entriesOf,
+  findFolder,
+  folders,
+  hrefOf,
+  notes,
+  paramOf,
+  readingTimeOf,
+  tagsOf,
+  titleOf,
+  tree,
+  type Note,
+  type TreeNode,
+} from "../layouts/notes"
+
+type Props =
+  | { kind: "note"; note: Note; folder?: string }
+  | { kind: "folder"; folder: string }
+  | { kind: "alias"; to: string; note: Note }
 
 export async function getStaticPaths() {
-  const notes = await getCollection("notes")
-  return notes.map((note) => ({
-    // index notes are their folder's page: "blog/index" is /blog
-    params: { slug: note.id === "index" ? undefined : note.id.replace(/\/index$/, "") },
-    props: { note },
-  }))
+  const all = (await notes()).filter((n) => !n.id.startsWith("tags/"))
+  const root = tree(all)
+  const paths: { params: { slug: string | undefined }; props: Props }[] = []
+  const taken = new Set<string>()
+  for (const note of all) {
+    const isIndex = /(^|\/)index$/.test(note.id) && note.id !== "index"
+    const param = paramOf(note.id)
+    taken.add(param ?? "")
+    paths.push({
+      params: { slug: param },
+      props: isIndex ? { kind: "note", note, folder: note.id.replace(/\/index$/, "") } : { kind: "note", note },
+    })
+  }
+  for (const f of folders(root)) {
+    if (f.note || taken.has(f.slug)) continue
+    taken.add(f.slug)
+    paths.push({ params: { slug: f.slug }, props: { kind: "folder", folder: f.slug } })
+  }
+  for (const note of all) {
+    for (const alias of aliasesOf(note)) {
+      const param = paramOf(alias)
+      if (taken.has(param ?? "")) continue
+      taken.add(param ?? "")
+      paths.push({ params: { slug: param }, props: { kind: "alias", to: hrefOf(note.id), note } })
+    }
+  }
+  return paths
 }
 
-const { note } = Astro.props
-const { Content, headings } = await render(note)
+const props = Astro.props as Props
+let rendered: Awaited<ReturnType<typeof render>> | undefined
+let folderNode: TreeNode | undefined
+if (props.kind === "note") rendered = await render(props.note)
+if (props.kind !== "alias" && props.folder !== undefined) {
+  folderNode = findFolder(tree((await notes()).filter((n) => !n.id.startsWith("tags/"))), props.folder)
+}
+const entries = folderNode ? entriesOf(folderNode) : []
+const count = `${entries.length} ${entries.length === 1 ? "item" : "items"} under this folder`
+const Content = rendered?.Content
 ---
 
-<Page note={note} headings={headings}>
-  <Content />
-</Page>
+{
+  props.kind === "alias" ? (
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>{titleOf(props.note)}</title>
+        <link rel="canonical" href={props.to} />
+        <meta name="robots" content="noindex" />
+        <meta http-equiv="refresh" content={`0; url=${props.to}`} />
+      </head>
+      <body>
+        <a href={props.to}>{titleOf(props.note)}</a>
+      </body>
+    </html>
+  ) : props.kind === "note" ? (
+    <Page
+      note={props.note}
+      headings={rendered!.headings}
+      slug={props.note.id}
+      title={titleOf(props.note)}
+      description={descriptionOf(props.note)}
+      date={dateOf(props.note)}
+      minutes={readingTimeOf(props.note)}
+      tags={tagsOf(props.note)}
+      meta={folderNode ? count : undefined}
+    >
+      {Content && <Content />}
+      {folderNode && (
+        <div class="page-listing" slot="listing">
+          <PageList entries={entries} />
+        </div>
+      )}
+    </Page>
+  ) : (
+    <Page slug={`${props.folder}/index`} title={`Folder: ${folderNode?.name ?? props.folder}`} meta={count}>
+      <div class="page-listing" slot="listing">
+        <PageList entries={entries} />
+      </div>
+    </Page>
+  )
+}

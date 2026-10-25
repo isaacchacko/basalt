@@ -1,0 +1,41 @@
+---
+// A list of notes (a folder's, a tag's): the date, the title, its tags.
+import type { Entry } from "../layouts/notes"
+import { byDate, formatDate, hrefOf } from "../layouts/notes"
+
+interface Props {
+  entries: Entry[]
+  limit?: number
+}
+const { entries, limit } = Astro.props
+let list = [...entries].sort(byDate)
+if (limit) list = list.slice(0, limit)
+---
+
+<ul class="section-ul">
+  {
+    list.map((e) => (
+      <li class="section-li">
+        <div class="section">
+          <p class="meta">{e.date && <time datetime={e.date.toISOString()}>{formatDate(e.date)}</time>}</p>
+          <div class="desc">
+            <h3>
+              <a href={hrefOf(e.isFolder ? `${e.slug}/index` : e.slug)} class="internal" data-slug={e.isFolder ? `${e.slug}/index` : e.slug}>
+                {e.title}
+              </a>
+            </h3>
+          </div>
+          <ul class="tags">
+            {e.tags.map((tag) => (
+              <li>
+                <a class="internal tag-link" href={`/tags/${tag}`}>
+                  {tag}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </li>
+    ))
+  }
+</ul>
