@@ -23,28 +23,39 @@ const button = (cls: string, label: string, svg: string) => makeButton(`viewer-b
 const link = (cls: string, label: string, svg: string) => makeLink(`viewer-button ${cls}`, label, svg)
 
 const DIAGRAMS = "figure.diagram-graphviz, figure.diagram-svg, figure.diagram-mermaid"
-// link previews show a copy of another note: its pictures aren't this page's
-const ELSEWHERE = ".popover, .preview, [data-preview], a, .basalt-viewer"
+// link previews show a copy of another note: its pictures aren't this page's.
+// (A margin figure's copy in .margin-layer is this page's, and opens.)
+const ELSEWHERE = ".margin-preview, .margin-hover, .popover, a, .basalt-viewer"
 const shown = (el: Element) => el.getClientRects().length > 0
 /** a diagram's own svg, not the one in its expand control */
 const drawingOf = (el: Element) => el.querySelector<SVGSVGElement>("svg:not(.viewer-button *)")
 
 function captionOf(el: HTMLElement): string {
-  const figure = el.closest("figure, aside.marginfigure")
+  const figure = el.closest("figure, aside.marginfigure, .marginfigure")
   const cap = figure?.querySelector(":scope > figcaption")
   const text = cap?.textContent?.trim()
   if (text) return text
   if (el instanceof HTMLImageElement) {
     if (el.alt.trim()) return el.alt.trim()
     // a margin figure's caption is the text beside its image
-    const aside = el.closest("aside.marginfigure")
+    const aside = el.closest(".marginfigure")
     if (aside) return aside.textContent?.trim() ?? ""
   }
   return ""
 }
 
-/** Everything on the page the viewer can show, in reading order. */
+/**
+ * Everything on the page the viewer can show, in reading order: top to bottom
+ * as it's laid out, so a margin figure (whose copy sits in the margin column,
+ * after the article in the html) comes beside the line it's on.
+ */
 function items(): Item[] {
+  const found = collect()
+  const top = new Map(found.map((i) => [i, i.origin.getBoundingClientRect().top]))
+  return found.sort((a, b) => top.get(a)! - top.get(b)!)
+}
+
+function collect(): Item[] {
   const found: Item[] = []
   const candidates = document.querySelectorAll<HTMLElement>(`img.zoomable, ${DIAGRAMS}, figure.embed-frame`)
   for (const el of candidates) {
@@ -507,15 +518,20 @@ document.addEventListener("keydown", (e) => {
   }
 })
 
+/** an image opens on Enter too; a copy hidden from assistive tech stays out of the tab order */
+function operable(img: HTMLImageElement) {
+  if (img.closest(ELSEWHERE) || img.dataset.viewable) return
+  img.dataset.viewable = ""
+  if (img.closest("[aria-hidden='true']")) return
+  img.tabIndex = 0
+  img.setAttribute("role", "button")
+  if (!img.getAttribute("aria-label")) img.setAttribute("aria-label", `view ${img.alt || "image"} full screen`)
+}
+
 export function startViewer(signal: AbortSignal) {
   addExpands(document, signal)
   // mermaid draws after the page arrives: give its figures their expand too
   document.addEventListener("basalt:diagram", () => addExpands(document, signal), { signal })
-  for (const img of document.querySelectorAll<HTMLImageElement>("img.zoomable")) {
-    if (img.closest(ELSEWHERE)) continue
-    img.tabIndex = 0
-    img.setAttribute("role", "button")
-    if (!img.getAttribute("aria-label")) img.setAttribute("aria-label", `view ${img.alt || "image"} full screen`)
-  }
+  document.querySelectorAll<HTMLImageElement>("img.zoomable").forEach(operable)
   signal.addEventListener("abort", () => current?.close(true))
 }
