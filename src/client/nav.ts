@@ -175,14 +175,26 @@ document.addEventListener("astro:page-load", () => {
   watchBar()
 })
 
-// the browser forgets what's hovered while a page is swapped in, for about
-// 300ms: a navbar open under the pointer stays open through it, until the
-// pointer next moves (and :hover, or its absence, takes over)
+// the browser forgets what's hovered while a page is swapped in, and only
+// works it out again some time after the pointer next moves: a navbar open
+// under the pointer (you just clicked one of its entries) stays open through
+// the navigation for as long as the pointer is over it, and folds only once
+// the pointer has left it
+let releaseHold: ((e: PointerEvent) => void) | null = null
 document.addEventListener("astro:before-swap", () => {
   const nav = navbar()
-  if (!nav?.matches(":hover")) return
+  if (!nav || !(nav.matches(":hover") || nav.classList.contains("is-held"))) return
   nav.classList.add("is-held")
-  document.addEventListener("pointermove", () => nav.classList.remove("is-held"), { once: true })
+  if (releaseHold) document.removeEventListener("pointermove", releaseHold)
+  releaseHold = (e: PointerEvent) => {
+    const r = nav.getBoundingClientRect()
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
+    if (inside) return
+    nav.classList.remove("is-held")
+    document.removeEventListener("pointermove", releaseHold!)
+    releaseHold = null
+  }
+  document.addEventListener("pointermove", releaseHold)
 })
 // before the swapped-in page paints, so the explorer never shows the last page's state
 document.addEventListener("astro:after-swap", () => {
