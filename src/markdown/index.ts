@@ -36,6 +36,7 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import rehypeKatex from "rehype-katex"
 import rehypePrettyCode from "rehype-pretty-code"
 import { prettyCode } from "./source.ts"
+import { rehypeDiff } from "./diff.ts"
 import { parseFrontmatter } from "@astrojs/markdown-remark"
 import type { Root } from "hast"
 import { VFile } from "vfile"
@@ -50,6 +51,7 @@ import { remarkTree } from "./tree.ts"
 import { rehypeEmbeds, remarkFileEmbeds } from "./embeds.ts"
 import { rehypeIslands, remarkIslands } from "./islands.ts"
 import { rehypeMargin } from "./margin.ts"
+import { rehypeCompare, remarkCompare } from "./compare.ts"
 import { rehypeSealTranscludes, rehypeTables, rehypeTransclude, useTargets, type Target } from "./transclude.ts"
 import { rehypeNoteLists } from "./notelist.ts"
 import { loadSiteMarkdown, type TextTransform } from "./siteconfig.ts"
@@ -65,6 +67,8 @@ export const textTransforms: TextTransform[] = [(text) => ofmText(text), ...site
 const basaltRemark: PluggableList = [
   remarkNote,
   [remarkDiagrams, { graph: true, graphviz: true, svg: true, math: true }],
+  // compare callouts' anchors, before a fence's info string is read (by ```tree, rehype-pretty-code)
+  remarkCompare,
   // ```tree, a directory drawn
   remarkTree,
   remarkOfm,
@@ -105,7 +109,8 @@ const AUTOLINK_ICON = {
 }
 
 const basaltRehype: PluggableList = [
-  // Quartz highlighted first, before raw html is parsed
+  // Quartz highlighted first, before raw html is parsed; diffs before the rest
+  rehypeDiff,
   [rehypePrettyCode, prettyCode],
   rehypeRaw,
   // <copy>text</copy>, before links are made of what's in it
@@ -127,6 +132,8 @@ const basaltRehype: PluggableList = [
   // a picture with a dark version beside it follows the theme
   rehypeThemedMedia,
   rehypeIslands,
+  // > [!compare] callouts in a row, one figure
+  rehypeCompare,
   rehypeMargin,
   rehypeNoteData,
   [rehypeKatex, { output: "html", macros: {} }],
