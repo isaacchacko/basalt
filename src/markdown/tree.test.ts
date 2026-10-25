@@ -12,7 +12,6 @@ const names = (source: string) => {
   return walk(parseTree(source), 0).join("\n")
 }
 
-const paths = (html: string) => [...html.matchAll(/data-path="([^"]*)"/g)].map((m) => m[1])
 
 describe("trees", () => {
   test("indentation, in any step, makes the shape", () => {
@@ -94,12 +93,6 @@ describe("trees", () => {
     })
   })
 
-  test("paths start inside a lone top folder, so two sites' trees line up", () => {
-    const html = treeHtml("quartz/\n  content/\n    index.md")
-    assert.deepStrictEqual(paths(html), ["", "content/", "content/index.md"])
-    assert.deepStrictEqual(paths(treeHtml("a.md\nb/\n  c.md")), ["a.md", "b/", "b/c.md"])
-  })
-
   test("folders are details, open unless folded", () => {
     const html = treeHtml("a/\n  b/\n    c\n  d/…\n    e", 'title="x"')
     assert.match(html, /^<figure class="tree"><figcaption class="tree-title">x<\/figcaption>/)
@@ -114,7 +107,7 @@ describe("trees", () => {
   test("a linked folder is a link", () => {
     const e = entry("[[about]]/")
     assert.deepStrictEqual([e.href, e.name, e.dir], ["about", "about", true])
-    assert.match(treeHtml("[[about]]/\n  a.md"), /<summary[^>]*>.*<a class="tree-name" href="about" data-line>about<\/a>/)
+    assert.match(treeHtml("[[about]]/\n  a.md"), /<summary[^>]*>.*<a class="tree-name" href="about">about<\/a>/)
   })
 
   test("a mark is said as well as coloured, and only on its own entry", () => {
@@ -130,15 +123,9 @@ describe("trees", () => {
     assert.doesNotMatch(html, /<island/)
   })
 
-  test("only the name is the line an anchor's /text/ matches", () => {
-    const html = treeHtml("README  # notes")
-    assert.match(html, /<span class="tree-name" data-line>README<\/span>/)
-    assert.strictEqual(html.match(/data-line/g)?.length, 1)
-  })
-
   test("a long name can break after its dots", () => {
-    assert.match(treeHtml("music.inline.ts"), /data-line>music.<wbr>inline.<wbr>ts</)
-    assert.match(treeHtml(".gitignore"), /data-line>\.gitignore</)
+    assert.match(treeHtml("music.inline.ts"), /"tree-name">music.<wbr>inline.<wbr>ts</)
+    assert.match(treeHtml(".gitignore"), /"tree-name">\.gitignore</)
   })
 
   test("an elided folder says so", () => {

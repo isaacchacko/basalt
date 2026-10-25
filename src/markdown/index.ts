@@ -52,7 +52,6 @@ import { rehypeEmbeds, remarkFileEmbeds } from "./embeds.ts"
 import { rehypeCodeTitles } from "./code.ts"
 import { rehypeIslands, remarkIslands } from "./islands.ts"
 import { rehypeMargin } from "./margin.ts"
-import { rehypeCompare, remarkCompare } from "./compare.ts"
 import { rehypeSealTranscludes, rehypeTables, rehypeTransclude, useTargets, type Target } from "./transclude.ts"
 import { rehypeNoteLists } from "./notelist.ts"
 import { loadSiteMarkdown, type TextTransform } from "./siteconfig.ts"
@@ -68,8 +67,6 @@ export const textTransforms: TextTransform[] = [(text) => ofmText(text), ...site
 const basaltRemark: PluggableList = [
   remarkNote,
   [remarkDiagrams, { graph: true, graphviz: true, svg: true, math: true }],
-  // compare callouts' anchors, before a fence's info string is read (by ```tree, rehype-pretty-code)
-  remarkCompare,
   // ```tree, a directory drawn
   remarkTree,
   remarkOfm,
@@ -135,8 +132,6 @@ const basaltRehype: PluggableList = [
   // a picture with a dark version beside it follows the theme
   rehypeThemedMedia,
   rehypeIslands,
-  // > [!compare] callouts in a row, one figure
-  rehypeCompare,
   rehypeMargin,
   rehypeNoteData,
   [rehypeKatex, { output: "html", macros: {} }],

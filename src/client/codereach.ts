@@ -7,11 +7,10 @@ const SIDE_PAD = 16
 
 /**
  * Where the block's right edge is at rest (even mid-way back from a reach),
- * and how much room the side content has past it; none in a compare column,
- * whose neighbour is beside it instead.
+ * and how much room the side content has past it.
  */
 function restOf(block: HTMLElement): { rest: number; room: number } | undefined {
-  if (document.documentElement.dataset.margin !== "beside" || block.closest(".compare-column")) return
+  if (document.documentElement.dataset.margin !== "beside") return
   const side = document.querySelector<HTMLElement>("aside.margin")
   const parent = block.parentElement
   if (!side || !parent) return

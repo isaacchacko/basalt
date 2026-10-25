@@ -1,7 +1,7 @@
 // ```diff fences and embedded .diff / .patch files, drawn as a code review
 // draws a change. This runs before rehype-pretty-code and emits its markup
 // (figure > figcaption + pre > code > [data-line]), so code blocks' bars,
-// themes, reach and compare anchors work on a diff unchanged. Each side of a
+// themes and reach work on a diff unchanged. Each side of a
 // hunk is highlighted on its own, so a removed line is coloured as the code
 // it was in.
 
@@ -269,22 +269,21 @@ function nameOf(f: DiffFile): string {
 export interface DiffOptions {
   lang?: string
   title?: string
-  split?: boolean
 }
 
-/** The fence's info after `diff`: `lang=ts`, `title="…"`, `split`. */
+/** The fence's info after `diff`: `lang=ts`, `title="…"`. */
 export function diffOptions(meta: string | undefined): DiffOptions {
   const m = meta ?? ""
   const lang = /(?:^|\s)lang=["']?([\w+#.-]+)/.exec(m)?.[1]
   const t = /(?:^|\s)title=(?:"([^"]*)"|'([^']*)'|(\S+))/.exec(m)
-  return { lang, title: t ? (t[1] ?? t[2] ?? t[3]) : undefined, split: /(?:^|\s)split(?=\s|$)/.test(m) }
+  return { lang, title: t ? (t[1] ?? t[2] ?? t[3]) : undefined }
 }
 
 type Ranges = Array<[number, number]>
 type Row =
   | { kind: "file"; name: string; status?: string; added: number; removed: number }
-  | { kind: "hunk"; text: string; anchor?: string }
-  | { kind: "note" | "label" | "empty"; text: string }
+  | { kind: "hunk"; text: string }
+  | { kind: "note" | "label"; text: string }
   | { kind: "add" | "del" | "ctx"; line: DiffLine; tokens: ThemedToken[]; marks?: Ranges }
 
 /** Every row a diff draws, its code highlighted and its changed words found. */
@@ -332,8 +331,7 @@ async function layout(files: DiffFile[], opts: DiffOptions, title: string | unde
 }
 
 function rowElement(row: Row): Element {
-  const line = (children: ElementContent[], props: Properties = {}) =>
-    el("span", { dataLine: "", dataDiff: row.kind, ...props }, children)
+  const line = (children: ElementContent[]) => el("span", { dataLine: "", dataDiff: row.kind }, children)
   switch (row.kind) {
     case "file":
       return line([
@@ -349,13 +347,11 @@ function rowElement(row: Row): Element {
           el("span", { className: ["diff-hunk-range"] }, [text(m ? row.text.slice(0, row.text.length - m[5].length) : row.text)]),
           ...(m?.[5].trim() ? [el("span", { className: ["diff-hunk-context"] }, [text(m[5])])] : []),
         ],
-        row.anchor ? { dataCompareAnchor: row.anchor } : {},
       )
     }
     case "label":
       return el("span", { dataLine: "", dataDiff: "note", className: ["diff-label"] }, [text(row.text)])
     case "note":
-    case "empty":
       return line([text(row.text)])
     default: {
       const { line: l } = row
@@ -368,51 +364,11 @@ function rowElement(row: Row): Element {
   }
 }
 
-const EMPTY: Row = { kind: "empty", text: " " }
-
-/**
- * A split view's two columns: context on both, a removed line on the old
- * side beside the line that replaced it on the new, and a blank row where a
- * side has nothing, so every row stays level with its partner.
- */
-function sides(rows: Row[]): [Row[], Row[]] {
-  const old: Row[] = []
-  const neu: Row[] = []
-  let hunks = 0
-  for (let i = 0; i < rows.length; ) {
-    const row = rows[i]
-    if (row.kind === "del" || row.kind === "add") {
-      const dels: Row[] = []
-      const adds: Row[] = []
-      while (rows[i]?.kind === "del") dels.push(rows[i++])
-      while (rows[i]?.kind === "add") adds.push(rows[i++])
-      for (let k = 0; k < Math.max(dels.length, adds.length); k++) {
-        old.push(dels[k] ?? EMPTY)
-        neu.push(adds[k] ?? EMPTY)
-      }
-      continue
-    }
-    const both = row.kind === "hunk" ? { ...row, anchor: `hunk-${++hunks}` } : row
-    old.push(both)
-    neu.push(both)
-    i++
-  }
-  return [said(old, "nothing before"), said(neu, "nothing after")]
-}
-
-/** A side with no lines of its own says so in its first blank row. */
-function said(side: Row[], words: string): Row[] {
-  const blank = side.indexOf(EMPTY)
-  if (blank < 0 || side.some((r) => "line" in r)) return side
-  return side.with(blank, { kind: "label", text: words })
-}
-
 function codeFigure(
   rows: Row[],
   src: string,
   title: string | undefined,
   [added, removed]: [number, number],
-  extra: Properties = {},
 ): Element {
   const theme = `${THEMES.light} ${THEMES.dark}`
   const lines: ElementContent[] = []
@@ -436,7 +392,6 @@ function codeFigure(
       dataRehypePrettyCodeFigure: "",
       className: ["diff"],
       ...(digits ? { dataNumbered: "", style: `--diff-digits: ${digits}` } : {}),
-      ...extra,
       dataCopy: src.replace(/\n$/, ""),
     },
     caption ? [caption, pre] : [pre],
@@ -450,18 +405,7 @@ export async function renderDiff(src: string, opts: DiffOptions = {}): Promise<E
   const count = (kind: Kind) => files.reduce((n, f) => n + f.lines.filter((l) => l.kind === kind).length, 0)
   const added = count("add")
   const removed = count("del")
-  if (!opts.split) return codeFigure(rows, src, title, [added, removed])
-
-  // the split view is a compare block (compare.ts) of the diff's two sides
-  const [old, neu] = sides(rows)
-  const column = (label: string, figure: Element) =>
-    el("div", { className: ["compare-column"], dataLabel: label }, [el("p", { className: ["compare-label"] }, [text(label)]), figure])
-  return el("figure", { className: ["compare", "diff-split"], dataColumns: "2" }, [
-    el("div", { className: ["compare-columns"] }, [
-      column("Before", codeFigure(old, src, title, [0, removed], { dataSide: "old" })),
-      column("After", codeFigure(neu, src, title, [added, 0], { dataSide: "new" })),
-    ]),
-  ])
+  return codeFigure(rows, src, title, [added, removed])
 }
 
 const isDiff = (node: Element) =>
