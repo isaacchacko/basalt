@@ -5,6 +5,7 @@
 // when a pdf scrolls near; pages far from view give their canvases back. Without
 // this script the <object> it replaces stays, with its link.
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist"
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
 import { button as makeButton, icon, toggleFullscreen } from "./embeds"
 
 const ico = (d: string) => icon(d, 16, 2)
@@ -22,12 +23,10 @@ const ICONS = {
 type PdfJs = typeof import("pdfjs-dist")
 let pdfjs: Promise<PdfJs> | null = null
 function loadPdfJs(): Promise<PdfJs> {
-  pdfjs ??= Promise.all([import("pdfjs-dist"), import("pdfjs-dist/build/pdf.worker.min.mjs?url")]).then(
-    ([lib, worker]) => {
-      lib.GlobalWorkerOptions.workerSrc = worker.default
-      return lib
-    },
-  )
+  pdfjs ??= import("pdfjs-dist").then((lib) => {
+    lib.GlobalWorkerOptions.workerSrc = workerUrl
+    return lib
+  })
   return pdfjs
 }
 
@@ -370,6 +369,8 @@ async function mount(viewer: HTMLElement, signal: AbortSignal) {
     },
     { signal },
   )
+  viewer.addEventListener("pointerdown", () => (viewer.dataset.pointer = ""), { signal })
+  viewer.addEventListener("keydown", () => delete viewer.dataset.pointer, { signal, capture: true })
   // a click on the bar leaves the keys with the pages, not the button
   bar.addEventListener(
     "click",

@@ -14,11 +14,16 @@ figure.embed {
   & > object,
   & > .embed-facade {
     display: block;
-    width: 100%;
     max-width: 100%;
     border: 1px solid var(--lightgray);
     border-radius: 6px;
     background: var(--lightgray);
+  }
+
+  & > iframe,
+  & > object,
+  & > .embed-facade {
+    width: 100%;
   }
 
   & > iframe {
@@ -30,13 +35,11 @@ figure.embed {
     height: var(--embed-height, 720px);
   }
 
-  // a video keeps to the column, at its own shape: a width it asked for is a
-  // most, never more than the column
+  // a video keeps to the column, at its own shape: a width it asked for
+  // (its width attribute) holds until the column is narrower
   & > video {
-    width: auto;
     max-width: 100%;
     height: auto;
-    aspect-ratio: auto;
     align-self: flex-start;
     background: #000;
     &:not([width]) {

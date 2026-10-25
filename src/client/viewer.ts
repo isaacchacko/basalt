@@ -475,6 +475,18 @@ function addExpands(root: ParentNode, signal: AbortSignal) {
       { signal },
     )
     el.append(b)
+    if (el.matches("figure.diagram-graph")) {
+      document.addEventListener(
+        "fullscreenchange",
+        () => {
+          const full = document.fullscreenElement === el
+          b.innerHTML = ICON(full ? "collapse" : "expand")
+          b.title = full ? "leave full screen (esc)" : "full screen"
+          b.setAttribute("aria-label", b.title)
+        },
+        { signal },
+      )
+    }
   }
 }
 

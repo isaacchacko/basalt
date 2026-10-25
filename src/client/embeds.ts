@@ -10,6 +10,7 @@ export const icon = (d: string, size = 18, stroke = 1.8) =>
 
 export const PATHS = {
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  collapse: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   prev: '<path d="M15 6l-6 6 6 6"/>',
   next: '<path d="M9 6l6 6-6 6"/>',
@@ -69,10 +70,25 @@ export function onTheme(fn: () => void, signal: AbortSignal) {
   signal.addEventListener("abort", () => watch.disconnect())
 }
 
-/** Full screen for `el`, or out of it if it's already there. */
+/**
+ * Full screen for `el`, or out of it if it's already there. Back out, the page
+ * is where it was: the browser's relayout around a full-screen element can
+ * leave it scrolled somewhere else.
+ */
 export function toggleFullscreen(el: HTMLElement) {
-  if (document.fullscreenElement === el) document.exitFullscreen()
-  else el.requestFullscreen?.().catch(() => {})
+  if (document.fullscreenElement === el) return void document.exitFullscreen()
+  const x = scrollX
+  const y = scrollY
+  el.requestFullscreen?.()
+    .then(() => {
+      const back = () => {
+        if (document.fullscreenElement) return
+        document.removeEventListener("fullscreenchange", back)
+        requestAnimationFrame(() => scrollTo({ left: x, top: y, behavior: "instant" }))
+      }
+      document.addEventListener("fullscreenchange", back)
+    })
+    .catch(() => {})
 }
 
 function playFacade(facade: HTMLAnchorElement) {

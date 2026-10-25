@@ -46,7 +46,8 @@ figure.embed-pdf {
   overscroll-behavior: contain;
   scrollbar-width: thin;
 
-  &:focus-visible {
+  // the ring is for keys; a click on the bar hands focus here without one
+  .pdf-viewer:not([data-pointer]) &:focus-visible {
     box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tertiary) 45%, transparent);
   }
 }
