@@ -47,6 +47,7 @@ import { useRegistry } from "./context.ts"
 import { remarkNote, rehypeLinks, rehypeNoteData } from "./frontmatter.ts"
 import { ofmText, rehypeOfm, remarkOfm } from "./ofm.ts"
 import { remarkDiagrams } from "./diagrams.ts"
+import { remarkTree } from "./tree.ts"
 import { rehypeEmbeds, remarkFileEmbeds } from "./embeds.ts"
 import { rehypeIslands, remarkIslands } from "./islands.ts"
 import { rehypeMargin } from "./margin.ts"
@@ -65,6 +66,8 @@ export const textTransforms: TextTransform[] = [(text) => ofmText(text), ...site
 const basaltRemark: PluggableList = [
   remarkNote,
   [remarkDiagrams, { graph: true, graphviz: true, svg: true, math: true }],
+  // ```tree, a directory drawn
+  remarkTree,
   remarkOfm,
   // after ofm, whose arrows (-->) it would otherwise make dashes of
   remarkSmartypants,

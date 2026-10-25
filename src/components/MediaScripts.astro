@@ -10,6 +10,7 @@ import "../styles/diagrams.scss"
 import "../styles/code.scss"
 import "../styles/diff.scss"
 import "../styles/sound.scss"
+import "../styles/tree.scss"
 ---
 
 <script>
@@ -23,9 +24,10 @@ import "../styles/sound.scss"
   import { startIslands as islandsAtLoad } from "../client/islands"
   import { startGraphs } from "../client/graphembed"
   import { startMermaid } from "../client/mermaid"
+  import { startTrees } from "../client/tree"
 
   let startIslands = islandsAtLoad
-  const parts = [startEmbeds, startCodeFiles, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startViewer]
+  const parts = [startEmbeds, startCodeFiles, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startTrees, startViewer]
   let page: AbortController | null = null
 
   function start() {
