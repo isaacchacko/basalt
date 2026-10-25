@@ -36,35 +36,45 @@ $semiBoldWeight: 600;
   margin: 0;
   font-size: 1.75rem;
 
+  // the site's name, in the ink (the accent is for links and where you are)
   & a {
-    color: var(--secondary);
+    color: var(--dark);
   }
 }
 
-// ---------- wide: a drawer over the page ----------
+// ---------- wide: a column of its own, folded to a strip ----------
 
 @media all and ($desktop) {
+  // the navbar's column: its folded strip (the hover zone), widening when it
+  // opens; the page makes room
+  html .page > #quartz-body {
+    --nav-width: #{$zone};
+    transition: grid-template-columns 0.45s $ease;
+  }
+  html .page > #quartz-body:has(> .sidebar.left:is(:hover, :has(:focus-visible), .is-open, .is-held)) {
+    --nav-width: #{$open};
+  }
+  // a pointer passing through the strip on its way somewhere doesn't open it
+  html .page > #quartz-body:has(> .sidebar.left:hover) {
+    transition-delay: 0.15s;
+  }
+
   html .page > #quartz-body > .sidebar.left {
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
-    z-index: 40;
-    width: $open;
+    z-index: 3;
+    width: auto;
+    min-width: 0;
     height: 100vh;
-    // folded, only its last $zone shows: the hover zone, transparent
-    transform: translateX(calc(#{$zone} - #{$open}));
-    background-color: transparent;
+    overflow: hidden;
     border-right: 1px solid transparent;
-    box-shadow: none;
-    transition:
-      transform 0.45s $ease,
-      background-color 0.3s ease,
-      border-color 0.3s ease,
-      box-shadow 0.45s ease;
+    transition: border-color 0.3s ease;
 
     // folded, everything but the chevron waits for it to open; it stays
     // focusable (not visibility: hidden), so tabbing into it opens it
     & > :not(.nav-rail) {
+      // laid out at the open width, so nothing reflows as the column widens
+      min-width: calc(#{$open} - 4rem);
       opacity: 0;
       pointer-events: none;
       transform: translateX(-10px);
@@ -127,14 +137,7 @@ $semiBoldWeight: 600;
   // open: hovered, focused into from the keyboard, tapped, or held open
   // through a page transition (nav.ts)
   html .page > #quartz-body > .sidebar.left:is(:hover, :has(:focus-visible), .is-open, .is-held) {
-    transform: none;
-    background-color: var(--light);
     border-right-color: var(--lightgray);
-    box-shadow: 14px 0 44px -16px rgb(0 0 0 / 0.2);
-
-    :root[saved-theme="dark"] & {
-      box-shadow: 18px 0 48px -12px rgb(0 0 0 / 0.65);
-    }
 
     & > :not(.nav-rail) {
       opacity: 1;
@@ -148,10 +151,6 @@ $semiBoldWeight: 600;
     }
   }
 
-  // a pointer passing through the strip on its way somewhere doesn't open it
-  html .page > #quartz-body > .sidebar.left:hover {
-    transition-delay: 0.15s;
-  }
 
   .nav-head {
     display: flex;

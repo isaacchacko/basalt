@@ -18,8 +18,9 @@ $boldWeight: 700;
   --margin-width: 22rem;
   // the room kept left of the main content: the folded navbar's hover zone
   // (5.5rem, nav.scss) and a gap, so the zone never sits over the text
-  // at least the navbar's hover zone (nav.scss $zone), so it never lies over the text
-  --gutter-left: 11.5rem; /* with the text (36rem) and the side content (15rem) the desktop layout needs 62.5rem: it starts at 1056px (66rem), leaving a right gutter */
+  // the folded navbar's strip (nav.scss $zone), with the text (36rem) and the
+  // side content (15rem): the desktop layout starts at 1056px (66rem)
+  --gutter-left: 11.5rem;
   --gutter-right: 2rem;
 }
 
@@ -177,22 +178,28 @@ a {
   & > #quartz-body {
     position: relative;
     display: grid;
-    // room | the main content | the side content | room. The navbar is a
-    // drawer over the page (nav.scss), so it takes no column.
+    // the navbar | room | the main content | the side content | room. The
+    // navbar's column is its folded strip, and widens when it opens (nav.scss);
+    // the room beside it gives way first, then the text
     grid-template-columns:
-      minmax(var(--gutter-left), 1fr) var(--text-width) minmax(15rem, var(--margin-width))
+      var(--nav-width, 0px) minmax(1.75rem, 1fr) minmax(0, var(--text-width)) minmax(15rem, var(--margin-width))
       minmax(var(--gutter-right), 1fr);
     grid-template-rows: auto 1fr;
 
+    & > .sidebar.left {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+
     & > .center {
-      grid-column: 2;
+      grid-column: 3;
       grid-row: 1;
       min-width: 0;
     }
 
     // the margin: it scrolls with the note, its notes beside their lines
     & > .sidebar.right {
-      grid-column: 3;
+      grid-column: 4;
       grid-row: 1 / span 2;
       position: relative;
       min-width: 0;
@@ -201,7 +208,7 @@ a {
     }
 
     & > footer {
-      grid-column: 2;
+      grid-column: 3;
       grid-row: 2;
     }
 
