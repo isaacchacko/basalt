@@ -17,7 +17,7 @@ showcase/
   notes/
     index.md             # the home page
     [[start|start.md]]   # a name can link to a note
-    examples/
+    [[examples/index|examples]]/
       diagrams.md
       trees.md           # this page
     files/

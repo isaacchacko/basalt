@@ -130,8 +130,18 @@ figure.tree > figcaption.tree-title {
   color: var(--dark);
 }
 
-a.tree-name {
+// after the folder's ink, which it would otherwise lose to; underlined, since
+// in the dark theme the accent is close to the ink
+figure.tree a.tree-name {
   color: var(--secondary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 0.2em;
+  background: none;
+
+  &:hover {
+    text-decoration-color: currentColor;
+  }
 }
 
 // a note beside its entry, quiet, set as prose

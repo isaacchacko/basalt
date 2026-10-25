@@ -109,6 +109,14 @@ describe("trees", () => {
     assert.strictEqual(treeHtml("a/\n  b/\n    c", "open=1").match(/<details open>/g)?.length, 1)
   })
 
+  test("an empty tree draws nothing", () => {
+    assert.strictEqual(treeHtml("\n  \n"), "")
+  })
+
+  test("a linked folder is a link", () => {
+    assert.match(treeHtml("[[about]]/\n  a.md"), /<summary[^>]*>.*<a class="tree-name" href="about"/)
+  })
+
   test("a mark is said as well as coloured, and only on its own entry", () => {
     const html = treeHtml("+ a/\n  + b.md\n  c.md")
     assert.strictEqual(html.match(/data-mark="added"/g)?.length, 2)
