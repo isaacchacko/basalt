@@ -2,7 +2,7 @@
 // up. Basalt reads it from BASALT_SITE (or --site), and never writes into it
 // except under <site>/.basalt/astro.
 //
-//   basalt.json         { title, baseUrl, description, content: [{ from, to }] }
+//   basalt.json         { title, baseUrl, description, icon, content: [{ from, to }] }
 //   basalt.config.ts    optional: markdown plugins, layout choices (see config.ts)
 //   styles/custom.scss  the site's look, on top of Basalt's
 //   islands/            interactive components
@@ -21,6 +21,8 @@ export interface SiteConfig {
   description?: string
   /** the host it's published at, e.g. "basalt.isaacchacko.com" (no protocol) */
   baseUrl?: string
+  /** a file in the site's tree for the tab's icon, e.g. "assets/icon.svg"; Basalt's mark without one */
+  icon?: string
   locale: string
   content: { from: string; to?: string }[]
 }
@@ -54,6 +56,7 @@ export function loadSite(dir = siteDir()): Site {
     title: raw.title ?? path.basename(dir),
     description: raw.description,
     baseUrl: raw.baseUrl,
+    icon: typeof raw.icon === "string" && raw.icon.trim() ? raw.icon.trim() : undefined,
     locale: raw.locale ?? "en-US",
     content: Array.isArray(raw.content) ? raw.content : [{ from: "notes" }],
   }
