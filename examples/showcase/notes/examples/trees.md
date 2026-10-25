@@ -1,0 +1,68 @@
+---
+title: Trees
+aliases: [trees]
+toc: true
+---
+
+A folder is easier to show than to describe. Write it in a ` ```tree ` block, indented the way you'd sketch it, and Basalt draws it: folders that fold, an icon for each kind of file, and a quiet note beside any entry.
+
+## A tree
+
+```tree title="This site"
+showcase/
+  basalt.json            # the site's settings
+  islands/
+    counter.tsx          # an island, hydrated in the page
+    clock.ts
+  notes/
+    index.md             # the home page
+    [[start|start.md]]   # a name can link to a note
+    examples/
+      diagrams.md
+      trees.md           # this page
+    files/
+      sieve.py
+      euclid.csv
+    assets/…             # starts folded
+```
+
+Each line is an entry. A name ending in `/` (or with entries under it) is a folder; click it, or tab to it and press enter, to fold it. `# ` after a name is its note, and a note can hold `code` and [[links]].
+
+## What changed
+
+A sign before a name marks it: `+` added, `-` removed, `~` changed, `!` worth looking at. Two marked trees, side by side, say what one has that the other hasn't.
+
+```tree title="A pull request"
+basalt/
+  ! BASALT.md            # what to read first
+  src/
+    markdown/
+      + tree.ts          # the block, drawn when the site is built
+      ~ index.ts
+    styles/
+      + tree.scss
+      - old.scss
+```
+
+## Pasted from `tree`
+
+The output of the `tree` command works as it is, branches and all. A folder you'd rather not show in full can end in `/…`, and a line of `…` says there's more.
+
+```tree open=1
+.
+├── astro.config.ts
+├── bin
+│   └── basalt.mjs
+├── package.json
+└── src
+    ├── client
+    │   ├── embeds.ts
+    │   └── tree.ts
+    └── markdown
+        ├── diagrams.ts
+        └── tree.ts
+
+5 directories, 6 files
+```
+
+`open=1` after the language starts every folder below the first level folded.
