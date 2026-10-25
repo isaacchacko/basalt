@@ -1,0 +1,240 @@
+// A diff (src/markdown/diff.ts): its lines on red or green, each led by a
+// gutter with its old and new line numbers and its sign, hunks as quiet rules
+// between the parts. A narrow block (a phone, a compare column) keeps one
+// number per line: the new file's, or the old one's for a removed line.
+
+// what was added, removed and changed, wherever Basalt marks it (diffs, trees)
+:root {
+  --basalt-added: #217a46;
+  --basalt-removed: #c2283c;
+  --basalt-changed: #9a6a00;
+}
+
+:root[saved-theme="dark"] {
+  --basalt-added: #63d69a;
+  --basalt-removed: #ff8a97;
+  --basalt-changed: #f0c35e;
+}
+
+figure.diff {
+  // how strongly a line, its gutter and its changed words take their colour,
+  // mixed into the paper so the block stays opaque when it reaches
+  --diff-line: 9%;
+  --diff-gutter: 16%;
+  --diff-word: 26%;
+  --diff-num: calc(var(--diff-digits, 0) * 1ch + 1.2ch);
+  --diff-numbers: calc(0.6ch + 2 * var(--diff-num));
+  --code-gutter: calc(var(--diff-numbers) + 2ch);
+  container-type: inline-size;
+
+  :root[saved-theme="dark"] & {
+    --diff-line: 17%;
+    --diff-gutter: 26%;
+    --diff-word: 40%;
+  }
+
+  &:not([data-numbered]) {
+    --diff-numbers: 0.5ch;
+
+    .diff-gutter::before,
+    .diff-gutter::after {
+      content: none;
+    }
+  }
+
+  & > pre > code {
+    padding: 0.35rem 0;
+
+    & > [data-line] {
+      --diff-tint: transparent;
+      padding: 0 1rem 0 0;
+      border-left: none;
+      background: color-mix(in srgb, var(--diff-tint) var(--diff-line), var(--light));
+
+      &::before {
+        content: none;
+      }
+    }
+
+    & > [data-diff="add"] {
+      --diff-tint: var(--basalt-added);
+    }
+
+    & > [data-diff="del"] {
+      --diff-tint: var(--basalt-removed);
+    }
+
+    & > [data-diff="ctx"] {
+      background: var(--light);
+    }
+  }
+
+  // old number, new number, sign; it stays put when a long line scrolls
+  .diff-gutter {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    display: inline-flex;
+    justify-content: flex-end;
+    width: var(--diff-numbers);
+    text-indent: 0;
+    vertical-align: top;
+    background: inherit;
+    color: var(--gray);
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+
+    &::before,
+    &::after {
+      box-sizing: border-box;
+      width: var(--diff-num);
+      padding-right: 1.2ch;
+      text-align: right;
+      opacity: 0.75;
+    }
+
+    &::before {
+      content: attr(data-old);
+    }
+
+    &::after {
+      content: attr(data-new);
+    }
+  }
+
+  .diff-sign {
+    position: sticky;
+    left: var(--diff-numbers);
+    z-index: 1;
+    display: inline-block;
+    width: 2ch;
+    padding-left: 0.4ch;
+    box-sizing: border-box;
+    text-indent: 0;
+    background: inherit;
+    user-select: none;
+  }
+
+  [data-diff="add"],
+  [data-diff="del"] {
+    & > .diff-gutter,
+    & > .diff-sign {
+      background: color-mix(in srgb, var(--diff-tint) var(--diff-gutter), var(--light));
+    }
+
+    // over code[data-theme] span, which takes the highlighter's colour
+    & > span.diff-sign {
+      color: var(--diff-tint);
+    }
+
+    & > .diff-gutter {
+      color: color-mix(in srgb, var(--diff-tint) 55%, var(--gray));
+    }
+  }
+
+  .diff-word {
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--diff-tint) var(--diff-word), var(--light));
+  }
+
+  // @@ -12,7 +12,8 @@ a hunk: a quiet rule, saying which lines and in what
+  & > pre > code > [data-diff="hunk"] {
+    margin: 0.25rem 0;
+    background: color-mix(in srgb, var(--lightgray) 38%, var(--light));
+    color: var(--gray);
+
+    &:first-child {
+      margin-top: -0.35rem;
+    }
+
+    // under its file's row, the file's row is the rule
+    [data-diff="file"] + & {
+      margin-top: 0;
+    }
+
+    & > span.diff-hunk-range {
+      color: var(--gray);
+      opacity: 0.8;
+    }
+
+    & > span.diff-hunk-context {
+      color: var(--darkgray);
+      font-style: italic;
+    }
+
+    // its gutter is as wide as the lines', so the range sits over the code
+    & > .diff-gutter {
+      width: var(--code-gutter);
+
+      &::before,
+      &::after {
+        content: none;
+      }
+    }
+  }
+
+  // a file's own row, when one block holds several
+  & > pre > code > [data-diff="file"] {
+    padding: 0.3rem 1rem 0.3rem 0.85rem;
+    border-top: 1px solid var(--lightgray);
+    background: color-mix(in srgb, var(--lightgray) 45%, var(--light));
+    color: var(--dark);
+    font-weight: 600;
+
+    &:first-child {
+      margin-top: -0.35rem;
+      border-top: none;
+    }
+
+    & > span.diff-file-status {
+      margin-left: 1ch;
+      color: var(--gray);
+      font-weight: 400;
+      font-style: italic;
+    }
+  }
+
+  // \ No newline at end of file
+  & > pre > code > [data-diff="note"] {
+    padding-left: calc(var(--code-gutter) + 0.5ch);
+    color: var(--gray);
+    font-style: italic;
+  }
+
+  // +3 −1, beside the title
+  .diff-stat {
+    display: inline-flex;
+    gap: 0.6ch;
+    margin-left: 0.75ch;
+    font-family: var(--codeFont);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+
+    & > .diff-stat-added {
+      color: var(--basalt-added);
+    }
+
+    & > .diff-stat-removed {
+      color: var(--basalt-removed);
+    }
+  }
+}
+
+// a narrow block: one number per line
+@container (max-width: 30rem) {
+  figure.diff[data-numbered] > pre {
+    --diff-numbers: calc(0.6ch + var(--diff-num));
+    --code-gutter: calc(var(--diff-numbers) + 2ch);
+
+    .diff-gutter {
+      &::before {
+        content: none;
+      }
+
+      &::after {
+        content: attr(data-n);
+      }
+    }
+
+  }
+}

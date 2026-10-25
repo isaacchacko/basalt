@@ -368,6 +368,8 @@ const CODE_LANGS: Record<string, string> = {
   ini: "ini",
   nix: "nix",
   tex: "latex",
+  diff: "diff",
+  patch: "diff",
 }
 
 export const isCodeFile = (fp: string) => path.extname(fp).slice(1).toLowerCase() in CODE_LANGS
