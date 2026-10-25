@@ -168,6 +168,14 @@ document.addEventListener("pointerdown", (e) => {
   nav.classList.toggle("is-open", nav.contains(e.target as Node))
 })
 
+// an explorer entry cut short by its ellipsis gives its whole name on hover
+document.addEventListener("pointerover", (e) => {
+  const a = (e.target as Element | null)?.closest?.<HTMLAnchorElement>(".explorer-content a")
+  if (!a) return
+  if (a.scrollWidth > a.clientWidth + 1) a.title = a.textContent?.trim() ?? ""
+  else a.removeAttribute("title")
+})
+
 document.addEventListener("astro:page-load", () => {
   sync()
   shutDrawer()
