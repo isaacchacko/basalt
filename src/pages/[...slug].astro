@@ -101,6 +101,7 @@ const Content = rendered?.Content
       minutes={readingTimeOf(props.note)}
       tags={tagsOf(props.note)}
       meta={folderNode ? count : undefined}
+      folder={!!folderNode}
     >
       {Content && <Content />}
       {folderNode && (
@@ -110,7 +111,7 @@ const Content = rendered?.Content
       )}
     </Page>
   ) : (
-    <Page slug={`${props.folder}/index`} title={folderNode?.name ?? props.folder.split("/").pop()!} meta={count}>
+    <Page slug={`${props.folder}/index`} title={folderNode?.name ?? props.folder.split("/").pop()!} meta={count} folder>
       <div class="page-listing" slot="listing">
         <PageList entries={entries} />
       </div>

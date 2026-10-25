@@ -17,6 +17,7 @@ import ContentMeta from "basalt:components/ContentMeta"
 import TagList from "basalt:components/TagList"
 import Footer from "basalt:components/Footer"
 import Motion from "basalt:components/Motion"
+import FolderMark from "../components/FolderMark.astro"
 import Margin from "basalt:components/Margin"
 import MediaScripts from "basalt:components/MediaScripts"
 // KaTeX's own stylesheet and fonts, the installed version rehype-katex renders with
@@ -37,6 +38,8 @@ interface Props {
   /** the page's slug: "blog/a-post", "blog/index", "tags/x", "404" */
   slug: string
   title: string
+  /** a folder's page: its title gets the folder mark */
+  folder?: boolean
   description?: string
   date?: Date
   /** frontmatter `cssclasses`: classes on the note's article, for a site's styles */
@@ -57,6 +60,7 @@ const {
   headings = [],
   slug,
   title,
+  folder = false,
   description,
   date,
   dated = false,
@@ -98,7 +102,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
             }
             <div class="popover-hint">
               {layout.components.breadcrumbs && breadcrumbs && <Breadcrumbs trail={trail} last={crumb} rootName={layout.breadcrumbs.rootName} />}
-              <h1 class="article-title">{title}</h1>
+              <h1 class="article-title">{folder && <FolderMark size="0.8em" />}{title}</h1>
               {
                 (layout.components.meta === "dated" ? dated : layout.components.meta) ? (
                   <ContentMeta date={date} minutes={minutes} extra={meta} />

@@ -2,6 +2,7 @@
 // A list of notes (a folder's, a tag's): the date, the title, its tags.
 import type { Entry } from "../layouts/notes"
 import { byDate, formatDate, hrefOf } from "../layouts/notes"
+import FolderMark from "./FolderMark.astro"
 
 interface Props {
   entries: Entry[]
@@ -21,6 +22,7 @@ if (limit) list = list.slice(0, limit)
           <div class="desc">
             <h3>
               <a href={hrefOf(e.isFolder ? `${e.slug}/index` : e.slug)} class="internal" data-slug={e.isFolder ? `${e.slug}/index` : e.slug}>
+                {e.isFolder && <FolderMark />}
                 {e.title}
               </a>
             </h3>
