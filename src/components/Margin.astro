@@ -1,0 +1,10 @@
+---
+// The margin column: sidenotes, margin notes, previews, and whatever the page opted into.
+interface Props {
+  note: unknown
+  headings: { depth: number; slug: string; text: string }[]
+  backlinks: { slug: string; title: string }[]
+}
+---
+
+<aside class="margin"></aside>

@@ -2,12 +2,14 @@
 // The page every note is set in: navigation, the note, and its margin.
 import type { CollectionEntry } from "astro:content"
 import { registry } from "../lib/registry"
+import Margin from "../components/Margin.astro"
+import MediaScripts from "../components/MediaScripts.astro"
 
 interface Props {
   note: CollectionEntry<"notes">
   headings: { depth: number; slug: string; text: string }[]
 }
-const { note } = Astro.props
+const { note, headings } = Astro.props
 const { site } = registry()
 const title = (note.data.title as string | undefined) ?? note.id.split("/").pop()
 ---
@@ -25,6 +27,8 @@ const title = (note.data.title as string | undefined) ?? note.id.split("/").pop(
         <h1>{title}</h1>
         <slot />
       </article>
+      <Margin note={note} headings={headings} backlinks={[]} />
     </main>
+    <MediaScripts />
   </body>
 </html>

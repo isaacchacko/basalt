@@ -3,7 +3,8 @@ import preact from "@astrojs/preact"
 import { unified } from "@astrojs/markdown-remark"
 import path from "node:path"
 import { loadSite, siteDir } from "./src/lib/site"
-import { remarkPlugins, rehypePlugins } from "./src/markdown"
+import { processorOptions, rehypePlugins, remarkPlugins, syntaxHighlight } from "./src/markdown"
+import { vitePlugins } from "./src/lib/vite"
 
 const site = loadSite(siteDir())
 
@@ -15,13 +16,11 @@ export default defineConfig({
   trailingSlash: "ignore",
   integrations: [preact({ compat: true })],
   markdown: {
-    processor: unified({
-      remarkPlugins,
-      rehypePlugins,
-      remarkRehype: { allowDangerousHtml: true },
-    }),
+    syntaxHighlight,
+    processor: unified({ remarkPlugins, rehypePlugins, ...processorOptions }),
   },
   vite: {
+    plugins: vitePlugins,
     resolve: {
       alias: { "@site": site.dir, "@basalt": path.resolve("src") },
     },

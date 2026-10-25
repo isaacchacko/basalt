@@ -18,3 +18,10 @@ export type TextTransform = (text: string, file: SiteFile) => string
 export const textTransforms: TextTransform[] = []
 export const remarkPlugins: PluggableList = []
 export const rehypePlugins: PluggableList = []
+
+/** the rest of unified()'s options (gfm, smartypants, remarkRehype) */
+export const processorOptions = {
+  remarkRehype: { allowDangerousHtml: true },
+}
+/** Astro's own highlighting ("shiki", "prism"), or false when a plugin does it */
+export const syntaxHighlight: "shiki" | "prism" | false = "shiki"
