@@ -4,7 +4,8 @@
 // The palette is black ink on white paper with a cobalt accent, and cobalt
 // paper at night. Type is Palatino throughout, as a book is set. Small labels
 // (a sidebar section, a date) are set like the titles, in italic, never in
-// small caps or monospace. Lists are hung on hexagons, basalt's columns.
+// small caps or monospace. Lists hang on round dots (a site can make them
+// hexagons, basalt's columns, or anything: theme.bullets, or the --basalt-bullet-* properties).
 // A site changes any of it in its styles/custom.scss.
 
 :root {
@@ -48,8 +49,6 @@
   color-scheme: dark;
 }
 
-// a hexagon, flat sides left and right, like a basalt column seen from above
-$hex: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
 
 :root {
   // how soft a variable face's corners are, where it has the axis (Fraunces'
@@ -124,7 +123,22 @@ figure.diagram figcaption {
   font-variation-settings: "SOFT" 100;
 }
 
-// ---------- lists hung on hexagons ----------
+// ---------- lists hung on dots ----------
+
+// a list's mark, which a site restyles with these alone (or basalt.json's
+// theme.bullets: "circle", "hexagon", "none", which sets them; config.ts):
+// its shape (a clip-path), colour, width and height, how strong it is at
+// rest, and what it does when its item is pointed at. It's centred on the
+// same point whatever its size.
+:root {
+  --basalt-bullet-shape: circle(50%);
+  --basalt-bullet-color: var(--tertiary);
+  --basalt-bullet-size: 0.42em;
+  --basalt-bullet-height: var(--basalt-bullet-size);
+  --basalt-bullet-opacity: 0.75;
+  --basalt-bullet-hover-transform: scale(1.3);
+  --basalt-bullet-display: block;
+}
 
 article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li,
 .margin-preview-body ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li {
@@ -133,14 +147,15 @@ article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li
 
   &::before {
     content: "";
+    display: var(--basalt-bullet-display);
     position: absolute;
-    left: -1.15em;
-    top: 0.5em;
-    width: 0.7em;
-    height: 0.62em;
-    clip-path: $hex;
-    background: var(--tertiary);
-    opacity: 0.75;
+    left: calc(-0.8em - var(--basalt-bullet-size) / 2);
+    top: calc(0.81em - var(--basalt-bullet-height) / 2);
+    width: var(--basalt-bullet-size);
+    height: var(--basalt-bullet-height);
+    clip-path: var(--basalt-bullet-shape);
+    background: var(--basalt-bullet-color);
+    opacity: var(--basalt-bullet-opacity);
     transition:
       transform 0.3s var(--basalt-ease),
       opacity 0.3s ease;
@@ -148,7 +163,7 @@ article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li
 
   &:hover::before {
     opacity: 1;
-    transform: rotate(60deg) scale(1.15);
+    transform: var(--basalt-bullet-hover-transform);
   }
 }
 

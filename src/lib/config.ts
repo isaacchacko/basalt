@@ -78,7 +78,26 @@ export interface LayoutConfig {
      * fonts the visitor may not have (a Google Fonts link, say).
      */
     fonts: { title?: string; header?: string; body?: string; code?: string; load?: string[] }
+    /**
+     * What a list hangs on: a round dot (Basalt's), a hexagon (basalt's
+     * columns, seen from above), or nothing. Any of it can be set finer with
+     * the --basalt-bullet-* properties (styles/basalt.scss).
+     */
+    bullets?: "circle" | "hexagon" | "none"
   }
+}
+
+/** each bullet, as the --basalt-bullet-* properties it sets */
+const BULLETS: Record<string, Record<string, string>> = {
+  circle: {},
+  // flat sides left and right, like a basalt column seen from above; it turns as you point
+  hexagon: {
+    "basalt-bullet-shape": "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%)",
+    "basalt-bullet-size": "0.7em",
+    "basalt-bullet-height": "0.62em",
+    "basalt-bullet-hover-transform": "rotate(60deg) scale(1.15)",
+  },
+  none: { "basalt-bullet-display": "none" },
 }
 
 export interface BasaltConfig {
@@ -211,8 +230,12 @@ export function paletteCss(cfg: LayoutConfig): string {
       .filter((k) => typeof fonts[k] === "string" && /^[\w\s",'-]+$/.test(fonts[k]!))
       .map((k) => [`${k}Font`, fonts[k]!]),
   )
+  const bullets = Object.entries(BULLETS[cfg.theme.bullets ?? "circle"] ?? {})
+    .map(([k, v]) => `--${k}: ${v};`)
+    .join(" ")
   return [
     block(":root", { ...(cfg.theme.colors.lightMode ?? {}), ...type }),
+    bullets ? `:root { ${bullets} }` : "",
     block(':root[saved-theme="dark"]', cfg.theme.colors.darkMode ?? {}),
   ]
     .filter(Boolean)
