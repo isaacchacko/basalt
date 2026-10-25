@@ -17,7 +17,8 @@ figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-titl
   border: 1px solid var(--lightgray);
   border-bottom: none;
   border-radius: 6px 6px 0 0;
-  background: color-mix(in srgb, var(--lightgray) 45%, transparent);
+  // opaque, so a block reaching over the side content hides what's under it
+  background: color-mix(in srgb, var(--lightgray) 45%, var(--light));
   color: var(--dark);
   font-size: 0.85rem;
 
@@ -96,3 +97,78 @@ figure.code-file {
   }
 }
 
+
+// ---------- code wider than the text reaches into the side content (codereach.ts) ----------
+
+$reach-out: cubic-bezier(0.16, 1, 0.3, 1);
+$reach-back: cubic-bezier(0.4, 0, 0.2, 1);
+
+// drawing back: quick and even. At rest it's as wide as its column, said as a
+// length (not auto), so the width has something to animate from
+figure[data-rehype-pretty-code-figure],
+article pre {
+  box-sizing: border-box;
+  width: 100%;
+  transition:
+    width 0.32s $reach-back,
+    box-shadow 0.32s ease;
+
+  & > pre,
+  &:is(pre) {
+    transition: box-shadow 0.32s ease;
+  }
+}
+
+// code that runs past the edge fades out there, so it reads as more to see
+.has-more {
+  &:is(pre),
+  & > pre {
+    &::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      right: 0;
+      bottom: 1px;
+      width: 2.75rem;
+      border-radius: 0 5px 5px 0;
+      background: linear-gradient(to right, transparent, var(--light) 85%);
+      pointer-events: none;
+      transition: opacity 0.25s ease 0.1s;
+    }
+  }
+}
+
+// reaching: it opens out fast and settles, lifting off the page as it goes,
+// and the fade at its edge gives way to the rest of the line
+:is(figure[data-rehype-pretty-code-figure], article pre).is-reaching {
+  position: relative;
+  z-index: 6;
+  width: calc(100% + var(--code-reach, 0px));
+  max-width: none;
+  transition: width 0.55s $reach-out;
+
+  &:is(pre),
+  & > pre {
+    background: var(--light);
+    box-shadow: 12px 10px 32px -16px rgb(0 0 0 / 0.28);
+    transition: box-shadow 0.45s ease;
+
+    :root[saved-theme="dark"] & {
+      box-shadow: 12px 10px 34px -12px rgb(0 0 0 / 0.65);
+    }
+
+    &::after {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  figure[data-rehype-pretty-code-figure],
+  article pre,
+  :is(figure[data-rehype-pretty-code-figure], article pre).is-reaching,
+  .is-reaching > pre {
+    transition: none;
+  }
+}

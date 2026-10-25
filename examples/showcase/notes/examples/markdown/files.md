@@ -7,7 +7,7 @@ Embed a file that isn't a note, `![[sieve.py]]`, and it's shown from the file it
 
 ## A code file
 
-`![[sieve.py|fullscreen]]` is highlighted and titled with its name. Its bar opens the raw file and copies the code, and because this one asked for `fullscreen`, it has a button for that too. It's the code that drew the sieve on [[margin]].
+`![[sieve.py|fullscreen]]` is highlighted and titled with its name. Its bar opens the raw file and copies the code, and because this one asked for `fullscreen`, it has a button for that too. It's the code that drew the sieve on [[margin]]. Its first line is wider than the page: point at it, and the code reaches into the side content to show the rest.
 
 ![[sieve.py|fullscreen]]
 
