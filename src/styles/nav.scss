@@ -51,7 +51,8 @@ $semiBoldWeight: 600;
     --nav-width: #{$zone};
     transition: grid-template-columns 0.45s $ease;
   }
-  html .page > #quartz-body:has(> .sidebar.left:is(:hover, :has(:focus-visible), .is-open, .is-held)) {
+  // (:has can't hold another :has, so focus inside it is its own clause)
+  html .page > #quartz-body:has(> .sidebar.left:is(:hover, .is-open, .is-held), > .sidebar.left :focus-visible) {
     --nav-width: #{$open};
   }
   // a pointer passing through the strip on its way somewhere doesn't open it
