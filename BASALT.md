@@ -64,6 +64,7 @@ Obsidian-flavoured markdown:
 - **Diagrams:** ```` ```graph ```` (isaacchacko/graph), ```` ```dot ````, ```` ```mermaid ````, ```` ```svg ````, and `$math$` / `$$math$$` / ```` ```math ````.
 - **Islands:** `<island name="counter" start="3" ssr></island>` mounts `islands/counter.tsx`, rendered at build time with `ssr` and hydrated in the browser. `frame` puts it alone in a frame. Editing an island hot-swaps it and keeps its state.
 - **Note lists:** `<note-list folder="blog" limit="4"></note-list>`.
+- **Text to copy:** `<copy>you@example.com</copy>` is that text in the page, underlined in dots, and a click on it (or enter, tabbed to) copies it, with "copied" beside it for a moment. `<copy value="npm i basalt">install it</copy>` copies something other than what it shows. An address or a url in it isn't made a link. Elsewhere it's just the text.
 
 A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: true`, `backlinks: true`. A site can turn them on everywhere with `layout`. `draft: true` and `private: true` notes aren't published.
 

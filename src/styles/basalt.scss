@@ -357,3 +357,62 @@ html.theme-switching *::after {
     scrollbar-color: var(--gray) var(--lightgray);
   }
 }
+
+// ---------- <copy>text</copy>: text you copy by clicking it (client/copy.ts) ----------
+
+.copyable {
+  position: relative;
+  border-radius: 3px;
+  cursor: copy;
+  text-decoration: underline dotted color-mix(in srgb, currentColor 55%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.2em;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--highlight);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  // with no side content to say it in (copy.ts): "copied", quietly, just
+  // above the text, and gone again
+  &::after {
+    content: "copied";
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 0.1em);
+    padding: 0 0.3em;
+    border-radius: 3px;
+    background: var(--light);
+    color: var(--gray);
+    font-size: 0.75em;
+    font-style: italic;
+    line-height: 1.4;
+    white-space: nowrap;
+    opacity: 0;
+    translate: 0 3px;
+    pointer-events: none;
+    transition:
+      opacity 0.3s ease,
+      translate 0.3s ease;
+  }
+
+  &[data-copied="above"]::after {
+    opacity: 1;
+    translate: 0 0;
+    transition-duration: 0.12s;
+  }
+}
+
+.copyable-said {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

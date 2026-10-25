@@ -20,6 +20,7 @@
 // data.draft / data.private set: the page route leaves them out.
 
 import { rehypeThemedMedia } from "./themed.ts"
+import { rehypeCopy } from "./copy.ts"
 import fs from "node:fs"
 import type { PluggableList } from "unified"
 import { unified } from "unified"
@@ -105,6 +106,8 @@ const basaltRehype: PluggableList = [
     { theme: { light: "github-light", dark: "github-dark" }, keepBackground: false },
   ],
   rehypeRaw,
+  // <copy>text</copy>, before links are made of what's in it
+  rehypeCopy,
   rehypeOfm,
   rehypeSlug,
   [
