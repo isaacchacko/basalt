@@ -1,12 +1,17 @@
 // What's hovered, in the margin: a link to another note shows that note's
-// title and opening, and anything that asks for a tooltip ([data-tip], or a
-// title= in the note) shows its words, quietly. Each sits level with the line
+// title and opening, anything that asks for a tooltip ([data-tip], or a
+// title= in the note) shows its words, quietly, and anything with a child
+// marked [data-secondary] (an island's card: a site's screenshot, the track
+// that's playing) shows that child, which never shows in the text itself.
+// A link to an image shows the image, captioned with the link's words; a
+// click on it opens the viewer (viewer.ts), growing out of that preview. Each sits level with the line
 // of what it's about. One shows at a time; the notes under it fade back
 // instead of moving, and come back when it goes. It goes after a short grace,
 // unless the pointer is on it.
 //
 // Only beside a margin: on a phone, a link is just a link.
 
+import { isImageLink } from "./embeds"
 import { isBeside, levelWith, lineOf, onPage } from "./margin"
 
 const SHOW_MS = 90
@@ -101,8 +106,9 @@ function notePreview(link: HTMLAnchorElement): Item {
       }
       const article = got.querySelector("main article") ?? got.querySelector("article")
       if (!article) return null
+      // the page's own title, never an h1 inside it (a note it embeds has one)
       title.textContent =
-        article.querySelector("h1")?.textContent?.trim() || got.title.split(" · ")[0] || url.pathname
+        got.querySelector("h1.article-title")?.textContent?.trim() || got.title.split(" · ")[0] || url.pathname
       const heading = hash ? article.querySelector(`[id="${CSS.escape(hash)}"]`) : null
       const section = heading?.closest("h2, h3, h4, h5, h6") ?? null
       const blocks = section
@@ -112,6 +118,31 @@ function notePreview(link: HTMLAnchorElement): Item {
       body.append(...blocks.map((b) => document.importNode(b, true)))
       rebase(body, url)
       box.append(title, body)
+      return box
+    },
+  }
+}
+
+function imagePreview(link: HTMLAnchorElement): Item {
+  const src = new URL(link.href).pathname
+  return {
+    key: `image:${src}`,
+    build: async () => {
+      const box = el("figure", "margin-image")
+      box.dataset.src = src
+      const img = el("img")
+      img.src = src
+      img.alt = link.textContent?.trim() ?? ""
+      img.draggable = false
+      // measured once it has a size, so it lands level with its line at once
+      const ok = await Promise.race([
+        img.decode().then(() => true, () => false),
+        new Promise<boolean>((r) => setTimeout(() => r(true), 1500)),
+      ])
+      if (!ok) return null
+      box.append(img)
+      const words = link.textContent?.trim()
+      if (words) box.append(el("figcaption", "margin-image-caption", words))
       return box
     },
   }
@@ -137,12 +168,42 @@ function tooltip(target: HTMLElement): Item | null {
   }
 }
 
+/**
+ * Something a page or island marks: its `[data-secondary]` child, shown as a
+ * card, titled by `data-secondary-title`.
+ */
+function marked(content: HTMLElement): Item {
+  const key = content.dataset.secondaryKey ?? content.textContent?.trim().slice(0, 80) ?? ""
+  return {
+    key: `marked:${key}`,
+    build: async () => {
+      const box = el("div", "margin-preview margin-marked")
+      box.dataset.kind = content.dataset.secondary ?? ""
+      const title = content.dataset.secondaryTitle?.trim()
+      if (title) box.append(el("span", "margin-preview-title", title))
+      const copy = content.cloneNode(true) as HTMLElement
+      copy.removeAttribute("data-secondary")
+      copy.removeAttribute("hidden")
+      copy.querySelectorAll("[id]").forEach((x) => x.removeAttribute("id"))
+      const body = el("div", "margin-marked-body")
+      body.append(copy)
+      box.append(body)
+      return box
+    },
+  }
+}
+
 /** What, if anything, the margin has to say about what's under the pointer. */
 function itemFor(target: Element, article: Element): [Item, Element] | null {
   if (!article.contains(target)) return null
+  // inside a link that isn't a note's, only a marked card can still show
+  let inLink = false
   for (let node: Element | null = target; node && node !== article; node = node.parentElement) {
     if (node.matches(".sidenote, .marginnote, sup:has(> a[data-footnote-ref])")) return null
+    const content = node.querySelector<HTMLElement>(":scope > [data-secondary]")
+    if (content) return [marked(content), node]
     if (node instanceof HTMLAnchorElement) {
+      if (isImageLink(node)) return [imagePreview(node), node]
       if (
         node.matches("a.internal[data-slug]") &&
         node.dataset.footnoteRef === undefined &&
@@ -151,9 +212,10 @@ function itemFor(target: Element, article: Element): [Item, Element] | null {
         new URL(node.href).pathname !== location.pathname
       )
         return [notePreview(node), node]
-      return null
+      inLink = true
+      continue
     }
-    if (node instanceof HTMLElement && (node.dataset.tip !== undefined || node.hasAttribute("title"))) {
+    if (!inLink && node instanceof HTMLElement && (node.dataset.tip !== undefined || node.hasAttribute("title"))) {
       const tip = tooltip(node)
       if (tip) return [tip, node]
     }
@@ -264,6 +326,18 @@ onPage((signal) => {
     },
     { signal },
   )
+  // what's focused from the keyboard shows the way a hover does
+  document.addEventListener(
+    "focusin",
+    (e) => {
+      const target = e.target as Element
+      if (!isBeside() || !target.matches?.(":focus-visible") || hover.contains(target)) return
+      const found = itemFor(target, article)
+      if (found) show(found[0], found[1], found[1].getBoundingClientRect().top + 1)
+    },
+    { signal },
+  )
+  document.addEventListener("focusout", () => shown && hideSoon(), { signal })
   document.addEventListener("keydown", (e) => e.key === "Escape" && hide(), { signal })
   addEventListener("resize", place, { signal })
   margin.addEventListener("margin:placed", place, { signal })

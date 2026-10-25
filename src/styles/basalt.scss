@@ -118,7 +118,8 @@ figure.diagram figcaption {
 
 // ---------- lists hung on hexagons ----------
 
-article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li {
+article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li,
+.margin-preview-body ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li {
   list-style: none;
   position: relative;
 
@@ -326,4 +327,17 @@ article
     .katex-display
   ) {
   max-width: var(--measure, 34em);
+}
+
+// ---------- pictures keep their edges ----------
+
+// a screenshot on stone paper would bleed into it: a picture in the main
+// content, or a margin figure's (and its copy in the side content), gets a
+// faint 1px ring and a small radius, the way the viewer sets one. A ring,
+// not a border: it takes no room, so nothing moves.
+article img.zoomable,
+article .marginfigure img,
+.margin .in-margin img {
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--lightgray);
 }

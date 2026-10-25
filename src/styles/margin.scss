@@ -188,9 +188,13 @@ article sup a.is-paired {
   animation: margin-called 1.2s ease forwards;
 }
 
-// what a preview lies over fades back; it doesn't move
-.margin .is-covered {
-  opacity: 0.1;
+// what a preview lies over fades out while it's there, whole: one thing at
+// a time, with no edges showing round the card. It doesn't move.
+.margin .margin-layer .in-margin.is-covered,
+.margin .margin-part.is-covered {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
 // ---------- what rests in the margin ----------

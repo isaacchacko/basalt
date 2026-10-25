@@ -1,5 +1,6 @@
-// What's hovered, in the margin (src/client/previews.ts): a note's preview or
-// a tooltip, level with its line, over the notes there (which fade back).
+// What's hovered, in the margin (src/client/previews.ts): a note's preview, a
+// tooltip or a marked card, level with its line, over the notes there (which
+// fade out while it's there).
 
 $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 
@@ -97,12 +98,19 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 
   img,
   video,
-  svg,
+  svg:not(.external-icon),
   figure {
     display: block;
     max-width: 100%;
     height: auto;
     border-radius: 4px;
+  }
+
+  // a link's ⧉ stays in its line, as on the page
+  a.external .external-icon {
+    display: inline;
+    height: 1ex;
+    margin: 0 0.15em;
   }
 
   pre {
@@ -118,6 +126,55 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
   * {
     animation: none !important;
   }
+}
+
+// a marked card ([data-secondary]): the island's own markup, whole, under its
+// title; no fade, it's meant to be seen to the end
+.margin-marked-body {
+  & > * {
+    margin: 0;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+// a linked picture: the picture, as wide as the side content allows, its
+// link's words under it, the way a margin figure is set
+.margin-image {
+  left: 0;
+  right: 0;
+  margin: 0;
+  cursor: zoom-in;
+
+  img {
+    display: block;
+    max-width: 100%;
+    max-height: 70vh;
+    width: auto;
+    height: auto;
+    margin: 0;
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px var(--lightgray);
+  }
+}
+
+.margin-image-caption {
+  margin-top: 0.4rem;
+  font-family: var(--titleFont);
+  font-style: italic;
+  font-variation-settings: "SOFT" 100;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--gray);
+}
+
+// [data-secondary] content waits, unshown, for its parent to be hovered.
+// !important: a site's styles may give it a display of its own
+body [data-secondary] {
+  display: none !important;
 }
 
 // a tooltip: its words, beside what it's about, with an ember rule in the gutter

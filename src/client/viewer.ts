@@ -2,21 +2,31 @@
 // (graphviz, svg, mermaid) and pages in a frame open in one viewer that grows
 // out of where they sit, with the caption under them, zoom and pan (click, z,
 // the wheel, a pinch), ←/→ (or a swipe) through the page's others, and the
-// original a click away. Without this script an image is an image and a
-// diagram is a diagram.
+// original a click away. A link to a picture opens it here too, growing out
+// of its preview in the side content if that's showing (previews.ts), else
+// out of the link. Without this script an image is an image, a diagram is a
+// diagram, and a link to a picture is a link.
 import {
   EASE,
   PATHS,
   button as makeButton,
   fullscreenButton,
   icon,
+  isImageLink,
   link as makeLink,
   still,
   toggleFullscreen,
 } from "./embeds"
 
 type Kind = "image" | "svg" | "frame"
-type Item = { kind: Kind; origin: HTMLElement; caption: string; src?: string }
+type Item = {
+  kind: Kind
+  origin: HTMLElement
+  caption: string
+  src?: string
+  /** where it grows from and shrinks back to, when that isn't its origin (a link's preview) */
+  from?: HTMLElement
+}
 
 const ICON = (k: keyof typeof PATHS) => icon(PATHS[k])
 const button = (cls: string, label: string, svg: string) => makeButton(`viewer-button ${cls}`, label, svg)
@@ -55,10 +65,21 @@ function items(): Item[] {
   return found.sort((a, b) => top.get(a)! - top.get(b)!)
 }
 
+/** A link to a picture, in the page's own text (not a preview's copy). */
+const IMAGE_LINKS = "article a.internal[data-slug]"
+const ownLink = (a: Element) => isImageLink(a) && !a.closest(".margin-preview, .margin-hover, .popover, .basalt-viewer")
+
 function collect(): Item[] {
   const found: Item[] = []
-  const candidates = document.querySelectorAll<HTMLElement>(`img.zoomable, ${DIAGRAMS}, figure.embed-frame`)
+  const candidates = document.querySelectorAll<HTMLElement>(
+    `img.zoomable, ${DIAGRAMS}, figure.embed-frame, ${IMAGE_LINKS}`,
+  )
   for (const el of candidates) {
+    if (el instanceof HTMLAnchorElement) {
+      if (ownLink(el) && shown(el))
+        found.push({ kind: "image", origin: el, caption: el.textContent?.trim() ?? "", src: el.href })
+      continue
+    }
     if (!shown(el) || el.closest(ELSEWHERE)) continue
     if (el instanceof HTMLImageElement) {
       found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.currentSrc || el.src })
@@ -74,6 +95,7 @@ function collect(): Item[] {
 
 /** What the origin shows, measured: the image or svg itself, not its figure. */
 function originBox(item: Item): DOMRect {
+  if (item.from?.isConnected && shown(item.from)) return item.from.getBoundingClientRect()
   const el = item.kind === "svg" ? (drawingOf(item.origin) ?? item.origin) : item.origin
   return el.getBoundingClientRect()
 }
@@ -92,7 +114,7 @@ function flip(from: DOMRect, to: DOMRect): string {
 
 let current: { close: (now?: boolean) => void } | null = null
 
-export async function openViewer(start: HTMLElement, opener: { key?: boolean } = {}) {
+export async function openViewer(start: HTMLElement, opener: { key?: boolean; from?: HTMLElement } = {}) {
   current?.close(true)
   const all = items()
   if (!all.length) return
@@ -100,6 +122,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean } =
     0,
     all.findIndex((i) => i.origin === start || i.origin.contains(start)),
   )
+  if (opener.from) all[index].from = opener.from
   const returnFocus = document.activeElement as HTMLElement | null
 
   const dialog = document.createElement("dialog")
@@ -177,7 +200,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean } =
     if (item.kind === "image") {
       const img = document.createElement("img")
       img.src = item.src!
-      img.alt = (item.origin as HTMLImageElement).alt
+      img.alt = item.origin instanceof HTMLImageElement ? item.origin.alt : item.caption
       img.draggable = false
       await img.decode().catch(() => {})
       const nw = img.naturalWidth || room.width
@@ -229,7 +252,9 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean } =
   let hidden: HTMLElement | null = null
   const hideOrigin = (item: Item) => {
     if (hidden) hidden.style.visibility = ""
-    hidden = item.kind === "image" ? item.origin : null
+    // the picture leaves its place; a link stays where it is
+    const at = item.from ?? item.origin
+    hidden = item.kind === "image" && at instanceof HTMLImageElement ? at : null
     if (hidden) hidden.style.visibility = "hidden"
   }
 
@@ -504,6 +529,34 @@ function addExpands(root: ParentNode, signal: AbortSignal) {
     if (el.matches("figure.diagram-graph")) fullscreenButton(b, el, signal)
   }
 }
+
+// a link to a picture opens it here rather than going to the file (⌘/ctrl
+// still does). In capture, before Astro's router takes the click.
+document.addEventListener(
+  "click",
+  (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    const target = e.target as Element
+    // the link itself, or the picture its preview shows in the side content
+    const preview = target.closest?.<HTMLElement>(".margin-hover > .margin-image:not([data-leaving])")
+    const link = preview
+      ? [...document.querySelectorAll<HTMLAnchorElement>(IMAGE_LINKS)].find(
+          (a) => ownLink(a) && new URL(a.href).pathname === preview.dataset.src,
+        )
+      : target.closest?.("a")
+    if (!link || !ownLink(link)) return
+    e.preventDefault()
+    e.stopPropagation()
+    const src = new URL(link.href).pathname
+    const shownPreview =
+      preview ??
+      [...document.querySelectorAll<HTMLElement>(".margin-hover > .margin-image:not([data-leaving])")].find(
+        (p) => p.dataset.src === src,
+      )
+    openViewer(link, { from: shownPreview?.querySelector("img") ?? undefined })
+  },
+  { capture: true },
+)
 
 // one listener for the whole page, so an image in the margin opens as well as
 // one in the text

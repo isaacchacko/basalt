@@ -5,6 +5,12 @@
 export const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches
 export const EASE = "cubic-bezier(0.2, 0.7, 0.1, 1)"
 
+/** A link to a picture in the garden: `[[phone.png|on a phone]]`, `[x](assets/a.jpg)`. */
+export const isImageLink = (a: Element): boolean =>
+  a instanceof HTMLAnchorElement &&
+  a.matches("a.internal[data-slug]") &&
+  /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(a.dataset.slug ?? "")
+
 export const icon = (d: string, size = 18, stroke = 1.8) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 
