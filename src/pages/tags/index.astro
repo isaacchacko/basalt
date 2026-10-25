@@ -1,15 +1,19 @@
 ---
-// Every tag, each with the first of its notes.
+// Every tag, each with the first of its notes; a line saying so when there are none.
 import Page from "../../layouts/Page.astro"
 import PageList from "basalt:components/PageList"
 import { notes, tagIndex, toEntry } from "../../layouts/notes"
+import { layout } from "../../lib/config"
+import { say } from "../../lib/strings"
 
 const index = tagIndex(await notes())
+const { strings } = await layout()
 const LIMIT = 10
 ---
 
-<Page slug="tags/index" title="Tags" meta={`${index.size} ${index.size === 1 ? "tag" : "tags"} in all`} crumb="Tags">
+<Page slug="tags/index" title={say(strings, "tags")} meta={say(strings, "tagCount", { n: index.size })} crumb={say(strings, "tags")}>
   <div class="page-listing tag-index" slot="listing">
+    {index.size === 0 && <p class="tag-empty">{say(strings, "noTags")}</p>}
     {
       [...index].map(([tag, list]) => (
         <section>
@@ -19,8 +23,8 @@ const LIMIT = 10
             </a>
           </h2>
           <p class="tag-count">
-            {list.length} {list.length === 1 ? "item" : "items"} with this tag
-            {list.length > LIMIT && `, showing the first ${LIMIT}`}
+            {say(strings, "taggedCount", { n: list.length })}
+            {list.length > LIMIT && say(strings, "showingFirst", { n: LIMIT })}
           </p>
           <PageList entries={list.map(toEntry)} limit={LIMIT} />
         </section>
@@ -28,3 +32,10 @@ const LIMIT = 10
     }
   </div>
 </Page>
+
+<style>
+  .tag-empty {
+    margin: 0;
+    color: var(--gray);
+  }
+</style>

@@ -10,9 +10,13 @@
 //   // basalt.config.ts (beside its markdown plugins, if it has any)
 //   export default { layout: { components: { breadcrumbs: false } } }
 //
-// and a top-level "theme" (in either) for the site's palette:
+// a top-level "theme" (in either) for the site's palette:
 //
 //   { "theme": { "colors": { "lightMode": { "light": "#f5eedd" }, "darkMode": { ... } } } }
+//
+// and a top-level "strings" for the words Basalt puts on the page (strings.ts):
+//
+//   { "strings": { "explorer": "the garden", "noTags": "no tags yet." } }
 //
 // A page turns an opt-in part on (or off) for itself in its frontmatter:
 // `graph: true`, `toc: true`, `backlinks: true`.
@@ -22,6 +26,7 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { nativeImport } from "../markdown/siteconfig"
 import { siteDir } from "./site"
+import { strings, type Strings } from "./strings"
 
 export interface LayoutConfig {
   /** which of the page's parts show */
@@ -42,11 +47,22 @@ export interface LayoutConfig {
   explorer: {
     /** folders the note you're on isn't in start "collapsed" or "open" */
     folderDefaultState: "collapsed" | "open"
+    /**
+     * Entries that come first, in this order, by slug: ["about", "now",
+     * "blog", "blog/a-post"]. The rest follow, folders first, then by name.
+     */
+    order: string[]
   }
   breadcrumbs: { rootName: string }
   footer: { links: Record<string, string> }
   /** how many notes rss.xml carries */
   rssLimit: number
+  feed: {
+    /** the folders whose notes the feed carries (["blog"]); none listed, every note */
+    folders: string[]
+  }
+  /** the words Basalt puts on the page, over its own (strings.ts); a top-level "strings" in basalt.json */
+  strings: Strings
   /**
    * The site's palette, over Basalt's (src/styles/basalt.scss): any of
    * light, lightgray, gray, darkgray, dark, secondary, tertiary, highlight,
@@ -74,10 +90,12 @@ export const defaults: LayoutConfig = {
   graph: false,
   toc: false,
   backlinks: false,
-  explorer: { folderDefaultState: "collapsed" },
+  explorer: { folderDefaultState: "collapsed", order: [] },
   breadcrumbs: { rootName: "Home" },
   footer: { links: {} },
   rssLimit: 10,
+  feed: { folders: [] },
+  strings,
   theme: { colors: { lightMode: {}, darkMode: {} } },
 }
 
@@ -105,10 +123,11 @@ async function siteConfig(dir: string): Promise<BasaltConfig> {
   if (!file) return {}
   try {
     const mod = await nativeImport(pathToFileURL(file).href + `?t=${fs.statSync(file).mtimeMs}`)
-    const own = (mod.default ?? {}) as BasaltConfig & { theme?: unknown }
+    const own = (mod.default ?? {}) as BasaltConfig & { theme?: unknown; strings?: unknown }
     const lay = (mod.layout ?? own.layout ?? {}) as Record<string, unknown>
     const theme = mod.theme ?? own.theme
-    return { layout: { ...lay, ...(theme ? { theme } : {}) } as BasaltConfig["layout"] }
+    const words = mod.strings ?? own.strings
+    return { layout: { ...lay, ...(theme ? { theme } : {}), ...(words ? { strings: words } : {}) } as BasaltConfig["layout"] }
   } catch (err) {
     console.error(`basalt: ${file}: ${(err as Error).message}`)
     return {}
@@ -120,11 +139,15 @@ let last: LayoutConfig | undefined
 /** The site's layout, read fresh each page (basalt.json and basalt.config.ts can change while serving). */
 export async function layout(): Promise<LayoutConfig> {
   const dir = siteDir()
-  let json: { layout?: Record<string, unknown>; theme?: unknown } = {}
+  let json: { layout?: Record<string, unknown>; theme?: unknown; strings?: unknown } = {}
   try {
     json = JSON.parse(fs.readFileSync(path.join(dir, "basalt.json"), "utf8"))
   } catch {}
-  const fromJson = { ...json.layout, ...(json.theme ? { theme: json.theme } : {}) }
+  const fromJson = {
+    ...json.layout,
+    ...(json.theme ? { theme: json.theme } : {}),
+    ...(json.strings ? { strings: json.strings } : {}),
+  }
   last = merge(merge(defaults, fromJson), (await siteConfig(dir)).layout)
   return last
 }
@@ -178,4 +201,25 @@ export function paletteCss(cfg: LayoutConfig): string {
   ]
     .filter(Boolean)
     .join("\n")
+}
+
+/**
+ * The explorer's order (`layout.explorer.order`) as a sort: the slugs it
+ * lists first, in its order, then the rest as `rest` sorts them.
+ */
+export function ordered<T extends { slug: string }>(order: string[], rest: (a: T, b: T) => number) {
+  const rank = new Map(order.map((slug, i) => [slug.replace(/^\/+|\/+$/g, "").replace(/(^|\/)index$/, ""), i]))
+  const of = (n: T) => rank.get(n.slug) ?? Infinity
+  return (a: T, b: T) => {
+    const ra = of(a)
+    const rb = of(b)
+    return ra === rb ? rest(a, b) : ra - rb
+  }
+}
+
+/** Whether the feed carries a note: every note, or those under `feed.folders`. */
+export function inFeed(slug: string, cfg: LayoutConfig): boolean {
+  const folders = cfg.feed.folders.map((f) => f.replace(/^\/+|\/+$/g, "")).filter(Boolean)
+  if (folders.length === 0) return true
+  return folders.some((f) => slug.startsWith(f + "/") && slug !== `${f}/index`)
 }

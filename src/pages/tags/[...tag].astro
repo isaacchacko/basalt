@@ -5,6 +5,8 @@ import { render } from "astro:content"
 import Page from "../../layouts/Page.astro"
 import PageList from "basalt:components/PageList"
 import { descriptionOf, notes, tagIndex, toEntry, type Note } from "../../layouts/notes"
+import { layout } from "../../lib/config"
+import { say } from "../../lib/strings"
 
 export async function getStaticPaths() {
   const all = await notes()
@@ -16,13 +18,14 @@ export async function getStaticPaths() {
 
 const { tag, list, about } = Astro.props as { tag: string; list: Note[]; about?: Note }
 const Content = about ? (await render(about)).Content : undefined
+const { strings } = await layout()
 ---
 
 <Page
   slug={`tags/${tag}`}
-  title={`Tag: ${tag}`}
+  title={say(strings, "tag", { tag })}
   description={about && descriptionOf(about)}
-  meta={`${list.length} ${list.length === 1 ? "item" : "items"} with this tag`}
+  meta={say(strings, "taggedCount", { n: list.length })}
   crumb={`#${tag}`}
 >
   {Content && <Content />}

@@ -1,7 +1,9 @@
-// The site's newest notes as an RSS feed, at the site's baseUrl.
+// The site's newest notes as an RSS feed, at the site's baseUrl: every note,
+// or only those under the site's `layout.feed.folders` (its writing, say).
 import type { APIRoute } from "astro"
 import { registry } from "../lib/registry"
-import { layout } from "../lib/config"
+import { inFeed, layout } from "../lib/config"
+import { say } from "../lib/strings"
 import { dateOf, descriptionOf, hrefOf, notes, textOf, titleOf } from "../layouts/notes"
 
 const esc = (s: string) =>
@@ -10,8 +12,10 @@ const esc = (s: string) =>
 export async function feed(): Promise<string> {
   const { config } = registry().site
   const base = `https://${(config.baseUrl ?? "example.com").replace(/\/$/, "")}`
-  const limit = (await layout()).rssLimit
+  const cfg = await layout()
+  const limit = cfg.rssLimit
   const items = (await notes())
+    .filter((n) => inFeed(n.id, cfg))
     .map((n) => ({ n, date: dateOf(n) }))
     .sort((a, b) =>
       a.date && b.date
@@ -38,7 +42,7 @@ export async function feed(): Promise<string> {
   <channel>
     <title>${esc(config.title)}</title>
     <link>${base}</link>
-    <description>${esc(config.description ?? `The last ${limit} notes on ${config.title}`)}</description>
+    <description>${esc(config.description ?? say(cfg.strings, "feed", { n: limit, title: config.title }))}</description>
     <generator>Basalt</generator>
     ${items.join("\n    ")}
   </channel>
