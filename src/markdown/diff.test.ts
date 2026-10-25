@@ -168,4 +168,11 @@ describe("renderDiff", () => {
     assert.match(after, /aria-label="3 added, 0 removed"/)
     assert.strictEqual(before.match(/data-compare-anchor="hunk-\d"/g)?.join(), 'data-compare-anchor="hunk-1",data-compare-anchor="hunk-2"')
   })
+
+  test("split: a side with nothing on it says so", async () => {
+    const html = toHtml(await renderDiff("+one\n+two", { split: true }))
+    const [before, after] = html.split('data-label="After"')
+    assert.match(before, /data-diff="note" class="diff-label">nothing before<\/span>\n<span data-line="" data-diff="empty">/)
+    assert.doesNotMatch(after, /nothing/)
+  })
 })
