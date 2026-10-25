@@ -242,6 +242,7 @@ onPage((signal) => {
 
   const reset = () => {
     for (const part of parts) part.style.top = ""
+    margin.style.removeProperty("--resting-start")
     margin.style.minHeight = ""
   }
 
@@ -305,11 +306,15 @@ onPage((signal) => {
       put(copy, wants[i], clear(wants[i], copy.offsetHeight, [...blocked, ...notesAt]))
     }
 
-    // each resting part takes the first room the notes leave, from the top
+    // each resting part takes the first room the notes leave, from the note's
+    // first line down: not beside its title
+    const first = article.firstElementChild ?? article
+    const start = Math.max(0, Math.round(first.getBoundingClientRect().top - column.top))
+    margin.style.setProperty("--resting-start", `${start}px`)
     const avoid = [...blocked, ...taken]
     for (const part of parts) {
       const height = part.offsetHeight
-      const top = clear(0, height, avoid)
+      const top = clear(start, height, avoid)
       part.style.top = `${top}px`
       avoid.push([top - PART_GAP, top + height + PART_GAP])
       lowest = Math.max(lowest, top + height)
