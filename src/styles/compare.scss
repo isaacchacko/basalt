@@ -16,6 +16,12 @@ article > figure.compare {
   max-width: var(--compare-width, var(--measure, 34rem));
 }
 
+// over the side content's column, which would otherwise take its pointer;
+// under a link preview (z-index 3), which was asked for
+article > figure.compare[style*="--compare-width"] {
+  z-index: 1;
+}
+
 // what's in the side content beside a block that has taken its width steps
 // aside until it has passed (client/compare.ts)
 [data-under-compare] {
