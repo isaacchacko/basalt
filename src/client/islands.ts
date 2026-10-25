@@ -6,7 +6,10 @@
 // mount(el, props) and does what it likes with el, returning how to unmount.
 //
 // Editing an island in dev hot-swaps it: a component keeps its state (Preact's
-// fast refresh), anything else is unmounted and mounted again in place.
+// fast refresh), anything else is unmounted and mounted again in place. A note
+// or component swapped in while writing (hotswap.ts) keeps the page's mounted
+// islands, and their state, where the new page has the same island with the
+// same props: the live element is carried into the new page.
 //
 // Also: live html blocks (iframe.island-html) take the page's colours and
 // grow to fit what's in them.
@@ -45,6 +48,55 @@ if (import.meta.hot) {
     }
   })
 }
+// ---- islands carried through a hot swap (dev) ----
+const PERSIST = "data-astro-transition-persist"
+/** islands moving to the next page with their state: the old page's end leaves them running */
+const carried = new WeakSet<HTMLElement>()
+const islandKeys = (root: ParentNode) => {
+  const keys = new Map<string, HTMLElement>()
+  const count = new Map<string, number>()
+  for (const el of root.querySelectorAll<HTMLElement>(".island[data-island]")) {
+    const base = `${el.dataset.island}\u0000${el.dataset.islandProps ?? ""}`
+    const n = count.get(base) ?? 0
+    count.set(base, n + 1)
+    keys.set(`${base}\u0000${n}`, el)
+  }
+  return keys
+}
+if (import.meta.hot) {
+  document.addEventListener("astro:before-swap", (e) => {
+    if (!window.basaltHotSwap) return
+    const next = islandKeys(e.newDocument)
+    let i = 0
+    for (const [key, el] of islandKeys(document)) {
+      const running = hot.mounted.get(el)
+      const twin = next.get(key)
+      if (!twin || !running || running.signal.aborted || el.dataset.islandMounted !== "true") continue
+      // Astro's swap moves the old element into the new page in its twin's place
+      const id = `basalt-island-${i++}`
+      el.setAttribute(PERSIST, id)
+      twin.setAttribute(PERSIST, id)
+      carried.add(el)
+    }
+  })
+  document.addEventListener("astro:after-swap", () => {
+    for (const el of document.querySelectorAll<HTMLElement>(`.island[${PERSIST}^="basalt-island-"]`)) el.removeAttribute(PERSIST)
+  })
+}
+/** stop the island when the page goes, unless it's carried to the next one */
+const tied = new WeakMap<AbortSignal, WeakSet<HTMLElement>>()
+function tie(signal: AbortSignal, el: HTMLElement, mine: AbortController) {
+  const set = tied.get(signal) ?? new WeakSet()
+  tied.set(signal, set)
+  if (set.has(el)) return
+  set.add(el)
+  signal.addEventListener("abort", () => {
+    if (carried.has(el)) return void carried.delete(el)
+    mine.abort()
+    hot.mounted.delete(el)
+  })
+}
+
 function nameOf(file: string) {
   return file.split("?")[0].split("/").pop()!.replace(/\.\w+$/, "")
 }
@@ -190,15 +242,16 @@ export function startIslands(signal: AbortSignal) {
   for (const el of document.querySelectorAll<HTMLElement>(".island[data-island], [data-island-frame]")) {
     const name = el.dataset.island!
     const running = hot.mounted.get(el)
-    // the same page again, after a hot swap of something else: leave it be
-    if (running && !running.signal.aborted && hot.live.get(name) === versionOf(name)) continue
+    // the same page again, after a hot swap of something else (or an island
+    // carried into this page by one): leave it be
+    if (running && !running.signal.aborted && hot.live.get(name) === versionOf(name)) {
+      tie(signal, el, running)
+      continue
+    }
     running?.abort()
     const mine = new AbortController()
     hot.mounted.set(el, mine)
-    signal.addEventListener("abort", () => {
-      mine.abort()
-      hot.mounted.delete(el)
-    })
+    tie(signal, el, mine)
     schedule(el, mine.signal)
   }
   liveHtml(signal)
