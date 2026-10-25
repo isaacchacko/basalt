@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "dev": "node bin/basalt.mjs dev examples/showcase",
+    "build": "node bin/basalt.mjs build examples/showcase",
     "preview": "astro preview",
     "check": "tsc --noEmit",
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
@@ -52,5 +52,8 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
+  },
+  "bin": {
+    "basalt": "./bin/basalt.mjs"
   }
 }

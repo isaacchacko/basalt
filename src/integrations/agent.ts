@@ -5,7 +5,7 @@
 //   GET /__basalt/wait?after=<id>   answers once an update after buildId <id> has
 //                                   gone out to pages (or timeout=<s> passes)
 //
-// and <site>/.basalt/status.json, the same, for agents that read files. An
+// and <site>/.basalt/astro/status.json, the same, for agents that read files. An
 // update is whatever Vite sends open pages: a hot swap, a reload, or an error
 // (with its file, line and column), so "ready" means the pages have it.
 
