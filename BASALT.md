@@ -64,10 +64,25 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 
 ## For agents: the edit loop
 
-- **Saves land in place.** A note, a component or server code is swapped into the open page, keeping its scroll and state. A stylesheet or an island is hot-swapped. Client code reloads the page.
-- **It says when your change is live.** `GET /__basalt/status` returns `{pid, buildId, state, change, trigger, error}`. `GET /__basalt/wait?after=<buildId>` answers once a later update has reached the pages. `<site>/.basalt/astro/status.json` has the same.
-- **Errors keep the last page up.** `status.error` gives `{file, line, col, message}` for the file you edit.
-- **`basalt check`** lists broken links, missing embeds and orphans, each naming its note's file. `--json` gives machine-readable output.
+- **Save, then wait.** `basalt wait <dir>` blocks until the build that took in your newest save to the site is live in every open page, prints its status, and exits 0 when it's ready, 1 when the site has an error, 2 on a timeout (`--timeout <s>`, default 30). `--file <path>` waits for the build that has that file's save in it, `--since <ms>` for one with a save made at or after that time, `--after <buildId>` for any build after that one. No race: a save that's live before `wait` starts is found, not missed.
+- **One save, one build.** A build is what a save (or a burst of them) sets off: the notes it renders again, and what the open pages are sent. It finishes once, when both are done, and only then do the pages get it, so `ready` means they have it. It finishes with no page open too. Nothing counts up while nothing is saved.
+- **Saves land in place.** A note, a component, `basalt.json` or a layout change in `basalt.config.ts` is swapped into the open page, keeping its scroll and the state of its islands (an island with the same name and props keeps running). A stylesheet or an island is hot-swapped. Client code reloads the page. A change to a site's markdown plugins (`markdown` in `basalt.config.ts`) or to Basalt's own build-time code restarts that site's server, and only it: `state` is `restarting` meanwhile (open connections drop; `basalt wait` retries), `restarts` counts up, the pages reload, and `buildId` carries on.
+- **The status.** `GET /__basalt/status`, `basalt status <dir>`, or `<site>/.basalt/astro/status.json`:
+
+  ```json
+  { "buildId": 42, "state": "error", "change": "swap", "trigger": ["/…/notes/a.md"],
+    "startedAt": "…", "at": "…", "ms": 120, "restarts": 0,
+    "error": { "file": "notes/creatures/anemones.md", "line": 4, "col": 8, "kind": "frontmatter",
+               "message": "Implicit keys of flow sequence pairs need to be on a single line" },
+    "errors": [ … ], "warnings": [ { "file": "notes/zonation.md", "line": 28, "kind": "unknown island",
+               "message": "unknown island \"anemometer\" (have: tally, tideclock)" } ] }
+  ```
+
+  `state` is `starting`, `building`, `restarting`, `ready`, `error` or `stopped`. `change` is how the pages got it: `swap`, `hot`, `reload`, `restart`, `none` (no page needed anything) or `error`. Files are relative to the site's folder. `buildId` only goes up, across restarts.
+- **`GET /__basalt/wait`** takes `after=<buildId>`, `since=<ms>`, `file=<path>` and `timeout=<s>` (at most 600). It answers with the first finished build that matches, with `timedOut: false`, or after the timeout with HTTP 504 and `timedOut: true`.
+- **Errors keep the last good page up.** A note whose frontmatter or markdown doesn't parse keeps its last good version, and the rest of the site builds; notes that embed or list it still render. A broken component or stylesheet leaves the open page as it was, under the error overlay; the fix swaps the page back in and clears the error at once. Each problem stays in `errors` until it's fixed.
+- **`basalt build`** exits 1 when a note failed, naming its file and line (the rest of the site is still built). **`basalt check`** builds, then lists notes that failed, broken links, missing embeds and unknown islands with their file and line (`notes/field-log.md:10  broken link: [[nudibranch]]: no such note`), and orphans as warnings. `--json` gives the same as JSON. It exits 1 when anything is broken.
+- **`basalt logs <dir>`** prints the dev server's log as plain lines, with repeats collapsed (`--raw` for its JSON lines). `basalt help <topic>` prints a section of this file.
 
 ## Inside
 
