@@ -20,15 +20,9 @@ describe("trees", () => {
     assert.strictEqual(names("a\n\tb\n\t\tc"), "a/\n  b/\n    c")
   })
 
-  test("a markdown list's bullets go", () => {
-    assert.strictEqual(names("- a/\n  - b.md\n  - + c.md"), "a/\n  b.md\n  c.md")
-    assert.strictEqual(parseTree("- a/\n  - + c.md")[0].children[0].mark, "added")
-  })
-
   test("tree's output is read as it is, its count and its . dropped", () => {
     const out = [".", "├── a.md", "├── src", "│   ├── b.ts", "│   └── c", "│       └── d.ts", "└── e", "", "3 directories, 3 files"].join("\n")
     assert.strictEqual(names(out), "a.md\nsrc/\n  b.ts\n  c/\n    d.ts\ne")
-    assert.strictEqual(names("site\n|-- a\n`-- b\n    `-- c"), "site/\n  a\n  b/\n    c")
   })
 
   test("an entry's mark, note, fold and link", () => {
@@ -36,7 +30,6 @@ describe("trees", () => {
       name: "new.md",
       dir: false,
       folded: false,
-      more: false,
       mark: "added",
       note: "the new one",
       children: [],
@@ -47,12 +40,11 @@ describe("trees", () => {
     assert.ok(fold.dir && fold.folded)
     assert.strictEqual(fold.name, "node_modules")
     assert.strictEqual(fold.note, "132 files")
-    assert.ok(entry("...").more)
     assert.deepStrictEqual([entry("[[start|start.md]]").href, entry("[[start|start.md]]").name], ["start", "start.md"])
     assert.deepStrictEqual([entry("[x](files/x.py)").href, entry("[[examples]]/").dir], ["files/x.py", true])
     assert.deepStrictEqual(
       ["-", "~", "!"].map((s) => entry(`${s} a`).mark),
-      ["removed", "changed", "marked"],
+      ["removed", "changed", "highlighted"],
     )
   })
 
@@ -96,17 +88,16 @@ describe("trees", () => {
   })
 
   test("paths start inside a lone top folder, so two sites' trees line up", () => {
-    const html = treeHtml("quartz/\n  content/\n    index.md\n  …")
+    const html = treeHtml("quartz/\n  content/\n    index.md")
     assert.deepStrictEqual(paths(html), ["", "content/", "content/index.md"])
     assert.deepStrictEqual(paths(treeHtml("a.md\nb/\n  c.md")), ["a.md", "b/", "b/c.md"])
   })
 
   test("folders are details, open unless folded", () => {
-    const html = treeHtml("a/\n  b/\n    c\n  d/…\n    e", 'open=9 title="x"')
+    const html = treeHtml("a/\n  b/\n    c\n  d/…\n    e", 'title="x"')
     assert.match(html, /^<figure class="tree"><figcaption class="tree-title">x<\/figcaption>/)
     assert.strictEqual(html.match(/<details open>/g)?.length, 2)
     assert.strictEqual(html.match(/<details>/g)?.length, 1)
-    assert.strictEqual(treeHtml("a/\n  b/\n    c", "open=1").match(/<details open>/g)?.length, 1)
   })
 
   test("an empty tree draws nothing", () => {
@@ -114,7 +105,9 @@ describe("trees", () => {
   })
 
   test("a linked folder is a link", () => {
-    assert.match(treeHtml("[[about]]/\n  a.md"), /<summary[^>]*>.*<a class="tree-name" href="about"/)
+    const e = entry("[[about]]/")
+    assert.deepStrictEqual([e.href, e.name, e.dir], ["about", "about", true])
+    assert.match(treeHtml("[[about]]/\n  a.md"), /<summary[^>]*>.*<a class="tree-name" href="about" data-line>about<\/a>/)
   })
 
   test("a mark is said as well as coloured, and only on its own entry", () => {

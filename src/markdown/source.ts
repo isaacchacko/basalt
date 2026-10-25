@@ -8,7 +8,11 @@ import { toHtml } from "hast-util-to-html"
 import { unified } from "unified"
 
 /** how code is highlighted: a light and a dark theme, the page's own background */
-export const prettyCode: Options = { theme: { light: "github-light", dark: "github-dark" }, keepBackground: false }
+export const prettyCode: Options = {
+  theme: { light: "github-light", dark: "github-dark" },
+  keepBackground: false,
+  defaultLang: { block: "plaintext" },
+}
 
 export async function highlightSource(raw: string): Promise<string> {
   const tree = h(null, [h("pre", [h("code", { className: ["language-md"] }, raw)])])
