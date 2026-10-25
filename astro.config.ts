@@ -1,10 +1,15 @@
 import { defineConfig } from "astro/config"
 import preact from "@astrojs/preact"
-import { unified } from "@astrojs/markdown-remark"
+import { parseFrontmatter, unified } from "@astrojs/markdown-remark"
+import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadSite, siteDir } from "./src/lib/site"
-import { processorOptions, rehypePlugins, remarkPlugins, syntaxHighlight } from "./src/markdown"
+import { processorOptions, rehypePlugins, remarkPlugins, renderTarget, syntaxHighlight } from "./src/markdown"
+import { useTargets } from "./src/markdown/transclude"
+import { listed, rehypeNoteLists, renderNoteLists } from "./src/markdown/notelist"
+import { useRegistry } from "./src/markdown/context"
+import { registry } from "./src/lib/registry"
 import { vitePlugins } from "./src/lib/vite"
 import { agentApi } from "./src/integrations/agent"
 
@@ -12,6 +17,36 @@ const site = loadSite(siteDir())
 // Basalt itself, wherever it's run from: a site's root is its own .basalt
 // folder (so two sites can be served at once), and Basalt's src is shared
 const basalt = path.dirname(fileURLToPath(import.meta.url))
+
+// A note whose frontmatter doesn't parse is an error of its own (the loader
+// reports it, with its line). A note that embeds or lists it still renders:
+// the embed says there's nothing to embed, and the list leaves it out.
+useTargets((slug) => renderTarget(slug).catch(() => undefined))
+const parses = (abs: string) => {
+  try {
+    parseFrontmatter(fs.readFileSync(abs, "utf8"))
+    return true
+  } catch {
+    return false
+  }
+}
+const listedSafely = () => {
+  try {
+    return listed()
+  } catch {
+    const reg = registry()
+    const files = reg.files.filter((f) => !f.isNote || parses(f.abs))
+    useRegistry(() => ({ ...reg, files }))
+    try {
+      return listed()
+    } finally {
+      useRegistry(registry)
+    }
+  }
+}
+const rehype = rehypePlugins.map((p) =>
+  p === rehypeNoteLists ? () => (tree: never) => renderNoteLists(tree, registry().site.config.locale, listedSafely) : p,
+)
 
 export default defineConfig({
   site: site.config.baseUrl ? `https://${site.config.baseUrl}` : undefined,
@@ -29,7 +64,7 @@ export default defineConfig({
     // unified's PluggableList and Astro's plugin types describe the same thing
     processor: unified({
       remarkPlugins: remarkPlugins as never,
-      rehypePlugins: rehypePlugins as never,
+      rehypePlugins: rehype as never,
       ...processorOptions,
     }),
   },
