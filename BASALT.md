@@ -71,6 +71,7 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 
 - **Three parts.** The navbar folds to a chevron in the left margin and opens on hover. ⌘F searches. The theme toggle is in its bottom tray. The note is set to a 34em measure. Its margin is right beside it and holds the sidenotes, margin notes and link previews, each level with its line, one hover at a time.
 - **Search is ⌘F.** Type to search the whole garden. `#tag query` searches one tag. `@` lists the pages; `@page query` searches inside one page and `@here query` inside the page you're on, each result a passage: choose one and the page opens scrolled to it, marked for a moment.
+- **⌘G** shows the whole garden as a graph, on the whole screen: every note and its links, the page you're on marked. Click a note to go there; ⌘G again or escape closes it.
 - **Media opens full screen** in one viewer: images, diagrams and frames, with zoom, pan, swipe, ←/→ and pinch.
 - **PDFs** open in Basalt's own viewer, with a text layer, a page that fits the screen in full screen, and "open in the browser's viewer" at the current page.
 

@@ -26,6 +26,7 @@ import "../styles/base.scss"
 import "../styles/basalt.scss"
 import "../styles/print.scss"
 import "../styles/themed.scss"
+import "../styles/gardengraph.scss"
 import "../styles/nav.scss"
 import "../styles/search.scss"
 // the site's own styles/custom.scss, last, over Basalt's
@@ -129,6 +130,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
     <Motion />
     <script>
       import "../client/router"
+      import "../client/gardengraph"
     </script>
   </body>
 </html>

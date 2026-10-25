@@ -1,0 +1,57 @@
+// ⌘G: the whole garden, as a graph, on the whole screen (gardengraph.ts)
+dialog.garden-graph {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: var(--light);
+  color: var(--darkgray);
+
+  &[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    animation: garden-graph-in 0.28s cubic-bezier(0.2, 0.7, 0.1, 1);
+  }
+  &::backdrop {
+    background: transparent;
+  }
+}
+@keyframes garden-graph-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+.garden-graph-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.9rem 1.25rem 0.6rem;
+  border-bottom: 1px solid var(--lightgray);
+}
+.garden-graph-title {
+  font-family: var(--titleFont);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--dark);
+}
+.garden-graph-count,
+.garden-graph-hint {
+  font-family: var(--titleFont);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--gray);
+}
+.garden-graph-hint {
+  margin-left: auto;
+}
+.garden-graph-canvas {
+  position: relative;
+  min-height: 0;
+}
