@@ -165,6 +165,7 @@ html:not([data-margin="beside"]) .margin-layer {
 // a number and its note light up together, lightly
 article sup a.is-paired {
   background: var(--highlight);
+  box-shadow: 0 0 0 0.15em var(--highlight);
 }
 
 .margin-layer .in-margin.is-paired,
