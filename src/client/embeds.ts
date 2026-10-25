@@ -95,43 +95,6 @@ export function onTheme(fn: () => void, signal: AbortSignal) {
   signal.addEventListener("abort", () => watch.disconnect())
 }
 
-/**
- * Full screen for `el`, or out of it if it's already there. Back out, the page
- * is where it was: the browser's relayout around a full-screen element can
- * leave it scrolled somewhere else.
- */
-export function toggleFullscreen(el: HTMLElement) {
-  if (document.fullscreenElement === el) return void document.exitFullscreen()
-  const x = scrollX
-  const y = scrollY
-  el.requestFullscreen?.()
-    .then(() => {
-      const back = () => {
-        if (document.fullscreenElement) return
-        document.removeEventListener("fullscreenchange", back)
-        requestAnimationFrame(() => scrollTo({ left: x, top: y, behavior: "instant" }))
-      }
-      document.addEventListener("fullscreenchange", back)
-    })
-    .catch(() => {})
-}
-
-/** A full-screen control that says "leave" while its element is full screen. */
-export function fullscreenButton(b: HTMLElement, el: HTMLElement, signal: AbortSignal, size = 18, stroke = 1.8) {
-  const label = b.getAttribute("aria-label") ?? "full screen"
-  const title = b.title
-  document.addEventListener(
-    "fullscreenchange",
-    () => {
-      const full = document.fullscreenElement === el
-      b.innerHTML = icon(full ? PATHS.collapse : PATHS.expand, size, stroke)
-      b.setAttribute("aria-label", full ? "leave full screen" : label)
-      b.title = full ? "leave full screen (esc)" : title
-    },
-    { signal },
-  )
-}
-
 function playFacade(facade: HTMLAnchorElement) {
   const iframe = document.createElement("iframe")
   iframe.src = facade.dataset.embedSrc!

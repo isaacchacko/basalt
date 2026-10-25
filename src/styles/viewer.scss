@@ -210,6 +210,36 @@ dialog.basalt-viewer {
       background: white;
       cursor: auto;
     }
+    // a live embed (a ```graph, a pdf), itself, filling its place in the stage
+    &[data-kind="live"] {
+      cursor: auto;
+      user-select: auto;
+      touch-action: none;
+
+      & > figure {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        margin: 0;
+      }
+      // the viewer has its own caption and its own close
+      & > figure > figcaption,
+      .viewer-expand {
+        display: none;
+      }
+      .graph-embed,
+      .pdf-viewer {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: auto !important;
+        background: var(--light);
+      }
+      .pdf-stage {
+        box-shadow: none !important;
+      }
+    }
   }
   &[data-zoomed="true"] .viewer-media {
     cursor: grab;

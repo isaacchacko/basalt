@@ -1,7 +1,7 @@
 // ```graph blocks: the svg drawn at build time becomes the live graph, started
 // from the same layout, so nothing jumps. Drawn by isaacchacko/graph's
-// renderer, in the page's theme, and kept in it. Full screen (the viewer's
-// expand control) and back, it reframes itself to its new room.
+// renderer, in the page's theme, and kept in it. In the viewer (its expand
+// control) and back, it reframes itself to its new room.
 import type { GraphData, Theme } from "graph/packages/graph-view/src/types"
 import { onTheme } from "./embeds"
 
@@ -38,23 +38,17 @@ async function drawGraph(el: HTMLElement, data: GraphData, signal: AbortSignal) 
   svg?.remove()
   onTheme(() => renderer.setOptions({ theme: pageTheme() }), signal)
 
-  // Full screen and back: the renderer resizes its canvas itself (it watches
-  // its container), but keeps its camera, so the graph would stay the size it
-  // was. Reframe once the new size has landed, which on a Mac is after the
-  // window's own animation, so on every size change until it settles.
+  // Into the viewer and back (viewer.ts): the renderer resizes its canvas
+  // itself (it watches its container), but keeps its camera, so the graph
+  // would stay the size it was. Reframe as the new size lands, on every size
+  // change until it settles (the viewer grows it in over a moment).
   const figure = el.closest("figure") ?? el
   let refitting = 0
   const refit = () => {
     refitting = performance.now() + 900
     renderer.zoomToFit()
   }
-  document.addEventListener(
-    "fullscreenchange",
-    () => {
-      if (document.fullscreenElement === figure || !document.fullscreenElement) refit()
-    },
-    { signal },
-  )
+  figure.addEventListener("basalt:viewer", refit, { signal })
   const watch = new ResizeObserver(() => {
     if (performance.now() < refitting) renderer.zoomToFit()
   })

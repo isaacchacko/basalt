@@ -1,6 +1,7 @@
 // Basalt's viewer: any picture on the page, full screen. Images, diagrams
-// (graphviz, svg, mermaid), pages in a frame and code (a code file that
-// asked for `fullscreen`, a long code block) open in one viewer that grows
+// (graphviz, svg, mermaid), pages in a frame, code (a code file that asked
+// for `fullscreen`, a long code block) and live embeds (a ```graph, a pdf,
+// which come in themselves and keep working) open in one viewer that grows
 // out of where they sit, with the caption under them, zoom and pan (click, z,
 // the wheel, a pinch), ←/→ (or a swipe) through the page's others, and the
 // original a click away. A link to a picture opens it here too, growing out
@@ -11,17 +12,15 @@ import {
   EASE,
   PATHS,
   button as makeButton,
-  fullscreenButton,
   icon,
   isDark,
   isImageLink,
   themedPair,
   link as makeLink,
   still,
-  toggleFullscreen,
 } from "./embeds"
 
-type Kind = "image" | "svg" | "frame" | "code"
+type Kind = "image" | "svg" | "frame" | "code" | "live"
 type Item = {
   kind: Kind
   origin: HTMLElement
@@ -31,6 +30,8 @@ type Item = {
   from?: HTMLElement
   /** a picture with a light and a dark version: the viewer can show either */
   pair?: { light: string; dark: string }
+  /** a live embed's stand-in in the page while it's in the viewer */
+  home?: HTMLElement
 }
 
 const ICON = (k: keyof typeof PATHS) => icon(PATHS[k])
@@ -41,6 +42,9 @@ const DIAGRAMS = "figure.diagram-graphviz, figure.diagram-svg, figure.diagram-me
 // code that opens here: a code file with a full-screen button, or a code
 // block long enough to have been given one (addExpands)
 const CODE = "figure.code-file:has(.code-file-full), [data-viewer-code]"
+// embeds that are alive (a graph you drag, a pdf's pages): they can't be
+// copied, so they come into the viewer themselves and go back after
+const LIVE = "figure.diagram-graph, figure.embed-pdf"
 /** a code block taller than this many lines gets a way into the viewer */
 const LONG_CODE = 20
 // link previews show a copy of another note: its pictures aren't this page's.
@@ -82,7 +86,7 @@ const ownLink = (a: Element) => isImageLink(a) && !a.closest(".margin-preview, .
 function collect(): Item[] {
   const found: Item[] = []
   const candidates = document.querySelectorAll<HTMLElement>(
-    `img.zoomable, ${DIAGRAMS}, figure.embed-frame, ${CODE}, ${IMAGE_LINKS}`,
+    `img.zoomable, ${DIAGRAMS}, figure.embed-frame, ${CODE}, ${LIVE}, ${IMAGE_LINKS}`,
   )
   for (const el of candidates) {
     if (el instanceof HTMLAnchorElement) {
@@ -102,6 +106,8 @@ function collect(): Item[] {
     if (el instanceof HTMLImageElement) {
       // of a light and dark pair only the one showing is collected (the other is display: none)
       found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.currentSrc || el.src, pair: themedPair(el) })
+    } else if (el.matches(LIVE)) {
+      found.push({ kind: "live", origin: el, caption: captionOf(el) })
     } else if (el.matches(CODE)) {
       const name = el.querySelector(".code-file-name, [data-rehype-pretty-code-title]")?.textContent?.trim() ?? ""
       const raw = el.querySelector<HTMLAnchorElement>(".code-file-raw")?.href
@@ -136,6 +142,32 @@ function flip(from: DOMRect, to: DOMRect): string {
 }
 
 let current: { close: (now?: boolean) => void } | null = null
+
+/** Tell a live embed it's come into the viewer or gone back, to fit its new room. */
+const announce = (el: HTMLElement, open: boolean) =>
+  el.dispatchEvent(new CustomEvent("basalt:viewer", { detail: { open } }))
+
+/** A live embed's own full-screen control: into the viewer, or out if it's there. */
+export function toggleViewer(el: HTMLElement) {
+  if (el.dataset.inViewer !== undefined) return void current?.close()
+  openViewer(el)
+}
+
+/** A full-screen control that says "leave" while its embed is in the viewer. */
+export function viewerButton(b: HTMLElement, el: HTMLElement, signal: AbortSignal, size = 18, stroke = 1.8) {
+  const label = b.getAttribute("aria-label") ?? "full screen"
+  const title = b.title
+  el.addEventListener(
+    "basalt:viewer",
+    (e) => {
+      const open = (e as CustomEvent<{ open: boolean }>).detail.open
+      b.innerHTML = icon(open ? PATHS.collapse : PATHS.expand, size, stroke)
+      b.setAttribute("aria-label", open ? "leave full screen" : label)
+      b.title = open ? "leave full screen (esc)" : title
+    },
+    { signal },
+  )
+}
 
 export async function openViewer(start: HTMLElement, opener: { key?: boolean; from?: HTMLElement } = {}) {
   current?.close(true)
@@ -267,6 +299,27 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
       w = Math.min(room.width, 1040)
       h = 0
       maxScale = 1
+    } else if (item.kind === "live") {
+      // the embed itself, at the stage's size; a stand-in of its size keeps
+      // its place in the page, so nothing there moves
+      const fig = item.origin
+      if (!item.home) {
+        const home = document.createElement("div")
+        home.className = "viewer-home"
+        const style = getComputedStyle(fig)
+        home.style.height = `${fig.getBoundingClientRect().height}px`
+        home.style.margin = style.margin
+        fig.before(home)
+        item.home = home
+        item.from = home
+      }
+      fig.dataset.inViewer = ""
+      el = document.createElement("div")
+      el.append(fig)
+      live.set(el, item)
+      w = Math.min(room.width, 1280)
+      h = room.height
+      maxScale = 1
     } else {
       const frame = document.createElement("iframe")
       frame.src = item.src!
@@ -289,6 +342,19 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     return el
   }
 
+  // live embeds in the viewer, by the element that holds them there
+  const live = new Map<HTMLElement, Item>()
+  /** a live embed back in its place in the page, if it's still in `holder` */
+  const goHome = (holder: HTMLElement) => {
+    const item = live.get(holder)
+    live.delete(holder)
+    if (!item?.home || item.origin.parentElement !== holder) return
+    item.home.replaceWith(item.origin)
+    item.home = item.from = undefined
+    delete item.origin.dataset.inViewer
+    announce(item.origin, false)
+  }
+
   let hidden: HTMLElement | null = null
   const hideOrigin = (item: Item) => {
     if (hidden) hidden.style.visibility = ""
@@ -303,7 +369,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     caption.textContent = item.caption
     caption.hidden = !item.caption
     prev.hidden = next.hidden = all.length < 2
-    zoom.hidden = item.kind === "frame" || item.kind === "code"
+    zoom.hidden = item.kind === "frame" || item.kind === "code" || item.kind === "live"
     copyCode.hidden = item.kind !== "code"
     themeSwitch.hidden = !item.pair
     if (item.pair) {
@@ -342,9 +408,16 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
           easing: EASE,
           fill: "forwards",
         })
-      setTimeout(() => old.remove(), still() ? 0 : 190)
+      setTimeout(
+        () => {
+          goHome(old)
+          old.remove()
+        },
+        still() ? 0 : 190,
+      )
     }
     stage.append(el)
+    if (item.kind === "live") announce(item.origin, true)
     hideOrigin(item)
     const from = originBox(item)
     if (grow && !still() && from.width && item.kind !== "frame") {
@@ -417,6 +490,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     if (finished) return
     finished = true
     if (hidden) hidden.style.visibility = ""
+    for (const holder of [...live.keys()]) goHome(holder)
     resize.disconnect()
     document.removeEventListener("themechange", followTheme)
     if (dialog.open) dialog.close()
@@ -455,7 +529,14 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
   let first = true
   const resize = new ResizeObserver(() => {
     if (first) return void (first = false)
-    if (!closing) show(all[index], false)
+    if (closing) return
+    // a live embed stays as it is (its state with it), and fits the new room
+    if (media?.dataset.kind === "live") {
+      const room = stage.getBoundingClientRect()
+      media.style.width = `${(fitW = Math.min(room.width, 1280))}px`
+      media.style.height = `${(fitH = room.height)}px`
+      announce(all[index].origin, true)
+    } else show(all[index], false)
   })
 
   close.addEventListener("click", () => shut())
@@ -476,6 +557,8 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
   })
   dialog.addEventListener("keydown", (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return
+    // a live embed keeps its own keys (a pdf's ←/→ turn its pages); escape still closes
+    if (media?.dataset.kind === "live" && media.contains(e.target as Node) && e.key !== "Escape") return
     const keys: Record<string, () => void> = {
       Escape: () => shut(),
       ArrowLeft: () => step(-1),
@@ -530,11 +613,13 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && media.scrollWidth <= media.clientWidth) step(dx < 0 ? 1 : -1)
     else if (dy > 90 && top <= 0) shut()
   })
+  // what handles its own pointer (code, a page, a live embed): a click beside it closes
+  const ownPointer = () => media?.dataset.kind === "frame" || media?.dataset.kind === "code" || media?.dataset.kind === "live"
   stage.addEventListener("click", (e) => {
-    if (media?.dataset.kind === "code" && e.target === stage) shut()
+    if (ownPointer() && e.target === stage) shut()
   })
   stage.addEventListener("pointerdown", (e) => {
-    if (!media || media.dataset.kind === "frame" || media.dataset.kind === "code") return
+    if (!media || ownPointer()) return
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
     stage.setPointerCapture(e.pointerId)
     if (pointers.size === 2) {
@@ -601,7 +686,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
   stage.addEventListener(
     "wheel",
     (e) => {
-      if (!media || media.dataset.kind === "frame" || media.dataset.kind === "code") return
+      if (!media || ownPointer()) return
       e.preventDefault()
       if (e.ctrlKey || scale <= 1.01) {
         // a pinch on a trackpad, or the wheel at fit: zoom about the pointer
@@ -635,15 +720,11 @@ function addExpands(root: ParentNode, signal: AbortSignal) {
       "click",
       (e) => {
         e.stopPropagation()
-        // a live graph can't be copied into the viewer: it goes full screen
-        // itself, and graphembed.ts refits its camera to the new room
-        if (el.matches("figure.diagram-graph")) toggleFullscreen(el)
-        else openViewer(el)
+        openViewer(el)
       },
       { signal },
     )
     el.append(b)
-    if (el.matches("figure.diagram-graph")) fullscreenButton(b, el, signal)
   }
   // a long code block (not a code file, whose bar has its own button)
   for (const pre of root.querySelectorAll<HTMLElement>("article pre")) {

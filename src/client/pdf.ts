@@ -6,7 +6,8 @@
 // this script the <object> it replaces stays, with its link.
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist"
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
-import { button as makeButton, fullscreenButton, icon, toggleFullscreen } from "./embeds"
+import { button as makeButton, icon } from "./embeds"
+import { toggleViewer, viewerButton } from "./viewer"
 
 const ico = (d: string) => icon(d, 16, 2)
 const ICONS = {
@@ -138,7 +139,8 @@ async function mount(viewer: HTMLElement, signal: AbortSignal) {
     return cache.get(n)!
   }
   const figure = viewer.closest("figure") ?? viewer
-  const fullscreen = () => document.fullscreenElement === figure
+  // full screen is Basalt's viewer (viewer.ts), which takes the figure in
+  const fullscreen = () => figure.dataset.inViewer !== undefined
   let zoom = 1 // on top of fitting
   /** full screen fits the whole page to the screen; in the column, the width */
   const fitScale = () => {
@@ -335,10 +337,10 @@ async function mount(viewer: HTMLElement, signal: AbortSignal) {
   zoomIn.addEventListener("click", () => rezoom(zoom * 1.25), { signal })
   zoomOut.addEventListener("click", () => rezoom(zoom / 1.25), { signal })
   fit.addEventListener("click", () => rezoom(1), { signal })
-  full.addEventListener("click", () => toggleFullscreen(figure), { signal })
-  fullscreenButton(full, figure, signal, 16, 2)
-  // into full screen and out: fit again, at the page you were on
-  document.addEventListener("fullscreenchange", () => rezoom(1), { signal })
+  full.addEventListener("click", () => toggleViewer(figure), { signal })
+  viewerButton(full, figure, signal, 16, 2)
+  // into the viewer and out: fit again, at the page you were on
+  figure.addEventListener("basalt:viewer", () => rezoom(1), { signal })
   // the page fits whatever it's in: the column, or the whole screen
   const resize = new ResizeObserver(() => {
     if (stage.clientWidth === width && (stage.clientHeight === height || !fullscreen())) return
@@ -363,7 +365,7 @@ async function mount(viewer: HTMLElement, signal: AbortSignal) {
         "=": () => rezoom(zoom * 1.25),
         "-": () => rezoom(zoom / 1.25),
         "0": () => rezoom(1),
-        f: () => toggleFullscreen(figure),
+        f: () => toggleViewer(figure),
       }
       const act = keys[e.key]
       if (!act) return

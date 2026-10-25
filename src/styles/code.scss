@@ -81,20 +81,6 @@ figure.code-file {
   pre > .clipboard-button {
     display: none;
   }
-
-  &:fullscreen {
-    display: flex;
-    flex-direction: column;
-    padding: 2rem 3rem;
-    background: var(--light);
-    overflow: auto;
-
-    & > pre {
-      flex: 1;
-      max-height: none;
-      font-size: 1rem;
-    }
-  }
 }
 
 

@@ -72,27 +72,6 @@ figure.diagram-graph {
   figcaption {
     align-self: center;
   }
-
-  // full screen (the viewer's expand): the graph takes the whole screen, and
-  // graphembed.ts refits its camera to it
-  &:fullscreen {
-    display: flex;
-    flex-direction: column;
-    width: 100vw;
-    height: 100vh;
-    max-width: none;
-    margin: 0;
-    padding: 1.5rem;
-    background: var(--light);
-    overflow: hidden;
-
-    .graph-embed {
-      flex: 1 1 auto;
-      min-height: 0;
-      height: auto !important;
-      border: none;
-    }
-  }
 }
 
 // ```mermaid: drawn in the browser, in the page's colours; until then (or
