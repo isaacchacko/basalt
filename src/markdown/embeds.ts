@@ -456,14 +456,18 @@ export interface EmbeddedFile {
   fullscreen: boolean
 }
 
-/** A code file embed's alias: its title, then flags like `fullscreen`, `|`-separated in any order. */
+/**
+ * A code file embed's alias: its title, then flags like `fullscreen`,
+ * `|`-separated in any order. A line range (`L3-L9`) isn't a title: ofmText
+ * makes `![[a.py#L3-L9]]`'s heading its alias, as Obsidian shows a link.
+ */
 export function fileEmbedOptions(alias: string | undefined): {
   title?: string
   fullscreen: boolean
 } {
   const parts = (alias && alias !== "undefined" ? alias : "").split("|").map((p) => p.trim())
   const fullscreen = parts.includes("fullscreen")
-  const title = parts.filter((p) => p && p !== "fullscreen").join(" | ")
+  const title = parts.filter((p) => p && p !== "fullscreen" && !/^L\d+(-L?\d+)?$/.test(p)).join(" | ")
   return { title: title || undefined, fullscreen }
 }
 
