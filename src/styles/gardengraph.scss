@@ -22,10 +22,11 @@ dialog.garden-graph {
     background: transparent;
   }
 }
+// a fade, not a scale: the renderer measures its box as the dialog opens,
+// and a scaled box would leave its hover a little off its nodes
 @keyframes garden-graph-in {
   from {
     opacity: 0;
-    transform: scale(0.985);
   }
 }
 .garden-graph-bar {
