@@ -5,6 +5,7 @@ import path from "node:path"
 import { loadSite, siteDir } from "./src/lib/site"
 import { processorOptions, rehypePlugins, remarkPlugins, syntaxHighlight } from "./src/markdown"
 import { vitePlugins } from "./src/lib/vite"
+import { agentApi } from "./src/integrations/agent"
 
 const site = loadSite(siteDir())
 
@@ -14,7 +15,7 @@ export default defineConfig({
   publicDir: path.join(site.work, "public"),
   outDir: path.join(site.work, "dist"),
   trailingSlash: "ignore",
-  integrations: [preact({ compat: true })],
+  integrations: [preact({ compat: true }), agentApi()],
   markdown: {
     syntaxHighlight,
     processor: unified({ remarkPlugins, rehypePlugins, ...processorOptions }),
