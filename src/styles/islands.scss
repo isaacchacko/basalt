@@ -24,3 +24,8 @@ iframe.island-html {
   border-radius: 6px;
   background: var(--light);
 }
+
+// a frame takes its page's light or dark (islands.ts): let the page show through
+figure.island-frame > iframe {
+  background: transparent;
+}

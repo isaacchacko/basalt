@@ -157,7 +157,36 @@ function liveHtml(signal: AbortSignal) {
   onTheme(() => frames.forEach(sendTheme), signal)
 }
 
+/**
+ * A frame page (<island frame>) takes its page's light or dark, so the frame
+ * isn't a white box on a dark page (or a dark one on a light page). Its css is
+ * otherwise its own.
+ */
+function followParentTheme(signal: AbortSignal) {
+  let parentRoot: HTMLElement
+  try {
+    if (window.parent === window) return
+    parentRoot = window.parent.document.documentElement
+  } catch {
+    return // another origin's page: it can't be asked
+  }
+  const root = document.documentElement
+  const copy = () => {
+    for (const attr of ["saved-theme", "data-theme", "class"]) {
+      const v = parentRoot.getAttribute(attr)
+      if (v === null) root.removeAttribute(attr)
+      else root.setAttribute(attr, v)
+    }
+    root.style.colorScheme = getComputedStyle(parentRoot).colorScheme || "normal"
+  }
+  copy()
+  const watch = new MutationObserver(copy)
+  watch.observe(parentRoot, { attributes: true, attributeFilter: ["saved-theme", "data-theme", "class", "style"] })
+  signal.addEventListener("abort", () => watch.disconnect())
+}
+
 export function startIslands(signal: AbortSignal) {
+  if (document.querySelector("[data-island-frame]")) followParentTheme(signal)
   for (const el of document.querySelectorAll<HTMLElement>(".island[data-island], [data-island-frame]")) {
     const name = el.dataset.island!
     const running = hot.mounted.get(el)

@@ -14,6 +14,7 @@ figure.embed {
   & > object,
   & > .embed-facade {
     display: block;
+    box-sizing: border-box;
     max-width: 100%;
     border: 1px solid var(--lightgray);
     border-radius: 6px;
