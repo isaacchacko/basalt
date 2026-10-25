@@ -4,6 +4,7 @@
 //   basalt new <dir> [--title "My garden"]   start a site
 //   basalt dev [dir] [--port 4321]           serve it, live (in the background; `basalt stop` ends it)
 //   basalt build [dir]                       build it into <dir>/.basalt/astro/dist
+//   basalt check [dir] [--json]              build it and list broken links, missing embeds, orphans
 //   basalt status [dir]                      what the dev server is doing (JSON)
 //   basalt wait [dir] [--after <buildId>]    block until the next update reaches the pages
 //   basalt stop [dir] | logs [dir]
@@ -45,13 +46,23 @@ function prepare() {
 }
 
 function astro(...args) {
+  process.exit(run(args, "inherit"))
+}
+
+function run(args, stdio) {
   prepare()
   const result = spawnSync(path.join(basalt, "node_modules", ".bin", "astro"), args, {
     cwd: work,
-    stdio: "inherit",
+    stdio,
     env: { ...process.env, BASALT_SITE: dir },
   })
-  process.exit(result.status ?? 1)
+  return result.status ?? 1
+}
+
+/** a path as short as it can be while still pointing at the file */
+function shown(abs) {
+  const rel = path.relative(process.cwd(), abs)
+  return rel.startsWith("..") ? abs : rel
 }
 
 function fail(message) {
@@ -104,6 +115,17 @@ switch (command) {
   case "build":
     astro("build")
     break
+  case "check": {
+    if (run(["build"], flags.json ? "ignore" : ["ignore", "ignore", "inherit"]) !== 0) fail("the build failed")
+    const { check, report } = await import("./check.mjs")
+    // a note's slug -> the file it's in, from Basalt's own walk of the site
+    process.env.BASALT_SITE = dir
+    const { loadSite, walkSite } = await import("../src/lib/site.ts")
+    const notes = new Map(walkSite(loadSite(dir)).filter((f) => f.isNote).map((f) => [f.slug.replace(/\/index$/, ""), shown(f.abs)]))
+    const problems = check(path.join(work, "dist"), notes)
+    report(problems, flags.json)
+    process.exit(problems.some((p) => !p.warning) ? 1 : 0)
+  }
   case "stop":
     astro("dev", "stop")
     break
@@ -117,5 +139,5 @@ switch (command) {
     await api(`/__basalt/wait${flags.after ? `?after=${flags.after}` : ""}`)
     break
   default:
-    console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 13).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"))
+    console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 14).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"))
 }
