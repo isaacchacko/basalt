@@ -52,6 +52,7 @@ import { rehypeEmbeds, remarkFileEmbeds } from "./embeds.ts"
 import { rehypeCodeTitles } from "./code.ts"
 import { rehypeIslands, remarkIslands } from "./islands.ts"
 import { rehypeMargin } from "./margin.ts"
+import { rehypeTabs } from "./tabs.ts"
 import { rehypeSealTranscludes, rehypeTables, rehypeTransclude, useTargets, type Target } from "./transclude.ts"
 import { rehypeNoteLists } from "./notelist.ts"
 import { loadSiteMarkdown, type TextTransform } from "./siteconfig.ts"
@@ -129,6 +130,8 @@ const basaltRehype: PluggableList = [
   () => rehypeEmbeds({ web: true, files: true, lightbox: true }),
   // after a code file's bar is made
   rehypeCodeTitles,
+  // `> [!tab]` callouts in a row take turns
+  rehypeTabs,
   // a picture with a dark version beside it follows the theme
   rehypeThemedMedia,
   rehypeIslands,

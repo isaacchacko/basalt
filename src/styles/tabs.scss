@@ -1,0 +1,91 @@
+// Tabs (src/markdown/tabs.ts, src/client/tabs.ts): one shows, the bar above
+// steps through them. Without the script each tab shows under its label.
+
+.tabs {
+  margin: 1.5rem 0;
+
+  & > .tab > :first-child:not(.tab-label),
+  & > .tab > .tab-label + * {
+    margin-top: 0.5rem;
+  }
+
+  & > .tab > :last-child {
+    margin-bottom: 0;
+  }
+
+  & > .tab + .tab {
+    margin-top: 1.5rem;
+  }
+}
+
+.tab-label,
+.tabs-label,
+.tabs-count {
+  font-family: var(--bodyFont);
+  font-style: italic;
+  color: var(--darkgray);
+}
+
+.tab-label {
+  margin: 0;
+}
+
+.tabs[data-tabbing] {
+  & > .tab:not([data-shown]),
+  & .tab-label {
+    display: none;
+  }
+
+  & > .tab + .tab {
+    margin-top: 0;
+  }
+}
+
+.tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--lightgray);
+}
+
+.tabs-label {
+  padding: 0 0.3rem;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.tabs-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--gray);
+}
+
+.tabs-step {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--dark);
+    background: var(--highlight);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+    outline-offset: 1px;
+  }
+}
