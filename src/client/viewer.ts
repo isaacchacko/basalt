@@ -78,10 +78,16 @@ function originBox(item: Item): DOMRect {
   return el.getBoundingClientRect()
 }
 
+/**
+ * The transform that puts the media (laid out at `to`) where `from` is. The
+ * media scales about its centre (so zooming does too), so it moves centre to
+ * centre: measured from the corners, it set off towards the bottom right and
+ * then turned back.
+ */
 function flip(from: DOMRect, to: DOMRect): string {
-  return `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${
-    from.height / to.height
-  })`
+  const dx = from.left + from.width / 2 - (to.left + to.width / 2)
+  const dy = from.top + from.height / 2 - (to.top + to.height / 2)
+  return `translate(${dx}px, ${dy}px) scale(${from.width / to.width}, ${from.height / to.height})`
 }
 
 let current: { close: (now?: boolean) => void } | null = null
