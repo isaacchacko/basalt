@@ -91,13 +91,13 @@ function shutDrawer() {
   }
 }
 
-// ---------- the folded bar: a map of the navbar's entries ----------
+// ---------- the bar: the navbar's edge, with the page you're on marked ----------
 
-// Folded (layout.nav "bar"), the navbar is a thin bar down its strip: dotted
-// where no entry is, dark where an entry's text is, ember where the page
-// you're on is. Each segment is that entry's line, measured where it sits in
-// the open layout: folded, the entries are only moved sideways and faded, so
-// their heights are the open ones.
+// layout.nav "bar": a thin line at the navbar's edge, folded or open, with the
+// entry of the page you're on marked on it, level with that entry's text. The
+// mark is one element that slides when the page changes (the navbar persists
+// across pages). Entries are measured where they sit in the open layout:
+// folded, they're only moved sideways and faded, so their heights are the open ones.
 const ENTRIES = ".page-title a, .explorer-content a"
 
 function drawBar() {
@@ -105,12 +105,13 @@ function drawBar() {
   const bar = nav?.querySelector<HTMLElement>(".nav-bar")
   if (!nav || !bar || !bar.checkVisibility()) return
   const top = nav.getBoundingClientRect().top
-  const segments: HTMLElement[] = []
+  let from = Infinity
+  let to = -Infinity
   for (const a of nav.querySelectorAll<HTMLAnchorElement>(ENTRIES)) {
-    const current = a.classList.contains("active") || !!a.closest(".folder-container.active")
-    // an entry counts only where it shows: inside the explorer's scroll, and
-    // inside every folder it's in (a shut folder shows none of it; one
-    // opening, what's opened so far)
+    if (!a.classList.contains("active") && !a.closest(".folder-container.active")) continue
+    // it counts only where it shows: inside the explorer's scroll, and inside
+    // every folder it's in (a shut folder shows none of it; one opening, what's
+    // opened so far)
     let shownFrom = -Infinity
     let shownTo = Infinity
     for (let box = a.parentElement?.closest<HTMLElement>(".folder-outer, .explorer-content"); box; box = box.parentElement?.closest<HTMLElement>(".folder-outer, .explorer-content")) {
@@ -120,19 +121,31 @@ function drawBar() {
       shownTo = Math.min(shownTo, r.bottom)
     }
     for (const line of a.getClientRects()) {
-      const from = Math.max(line.top, shownFrom)
-      const to = Math.min(line.bottom, shownTo)
-      if (to - from < 2) continue
-      const seg = document.createElement("span")
-      seg.className = current ? "nav-bar-seg is-current" : "nav-bar-seg"
-      // the line's glyphs, not its leading
-      const inset = Math.min(3, (to - from) / 6)
-      seg.style.top = `${from - top + inset}px`
-      seg.style.height = `${to - from - inset * 2}px`
-      segments.push(seg)
+      const lineFrom = Math.max(line.top, shownFrom)
+      const lineTo = Math.min(line.bottom, shownTo)
+      if (lineTo - lineFrom < 2) continue
+      from = Math.min(from, lineFrom)
+      to = Math.max(to, lineTo)
     }
   }
-  bar.replaceChildren(...segments)
+  let mark = bar.querySelector<HTMLElement>(".nav-bar-seg")
+  const placing = !mark
+  if (!mark) {
+    mark = document.createElement("span")
+    mark.className = "nav-bar-seg is-placing"
+    bar.replaceChildren(mark)
+  }
+  if (to <= from) {
+    mark.classList.add("is-gone")
+    return
+  }
+  // the text's glyphs, not its leading
+  const inset = Math.min(3, (to - from) / 6)
+  mark.classList.remove("is-gone")
+  mark.style.top = `${from - top + inset}px`
+  mark.style.height = `${to - from - inset * 2}px`
+  // first placed where it is; after that it slides
+  if (placing) requestAnimationFrame(() => mark.classList.remove("is-placing"))
 }
 
 let barFrame = 0

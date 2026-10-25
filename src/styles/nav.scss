@@ -106,26 +106,41 @@ $semiBoldWeight: 600;
 
   // layout.nav "bar": folded, a thin muted bar at the strip's right edge,
   // with the page you're on marked in ember at its entry's height (nav.ts)
+  // it's also the navbar's edge when open: the one line, riding the column's
+  // edge as it widens and narrows
   .nav-bar {
     position: absolute;
     top: 0;
     bottom: 0;
-    right: 6px;
+    right: 0;
     width: 3pt;
     border-radius: 1.5pt;
     background: color-mix(in srgb, var(--gray) 28%, transparent);
   }
 
-  // only the page you're on shows on the bar, in the accent
+  // the page you're on, in the accent: one mark that slides to the entry you
+  // go to (nav.ts)
   .nav-bar-seg {
     position: absolute;
     left: 0;
     right: 0;
     border-radius: 1.5pt;
-    background: transparent;
+    background: var(--tertiary);
+    transition:
+      top 0.5s $ease,
+      height 0.5s $ease,
+      opacity 0.25s ease;
 
-    &.is-current {
-      background: var(--tertiary);
+    &.is-placing {
+      transition: none;
+    }
+
+    &.is-gone {
+      opacity: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: opacity 0.25s ease;
     }
   }
 
@@ -137,7 +152,10 @@ $semiBoldWeight: 600;
   // open: hovered, focused into from the keyboard, tapped, or held open
   // through a page transition (nav.ts)
   html .page > #quartz-body > .sidebar.left:is(:hover, :has(:focus-visible), .is-open, .is-held) {
-    border-right-color: var(--lightgray);
+    // its edge: a rule, or with the bar, the bar itself (it stays, below)
+    &:not([data-nav="bar"]) {
+      border-right-color: var(--lightgray);
+    }
 
     & > :not(.nav-rail) {
       opacity: 1;
@@ -146,7 +164,7 @@ $semiBoldWeight: 600;
       transition-delay: 0.15s;
     }
 
-    .nav-rail {
+    &:not([data-nav="bar"]) .nav-rail {
       opacity: 0;
     }
   }
