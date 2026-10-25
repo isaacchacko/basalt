@@ -303,7 +303,7 @@ export async function openViewer(
       block.classList.remove("is-reaching", "has-more")
       block.style.removeProperty("--code-reach")
       block.style.margin = "0"
-      block.querySelector("pre")?.removeAttribute("tabindex")
+      block.querySelectorAll("[tabindex]").forEach((n) => n.removeAttribute("tabindex"))
       el = document.createElement("div")
       el.append(block)
       w = Math.min(room.width, 1040)
