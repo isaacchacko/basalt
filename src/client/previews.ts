@@ -11,7 +11,7 @@
 //
 // Only beside a margin: on a phone, a link is just a link.
 
-import { isImageLink } from "./embeds"
+import { isDark, isImageLink, themedPair } from "./embeds"
 import { isBeside, levelWith, lineOf, onPage } from "./margin"
 
 const SHOW_MS = 90
@@ -131,7 +131,13 @@ function imagePreview(link: HTMLAnchorElement): Item {
       const box = el("figure", "margin-image")
       box.dataset.src = src
       const img = el("img")
-      img.src = src
+      // a picture with a dark version shows the one for the page's theme
+      const pair = themedPair(link)
+      if (pair) {
+        img.dataset.light = pair.light
+        img.dataset.dark = pair.dark
+      }
+      img.src = pair ? (isDark() ? pair.dark : pair.light) : src
       img.alt = link.textContent?.trim() ?? ""
       img.draggable = false
       // measured once it has a size, so it lands level with its line at once
@@ -339,6 +345,15 @@ onPage((signal) => {
   )
   document.addEventListener("focusout", () => shown && hideSoon(), { signal })
   document.addEventListener("keydown", (e) => e.key === "Escape" && hide(), { signal })
+  // the theme turned: a shown picture swaps to its other version
+  document.addEventListener(
+    "themechange",
+    () => {
+      for (const img of hover.querySelectorAll<HTMLImageElement>("img[data-dark]"))
+        img.src = isDark() ? img.dataset.dark! : img.dataset.light!
+    },
+    { signal },
+  )
   addEventListener("resize", place, { signal })
   margin.addEventListener("margin:placed", place, { signal })
 

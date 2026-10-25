@@ -24,6 +24,8 @@ export const PATHS = {
   open: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   check: '<path d="M5 12l5 5 9-10"/>',
+  sun: '<circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  moon: '<path fill="currentColor" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/>',
 }
 
 export function button(cls: string, label: string, svg: string): HTMLButtonElement {
@@ -46,6 +48,22 @@ export function link(cls: string, label: string, svg: string): HTMLAnchorElement
   a.dataset.noPopover = "true"
   a.dataset.astroReload = ""
   return a
+}
+
+/**
+ * A picture's light and dark versions, when it has both (src/markdown/themed.ts):
+ * an `img.themed-light` and its `img.themed-dark` twin, or a link to one,
+ * carrying the dark one as `data-dark-src`.
+ */
+export function themedPair(el: Element): { light: string; dark: string } | undefined {
+  if (el instanceof HTMLAnchorElement) return el.dataset.darkSrc ? { light: el.href, dark: el.dataset.darkSrc } : undefined
+  if (!(el instanceof HTMLImageElement)) return undefined
+  const light = el.classList.contains("themed-light")
+  if (!light && !el.classList.contains("themed-dark")) return undefined
+  const twin = el.parentElement?.querySelector<HTMLImageElement>(light ? ":scope > img.themed-dark" : ":scope > img.themed-light")
+  if (!twin) return undefined
+  const src = (img: HTMLImageElement) => img.currentSrc || img.src
+  return light ? { light: src(el), dark: src(twin) } : { light: src(twin), dark: src(el) }
 }
 
 /** Whether the page is dark: the toggle's choice if it made one, else the system's. */

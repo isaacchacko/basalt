@@ -12,7 +12,9 @@ import {
   button as makeButton,
   fullscreenButton,
   icon,
+  isDark,
   isImageLink,
+  themedPair,
   link as makeLink,
   still,
   toggleFullscreen,
@@ -26,6 +28,8 @@ type Item = {
   src?: string
   /** where it grows from and shrinks back to, when that isn't its origin (a link's preview) */
   from?: HTMLElement
+  /** a picture with a light and a dark version: the viewer can show either */
+  pair?: { light: string; dark: string }
 }
 
 const ICON = (k: keyof typeof PATHS) => icon(PATHS[k])
@@ -76,13 +80,22 @@ function collect(): Item[] {
   )
   for (const el of candidates) {
     if (el instanceof HTMLAnchorElement) {
-      if (ownLink(el) && shown(el))
-        found.push({ kind: "image", origin: el, caption: el.textContent?.trim() ?? "", src: el.href })
+      if (ownLink(el) && shown(el)) {
+        const pair = themedPair(el)
+        found.push({
+          kind: "image",
+          origin: el,
+          caption: el.textContent?.trim() ?? "",
+          src: pair && isDark() ? pair.dark : el.href,
+          pair,
+        })
+      }
       continue
     }
     if (!shown(el) || el.closest(ELSEWHERE)) continue
     if (el instanceof HTMLImageElement) {
-      found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.currentSrc || el.src })
+      // of a light and dark pair only the one showing is collected (the other is display: none)
+      found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.currentSrc || el.src, pair: themedPair(el) })
     } else if (el.matches("figure.embed-frame")) {
       const frame = el.querySelector("iframe")
       if (frame) found.push({ kind: "frame", origin: el, caption: captionOf(frame), src: frame.src })
@@ -138,9 +151,11 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
   openOriginal.rel = "noopener"
   const download = link("viewer-download", "download", ICON("download"))
   const close = button("viewer-close", "close (esc)", ICON("close"))
+  // a picture with a light and a dark version: see the other one, in place
+  const themeSwitch = button("viewer-theme", "the other theme's version (t)", ICON("moon"))
   const spacer = document.createElement("span")
   spacer.className = "viewer-spacer"
-  bar.append(counter, spacer, zoom, openOriginal, download, close)
+  bar.append(counter, spacer, themeSwitch, zoom, openOriginal, download, close)
 
   const stage = document.createElement("div")
   stage.className = "viewer-stage"
@@ -264,6 +279,14 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     caption.hidden = !item.caption
     prev.hidden = next.hidden = all.length < 2
     zoom.hidden = item.kind === "frame"
+    themeSwitch.hidden = !item.pair
+    if (item.pair) {
+      const dark = item.src === item.pair.dark
+      themeSwitch.innerHTML = ICON(dark ? "sun" : "moon")
+      themeSwitch.setAttribute("aria-label", dark ? "the light version (t)" : "the dark version (t)")
+      themeSwitch.title = themeSwitch.getAttribute("aria-label")!
+      themeSwitch.setAttribute("aria-pressed", String(dark !== isDark()))
+    }
     openOriginal.hidden = !item.src
     download.hidden = item.kind !== "image"
     if (item.src) openOriginal.href = item.src
@@ -314,6 +337,32 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     }
   }
 
+  /** Show the current picture's light or dark version, in place: same size, same zoom. */
+  const showVersion = async (dark: boolean) => {
+    const item = all[index]
+    if (!item.pair || media?.tagName !== "IMG") return
+    const want = dark ? item.pair.dark : item.pair.light
+    if (item.src === want) return
+    item.src = want
+    const img = media as HTMLImageElement
+    const next = new Image()
+    next.src = want
+    await next.decode().catch(() => {})
+    if (all[index] !== item) return
+    // twins are the same size; one that isn't is fitted again
+    const same = Math.abs(next.naturalWidth / next.naturalHeight - img.naturalWidth / img.naturalHeight) < 0.01
+    if (!same) return void show(item, false)
+    img.src = want
+    describe(item)
+  }
+  themeSwitch.addEventListener("click", () => {
+    const item = all[index]
+    if (item.pair) showVersion(item.src !== item.pair.dark)
+  })
+  // the page's theme turned while it's open: follow it
+  const followTheme = () => showVersion(isDark())
+  document.addEventListener("themechange", followTheme)
+
   const step = (by: number) => {
     if (all.length < 2) return
     index = (index + by + all.length) % all.length
@@ -328,6 +377,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
     finished = true
     if (hidden) hidden.style.visibility = ""
     resize.disconnect()
+    document.removeEventListener("themechange", followTheme)
     if (dialog.open) dialog.close()
     dialog.remove()
     delete document.documentElement.dataset.viewer
@@ -390,6 +440,7 @@ export async function openViewer(start: HTMLElement, opener: { key?: boolean; fr
       ArrowLeft: () => step(-1),
       ArrowRight: () => step(1),
       z: () => toggleZoom(),
+      t: () => themeSwitch.click(),
       "+": () => zoomTo(scale * 1.5),
       "=": () => zoomTo(scale * 1.5),
       "-": () => zoomTo(scale / 1.5),
