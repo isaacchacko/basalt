@@ -33,11 +33,14 @@ Basalt writes only under `<site>/.basalt/astro`. That folder holds the site's ow
 ```sh
 basalt new <dir> [--title "My garden"]   # start a site
 basalt dev [dir] [--port 4321]           # serve it, live, in the background
-basalt build [dir]                       # build it into <dir>/.basalt/astro/dist
-basalt check [dir] [--json]              # build it and list broken links, missing embeds, orphans
+basalt build [dir]                       # build it into <dir>/.basalt/astro/dist (exits 1 on a broken note)
+basalt check [dir] [--json]              # build it and list what's broken, with files and lines
 basalt status [dir]                      # what the dev server is doing (JSON)
-basalt wait [dir] [--after <buildId>]    # block until the next update reaches the pages
-basalt stop [dir] | basalt logs [dir]
+basalt wait [dir]                        # block until your newest save is live (0 ready, 1 error, 2 timeout)
+           [--file <path>] [--since <ms>] [--after <buildId>] [--timeout <s>]
+basalt stop [dir]
+basalt logs [dir] [--raw]                # the dev server's log, as plain lines
+basalt help [topic]                      # a section of this file
 ```
 
 Several sites can be served at once from one Basalt.
