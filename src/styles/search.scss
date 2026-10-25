@@ -270,3 +270,25 @@ $normalWeight: 400;
 .page-header header:has(> .search[data-button="mobile"]:only-child) {
   margin: 0;
 }
+
+// a passage "@page query" found: marked for a moment where it sits
+@keyframes search-found {
+  0%,
+  50% {
+    background-color: color-mix(in srgb, var(--textHighlight) 85%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.search-found {
+  border-radius: 3px;
+  box-shadow: 0 0 0 4px transparent;
+  animation: search-found 3.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-found {
+    animation-duration: 0.01s;
+    background-color: color-mix(in srgb, var(--textHighlight) 60%, transparent);
+  }
+}

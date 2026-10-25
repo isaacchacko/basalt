@@ -1,7 +1,9 @@
 // Search, ported from Quartz's search.inline.ts. ⌘F / ctrl+F opens it; with
 // it open, a second ⌘F is the browser's own find. ⌘K toggles it, ⌘⇧K
-// searches tags ("#tag query" narrows a search to a tag). The index is
-// built from /static/contentIndex.json the first time search opens.
+// searches tags ("#tag query" narrows a search to a tag). "@page query"
+// searches inside one page, and "@here query" the page you're on: each
+// result is a passage, and choosing one scrolls to it and marks it. The
+// index is built from /static/contentIndex.json the first time search opens.
 
 interface Details {
   slug: string
@@ -170,6 +172,17 @@ function highlightHTML(searchTerm: string, el: HTMLElement) {
   return html.body
 }
 
+// a page as it is, notes and all, for "@page query"
+const rawCache = new Map<string, Element[]>()
+async function fetchWhole(slug: string): Promise<Element[]> {
+  const hit = rawCache.get(slug)
+  if (hit) return hit
+  const html = new DOMParser().parseFromString(await (await fetch(new URL(hrefOf(slug), location.href))).text(), "text/html")
+  const roots = [...html.querySelectorAll("article")]
+  rawCache.set(slug, roots)
+  return roots
+}
+
 const pageCache = new Map<string, Element[]>()
 async function fetchContent(slug: string): Promise<Element[]> {
   const hit = pageCache.get(slug)
@@ -187,6 +200,72 @@ async function fetchContent(slug: string): Promise<Element[]> {
   pageCache.set(slug, contents)
   return contents
 }
+
+// ---------- "@page query": passages inside one page ----------
+
+// the blocks a page reads as: paragraphs, list items, headings, cells,
+// captions, code; the innermost, so a list item and its paragraph aren't both
+const BLOCKS = "p, li, h1, h2, h3, h4, h5, h6, td, th, figcaption, dt, dd, pre"
+// A page's notes are its content too: in the page you're on, the copies
+// shown in the side content (the inline ones are hidden), in a fetched page
+// the notes where they're written.
+const NOTE_BLOCKS = ".sidenote, .marginnote"
+function blocksOf(roots: Element[], live = false): Element[] {
+  const all = roots.flatMap((r) => [
+    ...r.querySelectorAll(BLOCKS),
+    // a note that's one line, with no paragraph of its own
+    ...[...r.querySelectorAll(NOTE_BLOCKS)].filter((n) => !n.querySelector(BLOCKS)),
+  ])
+  return all.filter(
+    (b) =>
+      !b.closest(".search, nav, .page-header, section[data-footnotes], section.footnotes") &&
+      !b.querySelector(BLOCKS) &&
+      !(live && b.getClientRects().length === 0) &&
+      (b.textContent ?? "").trim() !== "",
+  )
+}
+const liveRoots = () =>
+  [document.querySelector("article"), document.querySelector(".margin-layer")].filter((x): x is Element => !!x)
+
+/** The heading a block sits under, for a result's title. */
+function sectionOf(block: Element): string | null {
+  for (let el: Element | null = block; el; el = el.previousElementSibling ?? el.parentElement) {
+    if (el !== block && /^H[1-6]$/.test(el.tagName)) return (el.textContent ?? "").trim()
+    if (el.tagName === "ARTICLE") break
+  }
+  return null
+}
+
+const words = (q: string) =>
+  q
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w !== "")
+
+/** Where a page's passage is, after the page arrives: scrolled to and marked. */
+const FIND = "basalt:find"
+function findPassage(text: string) {
+  const want = text.replace(/\s+/g, " ").trim()
+  const blocks = blocksOf(liveRoots(), true)
+  const norm = (b: Element) => (b.textContent ?? "").replace(/\s+/g, " ").trim()
+  const hit = blocks.find((b) => norm(b) === want) ?? blocks.find((b) => norm(b).includes(want.slice(0, 60)))
+  if (hit) mark(hit)
+}
+function mark(el: Element) {
+  el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" })
+  el.classList.remove("search-found")
+  void (el as HTMLElement).offsetWidth
+  el.classList.add("search-found")
+  setTimeout(() => el.classList.remove("search-found"), 3200)
+}
+document.addEventListener("astro:page-load", () => {
+  let text: string | null = null
+  try {
+    text = sessionStorage.getItem(FIND)
+    sessionStorage.removeItem(FIND)
+  } catch {}
+  if (text) requestAnimationFrame(() => findPassage(text!))
+})
 
 // ---------- the search on the current page ----------
 
@@ -298,6 +377,7 @@ function setup() {
     await fill()
     currentSearchTerm = bar!.value
     layout!.classList.toggle("display-results", currentSearchTerm !== "")
+    if (currentSearchTerm.startsWith("@")) return onAt(currentSearchTerm)
     searchType = currentSearchTerm.startsWith("#") ? "tags" : "basic"
     let found: any[] = []
     if (searchType === "tags") {
@@ -319,6 +399,112 @@ function setup() {
     const byField = (field: string): number[] => [...(found.find((x) => x.field === field)?.result ?? [])]
     const ids = new Set([...byField("title"), ...byField("content"), ...byField("tags")])
     await displayResults([...ids].map((id) => format(currentSearchTerm, id)))
+  }
+
+  // ---- "@": a page to search in, then passages in it ----
+  const here = () => document.body.dataset.slug ?? "index"
+  const titleOf = (slug: string) => data[slug]?.title ?? slug.split("/").pop() ?? slug
+  // what "@token" calls a page: the last part of its slug, unless another
+  // page's is the same, then all of it
+  const tokenOf = (slug: string) => {
+    const tail = slug.replace(/\/index$/, "").split("/").pop() || "index"
+    const same = slugs.filter((s2) => (s2.replace(/\/index$/, "").split("/").pop() || "index") === tail)
+    return same.length > 1 ? slug : tail
+  }
+  const resolve = (token: string): string | undefined => {
+    if (token === "here") return here()
+    const t = token.toLowerCase()
+    return (
+      slugs.find((s2) => s2.toLowerCase() === t) ??
+      slugs.find((s2) => tokenOf(s2).toLowerCase() === t) ??
+      slugs.find((s2) => titleOf(s2).toLowerCase().replace(/\s+/g, "-") === t)
+    )
+  }
+  const pick = (title: string, note: string, value: string) => {
+    const a = document.createElement("a")
+    a.classList.add("result-card", "at-pick")
+    a.href = "#"
+    a.innerHTML = `<h3 class="card-title">${escapeHTML(title)}</h3><p class="card-description">${escapeHTML(note)}</p>`
+    a.addEventListener("click", (e) => {
+      e.preventDefault()
+      bar!.value = value
+      bar!.focus()
+      void onType()
+    })
+    return a
+  }
+  const show_ = (cards: HTMLElement[], empty: string) => {
+    results.replaceChildren()
+    preview?.replaceChildren()
+    if (!cards.length) {
+      results.innerHTML = `<a class="result-card no-match"><h3>${escapeHTML(empty)}</h3></a>`
+      return
+    }
+    results.append(...cards)
+    cards[0].classList.add("focus")
+    currentHover = cards[0]
+  }
+
+  async function onAt(term: string) {
+    const m = /^@(\S*)(\s+([\s\S]*))?$/.exec(term)!
+    const token = m[1]
+    // no space yet: which page
+    if (m[2] === undefined) {
+      const t = token.toLowerCase()
+      // names that start with what's typed first, then titles that hold it; A to Z
+      const rank = (s2: string) =>
+        !t || tokenOf(s2).toLowerCase().startsWith(t) ? 0 : titleOf(s2).toLowerCase().startsWith(t) ? 1 : 2
+      const pages = slugs
+        .filter((s2) => !s2.startsWith("tags/"))
+        .filter((s2) => !t || tokenOf(s2).toLowerCase().startsWith(t) || titleOf(s2).toLowerCase().includes(t))
+        .sort((a, b) => rank(a) - rank(b) || tokenOf(a).localeCompare(tokenOf(b)))
+        .slice(0, numSearchResults)
+      const cards = [
+        ...("here".startsWith(t) ? [pick("This page", `@here · ${titleOf(here())}`, "@here ")] : []),
+        ...pages.map((s2) => pick(titleOf(s2), `@${tokenOf(s2)}`, `@${tokenOf(s2)} `)),
+      ]
+      return show_(cards, `No page called @${token}`)
+    }
+    const slug = resolve(token)
+    if (!slug) return show_([], `No page called @${token}`)
+    const query = (m[3] ?? "").trim()
+    const title = titleOf(slug)
+    if (!query) return show_([], `Search in ${token === "here" ? "this page" : title}…`)
+    const isHere = slug === here()
+    const roots: Element[] = isHere ? liveRoots() : await fetchWhole(slug)
+    const ws = words(query)
+    const hits = blocksOf(roots, isHere)
+      .filter((b) => {
+        const text = (b.textContent ?? "").toLowerCase()
+        return ws.every((w) => text.includes(w))
+      })
+      .slice(0, 30)
+    currentSearchTerm = query
+    const cards = hits.map((b) => {
+      const text = (b.textContent ?? "").replace(/\s+/g, " ").trim()
+      const a = document.createElement("a")
+      a.classList.add("result-card", "at-passage")
+      a.dataset.slug = slug
+      a.href = hrefOf(slug)
+      const section = sectionOf(b)
+      a.innerHTML = `<h3 class="card-title">${escapeHTML(section ?? title)}</h3><p class="card-description">${highlight(query, text, true)}</p>`
+      a.addEventListener("click", (e) => {
+        if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+        hide()
+        if (isHere) {
+          e.preventDefault()
+          mark(b)
+          return
+        }
+        try {
+          sessionStorage.setItem(FIND, text)
+        } catch {}
+      })
+      a.addEventListener("mouseenter", () => displayPreview(a))
+      return a
+    })
+    show_(cards, `Nothing in ${isHere ? "this page" : title} matches "${query}"`)
+    if (cards.length) await displayPreview(cards[0])
   }
 
   async function onKey(e: KeyboardEvent) {
@@ -362,6 +548,11 @@ function setup() {
           await displayPreview(prev)
         } else bar!.focus()
       }
+    } else if (e.key === "Tab" && !e.shiftKey && bar!.value.startsWith("@") && !/\s/.test(bar!.value)) {
+      // "@mar" + Tab: the page under the cursor (the first, unless one's chosen)
+      e.preventDefault()
+      const card = (currentHover ?? results.querySelector(".at-pick")) as HTMLElement | null
+      if (card?.classList.contains("at-pick")) card.click()
     } else if (e.key === "ArrowDown" || e.key === "Tab") {
       e.preventDefault()
       const from = currentHover ?? (results.firstElementChild as HTMLElement | null)
