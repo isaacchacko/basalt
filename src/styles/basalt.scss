@@ -324,3 +324,36 @@ html.theme-switching *::before,
 html.theme-switching *::after {
   transition: none !important;
 }
+
+// ---------- scrollbars: square, in the page's colours ----------
+
+// the page's and every scroller's in it (the navbar, code, search, the viewer):
+// 8px, an ink thumb on a rule-coloured track, no arrows, no rounding. Chrome
+// drops these rules for its stock, rounded bar wherever scrollbar-color or
+// scrollbar-width is set, so only browsers without them (Firefox) get those
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--lightgray);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gray);
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: var(--darkgray);
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+::-webkit-scrollbar-corner {
+  background: var(--lightgray);
+}
+@supports not selector(::-webkit-scrollbar) {
+  html,
+  * {
+    scrollbar-color: var(--gray) var(--lightgray);
+  }
+}
