@@ -74,7 +74,8 @@ $semiBoldWeight: 600;
     }
   }
 
-  // the one thing a folded navbar shows: a chevron, halfway down its strip
+  // the one thing a folded navbar shows: a chevron halfway down its strip, or
+  // the bar below
   .nav-rail {
     display: grid;
     place-items: center;
@@ -91,6 +92,36 @@ $semiBoldWeight: 600;
       opacity: 0.6;
       animation: nav-beckon 5s ease-in-out infinite 2s;
     }
+  }
+
+  // layout.nav "bar": folded, a thin bar at the strip's right edge, a map of
+  // the entries at their own heights (nav.ts draws them): dotted where
+  // there's none, dark where one is, ember for the page you're on
+  .nav-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 6px;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--gray) 0 1px, transparent 1px 5px) center top / 1px 5px repeat-y;
+    opacity: 0.9;
+  }
+
+  .nav-bar-seg {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-radius: 1.5px;
+    background: var(--darkgray);
+
+    &.is-current {
+      background: var(--tertiary);
+    }
+  }
+
+  // the explorer as the navbar's only part never folds away
+  .explorer.explorer-fixed.collapsed > .explorer-content {
+    display: block;
   }
 
   // open: hovered, focused into from the keyboard, tapped, or held open

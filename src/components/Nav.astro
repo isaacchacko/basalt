@@ -1,7 +1,9 @@
 ---
 // Basalt's navbar. On a wide screen it's a drawer over the page's left edge
-// that takes no room: folded, one chevron halfway down a strip along the
-// window's edge; reach into the strip (or tab into it, or tap it) and after a
+// that takes no room: folded, a thin bar down a strip along the window's
+// edge, a map of its entries (dotted where there's none, dark where one is,
+// ember for the page you're on), or with `layout.nav: "chevron"` one chevron
+// halfway down; reach into the strip (or tab into it, or tap it) and after a
 // beat it slides out over the page. Open, it has the mark and the site's
 // title, the explorer, and a bottom tray with the theme toggle (and, on a
 // screen without a keyboard, search). Below desktop width it's a bar across
@@ -21,23 +23,46 @@ interface Props {
   layout: LayoutConfig
 }
 const { title, root, current, layout } = Astro.props
+// how the folded navbar looks: "bar" (a thin bar mapping its entries, the
+// default) or "chevron" (one chevron halfway down). basalt.json `layout.nav`.
+const mode = (layout as { nav?: string }).nav === "chevron" ? "chevron" : "bar"
+// the navbar's parts, besides its mark, title and tray: with only the
+// explorer, the explorer is just there, not a section that folds
+const parts = [layout.components.explorer && "explorer"].filter(Boolean)
+const fixedExplorer = mode === "bar" && parts.length === 1
 // what the tree is: a navbar kept across a transition is replaced when it changes
 const shape = (n: TreeNode): string => `${n.slug}:${n.name}(${n.children.map(shape).join(",")})`
 let hash = 0
 for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.charCodeAt(0)) | 0
 ---
 
-<div class="left sidebar" transition:persist="basalt-nav" data-tree={hash.toString(36)}>
+<div class="left sidebar" transition:persist="basalt-nav" data-tree={hash.toString(36)} data-nav={mode}>
   <div class="nav-rail" aria-hidden="true">
-    <svg class="nav-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M9 5l7 7-7 7"></path>
-    </svg>
+    {
+      mode === "chevron" ? (
+        <svg class="nav-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5l7 7-7 7" />
+        </svg>
+      ) : (
+        <div class="nav-bar" />
+      )
+    }
   </div>
   <div class="nav-head">
     <a class="nav-mark" href="/" aria-label={title}><Mark /></a>
   </div>
   <h2 class="page-title"><a href="/">{title}</a></h2>
-  {layout.components.explorer && <Explorer root={root} current={current} open={layout.explorer.folderDefaultState} />}
+  {
+    layout.components.explorer && (
+      <Explorer
+        root={root}
+        current={current}
+        open={layout.explorer.folderDefaultState}
+        fixed={fixedExplorer}
+        home={mode === "bar" ? layout.breadcrumbs.rootName : undefined}
+      />
+    )
+  }
   {
     (layout.components.darkmode || layout.components.search) && (
       <div class="nav-tray">

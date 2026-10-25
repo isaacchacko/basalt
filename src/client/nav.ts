@@ -52,6 +52,7 @@ function toggleFolder(icon: Element) {
   const outer = box?.nextElementSibling
   if (!box || !outer) return
   const open = outer.classList.toggle("open")
+  drawBarSoon()
   const state = load()
   state.set(box.dataset.folderpath!, !open)
   save(state)
@@ -90,6 +91,74 @@ function shutDrawer() {
   }
 }
 
+// ---------- the folded bar: a map of the navbar's entries ----------
+
+// Folded (layout.nav "bar"), the navbar is a thin bar down its strip: dotted
+// where no entry is, dark where an entry's text is, ember where the page
+// you're on is. Each segment is that entry's line, measured where it sits in
+// the open layout: folded, the entries are only moved sideways and faded, so
+// their heights are the open ones.
+const ENTRIES = ".page-title a, .explorer-content a"
+
+function drawBar() {
+  const nav = navbar()
+  const bar = nav?.querySelector<HTMLElement>(".nav-bar")
+  if (!nav || !bar || !bar.checkVisibility()) return
+  const top = nav.getBoundingClientRect().top
+  const segments: HTMLElement[] = []
+  for (const a of nav.querySelectorAll<HTMLAnchorElement>(ENTRIES)) {
+    const current = a.classList.contains("active") || !!a.closest(".folder-container.active")
+    // an entry counts only where it shows: inside the explorer's scroll, and
+    // inside every folder it's in (a shut folder shows none of it; one
+    // opening, what's opened so far)
+    let shownFrom = -Infinity
+    let shownTo = Infinity
+    for (let box = a.parentElement?.closest<HTMLElement>(".folder-outer, .explorer-content"); box; box = box.parentElement?.closest<HTMLElement>(".folder-outer, .explorer-content")) {
+      if (box.matches(".folder-outer:not(.open)")) shownTo = -Infinity
+      const r = box.getBoundingClientRect()
+      shownFrom = Math.max(shownFrom, r.top)
+      shownTo = Math.min(shownTo, r.bottom)
+    }
+    for (const line of a.getClientRects()) {
+      const from = Math.max(line.top, shownFrom)
+      const to = Math.min(line.bottom, shownTo)
+      if (to - from < 2) continue
+      const seg = document.createElement("span")
+      seg.className = current ? "nav-bar-seg is-current" : "nav-bar-seg"
+      // the line's glyphs, not its leading
+      const inset = Math.min(3, (to - from) / 6)
+      seg.style.top = `${from - top + inset}px`
+      seg.style.height = `${to - from - inset * 2}px`
+      segments.push(seg)
+    }
+  }
+  bar.replaceChildren(...segments)
+}
+
+let barFrame = 0
+const drawBarSoon = () => {
+  cancelAnimationFrame(barFrame)
+  barFrame = requestAnimationFrame(drawBar)
+}
+// what moves the entries: the page (its current entry), the window, a folder
+// opening or closing (its list grows over 0.3s: redrawn as it goes), fonts
+addEventListener("resize", drawBarSoon)
+document.fonts?.ready.then(drawBarSoon)
+const barWatch = new ResizeObserver(drawBarSoon)
+let watched: Element | null = null
+function watchBar() {
+  const list = navbar()?.querySelector(".explorer-content > ul")
+  if (list && list !== watched) {
+    if (watched) barWatch.unobserve(watched)
+    barWatch.observe(list)
+    watched = list
+  }
+  drawBarSoon()
+}
+document.addEventListener("transitionend", (e) => {
+  if ((e.target as Element).closest?.(".sidebar.left .folder-outer")) drawBarSoon()
+})
+
 // a tap on the folded navbar's strip opens it; a tap anywhere else, or a page
 // it took you to, folds it again
 const navbar = () => document.querySelector<HTMLElement>(".sidebar.left")
@@ -103,6 +172,7 @@ document.addEventListener("astro:page-load", () => {
   sync()
   shutDrawer()
   navbar()?.classList.remove("is-open")
+  watchBar()
 })
 
 // the browser forgets what's hovered while a page is swapped in, for about
@@ -115,7 +185,10 @@ document.addEventListener("astro:before-swap", () => {
   document.addEventListener("pointermove", () => nav.classList.remove("is-held"), { once: true })
 })
 // before the swapped-in page paints, so the explorer never shows the last page's state
-document.addEventListener("astro:after-swap", sync)
+document.addEventListener("astro:after-swap", () => {
+  sync()
+  drawBarSoon()
+})
 
 // a navbar kept across transitions is the old page's: if the site's tree
 // changed meanwhile (a note added, a title edited), take the new page's

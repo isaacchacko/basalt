@@ -12,8 +12,12 @@ interface Props {
   root: TreeNode
   current: string
   open?: "collapsed" | "open"
+  /** the navbar's only part: no title to fold it under, it's just there */
+  fixed?: boolean
+  /** the home page's entry at the top, by this name */
+  home?: string
 }
-const { root, current, open = "collapsed" } = Astro.props
+const { root, current, open = "collapsed", fixed = false, home } = Astro.props
 const { explorer } = await layout()
 // the tree comes sorted folders first, by name; a stable sort keeps that for what the order doesn't list
 const sort = ordered<TreeNode>(explorer.order, () => 0)
@@ -21,7 +25,7 @@ const arrange = (n: TreeNode): TreeNode => ({ ...n, children: [...n.children].so
 const tree = arrange(root)
 ---
 
-<div class="explorer" data-collapsed={open}>
+<div class:list={["explorer", { "explorer-fixed": fixed }]} data-collapsed={open}>
   <button type="button" class="explorer-toggle mobile-explorer" data-mobile="true" aria-controls="explorer-content" aria-label="Notes">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide-menu">
       <line x1="4" x2="20" y1="12" y2="12"></line>
@@ -29,14 +33,27 @@ const tree = arrange(root)
       <line x1="4" x2="20" y1="18" y2="18"></line>
     </svg>
   </button>
-  <button type="button" class="title-button explorer-toggle desktop-explorer" data-mobile="false" aria-expanded="true">
-    <h2>Explorer</h2>
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold">
-      <polyline points="6 9 12 15 18 9"></polyline>
-    </svg>
-  </button>
+  {
+    !fixed && (
+      <button type="button" class="title-button explorer-toggle desktop-explorer" data-mobile="false" aria-expanded="true">
+        <h2>Explorer</h2>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="5 8 14 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fold">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+    )
+  }
   <div id="explorer-content" class="explorer-content" role="group">
     <ul class="explorer-ul overflow">
+      {
+        home && (
+          <li class="explorer-home">
+            <a href="/" data-for="index" class:list={{ active: current === "index" }}>
+              {home}
+            </a>
+          </li>
+        )
+      }
       <ExplorerTree nodes={tree.children} current={current} open={open} />
       <li class="overflow-end"></li>
     </ul>
