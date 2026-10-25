@@ -69,6 +69,15 @@ figure.diff {
     & > [data-diff="ctx"] {
       background: var(--light);
     }
+
+    & > :is([data-diff="file"], [data-diff="note"]) {
+      text-indent: 0;
+    }
+  }
+
+  // wrapped (code.scss), a line hangs by its text-indent past this padding
+  &[data-wrap] > pre > code > :is([data-diff="add"], [data-diff="del"], [data-diff="ctx"], [data-diff="hunk"]) {
+    padding-left: var(--code-gutter);
   }
 
   .diff-gutter {
