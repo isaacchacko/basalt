@@ -1,8 +1,45 @@
 {
-  "name": "basalt",
-  "type": "module",
+  "name": "@isaacchacko/basalt",
   "version": "0.1.0",
-  "private": true,
+  "description": "Markdown in, a website that reads like a good math textbook out: remarks in the margin, one viewer for every picture, saves that land in place.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Isaac Chacko",
+  "homepage": "https://basalt.isaacchacko.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isaacchacko/basalt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/isaacchacko/basalt/issues"
+  },
+  "keywords": [
+    "markdown",
+    "static-site",
+    "digital-garden",
+    "astro",
+    "tufte",
+    "sidenotes",
+    "obsidian",
+    "quartz"
+  ],
+  "bin": {
+    "basalt": "./bin/basalt.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/markdown/test-hooks.ts",
+    "astro.config.ts",
+    "tsconfig.json",
+    "BASALT.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "dev": "node bin/basalt.mjs dev examples/showcase",
     "build": "node bin/basalt.mjs build examples/showcase",
@@ -52,8 +89,5 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
-  },
-  "bin": {
-    "basalt": "./bin/basalt.mjs"
   }
 }

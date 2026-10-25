@@ -1,4 +1,4 @@
-![Basalt](docs/banner.png)
+![Basalt](https://raw.githubusercontent.com/isaacchacko/basalt/main/docs/banner.png)
 
 **TL;DR:** Basalt turns markdown into a website that reads like a good math textbook. Think [Quartz](https://quartz.jzhao.xyz), with remarks in the margin, better media, and hot reloading that keeps your place.
 
@@ -18,14 +18,18 @@ It's set the way [Edward Tufte](https://www.edwardtufte.com/) sets his books, wi
 
 ## Start
 
+Basalt needs Node 22.18 or later.
+
 ```sh
-git clone https://github.com/isaacchacko/basalt && cd basalt
-npm install
-node bin/basalt.mjs new ../my-garden --title "My garden"
-node bin/basalt.mjs dev ../my-garden      # http://localhost:4321
+npm install --global @isaacchacko/basalt
+basalt new my-garden --title "My garden"
+basalt dev my-garden        # http://localhost:4321
+basalt build my-garden      # the site, in my-garden/.basalt/astro/dist
 ```
 
-Your notes go in `my-garden/notes/`. [BASALT.md](BASALT.md) covers the site's files, the CLI, what you can write, and the edit loop for agents.
+Your notes go in `my-garden/notes/`. [BASALT.md](https://github.com/isaacchacko/basalt/blob/main/BASALT.md) (or `basalt help`) covers the site's files, the CLI, what you can write, and the edit loop for agents.
+
+To work on Basalt itself, clone it, `npm install`, and run `node bin/basalt.mjs` in place of `basalt`.
 
 ## Made from
 

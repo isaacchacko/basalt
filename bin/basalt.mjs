@@ -17,9 +17,19 @@
 import fs from "node:fs"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
-import { fileURLToPath } from "node:url"
+import { createRequire } from "node:module"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 const basalt = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+
+/**
+ * The node_modules Basalt's packages are in: its own, in a checkout, or the
+ * one it was installed into (npm puts them beside it), wherever astro is.
+ */
+function packages() {
+  const astro = createRequire(path.join(basalt, "package.json")).resolve("astro/package.json")
+  return path.dirname(path.dirname(astro))
+}
 const [command = "help", ...rest] = process.argv.slice(2)
 const flags = {}
 const positional = []
@@ -41,7 +51,7 @@ function prepare() {
   fs.mkdirSync(work, { recursive: true })
   for (const name of ["astro.config.ts", "package.json", "tsconfig.json", "src", "node_modules"]) {
     const link = path.join(work, name)
-    const target = path.join(basalt, name)
+    const target = name === "node_modules" ? packages() : path.join(basalt, name)
     if (fs.lstatSync(link, { throwIfNoEntry: false })?.isSymbolicLink() && fs.readlinkSync(link) === target) continue
     fs.rmSync(link, { recursive: true, force: true })
     fs.symlinkSync(target, link)
@@ -50,13 +60,38 @@ function prepare() {
 
 function run(args, stdio) {
   prepare()
-  const result = spawnSync(path.join(basalt, "node_modules", ".bin", "astro"), args, {
+  const result = spawnSync(process.execPath, [path.join(packages(), "astro", "bin", "astro.mjs"), ...args], {
     cwd: work,
     stdio,
     encoding: "utf8",
     env: { ...process.env, BASALT_SITE: dir },
   })
   return result
+}
+
+/**
+ * One of Basalt's own src/lib modules, for the CLI to use directly: node won't
+ * strip types from a file under node_modules (where Basalt is when installed),
+ * so it and the src/lib modules it imports are stripped here, into the site's
+ * Astro root, whose node_modules link finds their packages.
+ */
+async function libModule(name) {
+  const { stripTypeScriptTypes } = await import("node:module")
+  const out = path.join(work, ".cli")
+  fs.mkdirSync(out, { recursive: true })
+  const done = new Set()
+  const emit = (n) => {
+    if (done.has(n)) return
+    done.add(n)
+    const ts = fs.readFileSync(path.join(basalt, "src", "lib", `${n}.ts`), "utf8")
+    const js = stripTypeScriptTypes(ts).replace(/(from\s+["'])\.\/([\w-]+)\.ts(["'])/g, (_, a, dep, b) => {
+      emit(dep)
+      return `${a}./${dep}.mjs${b}`
+    })
+    fs.writeFileSync(path.join(out, `${n}.mjs`), js)
+  }
+  emit(name)
+  return import(pathToFileURL(path.join(out, `${name}.mjs`)).href)
 }
 
 /** a path as short as it can be while still pointing at the file */
@@ -131,7 +166,8 @@ function scaffold() {
   const title = typeof flags.title === "string" ? flags.title : path.basename(dir)
   const files = {
     "basalt.json": JSON.stringify({ title, content: [{ from: "notes" }] }, null, 2) + "\n",
-    "notes/index.md": `---\ntitle: ${title}\n---\n\nWelcome. Notes go in \`notes/\`; link them with [[wikilinks]].[^margin]\n\nA counter, from \`islands/counter.tsx\`: <island name="counter" start="0" ssr></island>\n\n[^margin]: A footnote becomes a note in the margin.\n`,
+    "notes/about.md": `---\ntitle: About\n---\n\nA second note. [[index|Home]] links back.\n`,
+    "notes/index.md": `---\ntitle: ${title}\n---\n\nWelcome. Notes go in \`notes/\`; link one by its name in double brackets, like [[about]].[^margin]\n\nA counter, from \`islands/counter.tsx\`: <island name="counter" start="0" ssr></island>\n\n[^margin]: A footnote becomes a note in the margin.\n`,
     "styles/custom.scss": "// your look, on top of Basalt's\n",
     "islands/counter.tsx": `// An island: <island name="counter" start="3"></island> in a note mounts this.\n// Its attributes are its props ("3" arrives as 3); \`ssr\` renders it at build time too.\nimport { useState } from "preact/hooks"\n\nexport default function Counter({ start = 0 }: { start?: number }) {\n  const [n, setN] = useState(start)\n  return <button type="button" onClick={() => setN(n + 1)}>counted {n}</button>\n}\n`,
     "basalt.config.ts": `// Optional. The site's layout and theme in code (over basalt.json's), and its own\n// markdown plugins. A change to \`markdown\` restarts the dev server; the rest\n// shows on the next page.\nexport default {\n  layout: {\n    // components: { breadcrumbs: false },\n    // footer: { links: { GitHub: "https://github.com/me" } },\n  },\n  // markdown: { remarkPlugins: [], rehypePlugins: [], textTransforms: [] },\n}\n`,
@@ -243,7 +279,7 @@ switch (command) {
     const { check, report, islandNames } = await import("./check.mjs")
     // a note's slug -> the file it's in, from Basalt's own walk of the site
     process.env.BASALT_SITE = dir
-    const { loadSite, walkSite } = await import("../src/lib/site.ts")
+    const { loadSite, walkSite } = await libModule("site")
     const notes = new Map(
       walkSite(loadSite(dir))
         .filter((f) => f.isNote)

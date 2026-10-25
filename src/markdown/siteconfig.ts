@@ -27,7 +27,14 @@ export interface SiteMarkdown {
 
 const HOOKED = Symbol.for("basalt.siteResolve")
 
-function hookResolution(basalt: string) {
+/**
+ * How node finds and reads a site's own modules (its basalt.config.ts and
+ * what that imports): a package the site hasn't installed comes from
+ * Basalt's, `./plugins` finds `./plugins.ts`, and a site's TypeScript is an
+ * ES module, whatever its nearest package.json says ("type": "commonjs", as
+ * `npm init` writes, would have node read it as CommonJS and fail).
+ */
+export function hookResolution(basalt: string = process.cwd()) {
   const g = globalThis as { [HOOKED]?: boolean }
   if (g[HOOKED]) return
   g[HOOKED] = true
@@ -50,6 +57,11 @@ function hookResolution(basalt: string) {
         }
         throw err
       }
+    },
+    load(url, context, next) {
+      if (url.startsWith("file:") && /\.(m?ts|tsx)(\?|$)/.test(url) && !url.includes("/node_modules/"))
+        return next(url, { ...context, format: "module-typescript" })
+      return next(url, context)
     },
   })
 }
