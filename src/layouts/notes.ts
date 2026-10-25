@@ -238,7 +238,8 @@ export function tagIndex(all: Note[]): Map<string, Note[]> {
 }
 
 export function formatDate(d: Date, locale = registry().site.config.locale): string {
-  return d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "2-digit" })
+  // in UTC: a frontmatter date is a day, not a moment, and shouldn't slip to the one before
+  return d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "2-digit", timeZone: "UTC" })
 }
 
 // ---------- plain text, for search and feeds ----------
