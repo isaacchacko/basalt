@@ -149,7 +149,13 @@ export function check(dist, notes, { islands = null } = {}) {
   return problems
 }
 
-export function report(problems, json) {
+export function report(all, json) {
+  // the same problem twice on one line (a link, and the same link in an embed of it) is one
+  const seen = new Set()
+  const problems = all.filter((p) => {
+    const key = `${p.note}:${p.line}:${p.kind}:${p.detail}`
+    return !seen.has(key) && seen.add(key)
+  })
   if (json) return console.log(JSON.stringify(problems, null, 2))
   const errors = problems.filter((p) => !p.warning)
   for (const p of problems) {

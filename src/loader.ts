@@ -132,7 +132,13 @@ export function basaltLoader(): Loader {
         const embeds = ((existing?.data.transcludes as string[] | undefined) ?? [])
           .map((slug) => reg.bySlug.get(slug as never))
           .map((f) => (f && fs.existsSync(f.abs) ? fs.statSync(f.abs).mtimeMs : 0))
-        const digest = ctx.generateDigest(raw + reg.slugs.length + code + embeds.join(","))
+        // and a note that embeds or lists others depends on which are broken
+        // (they're missing from it), and a list on every note's frontmatter
+        const others = /!\[\[|<note-list\b/.test(raw) ? [...bus().noteErrors.keys()].sort().join(",") : ""
+        const listed = /<note-list\b/.test(raw)
+          ? reg.files.filter((f) => f.isNote && f !== file).map((f) => fs.statSync(f.abs, { throwIfNoEntry: false })?.mtimeMs ?? 0).join(",")
+          : ""
+        const digest = ctx.generateDigest(raw + reg.slugs.length + code + embeds.join(",") + others + listed)
         if (!force && existing && existing.digest === digest && !bus().noteErrors.has(file.abs)) {
           noteWarned(file.abs, unknownIslands(existing.rendered?.html ?? "", raw, rel(file), findIslands(islandsDir)))
           return false
@@ -164,7 +170,9 @@ export function basaltLoader(): Loader {
           body: raw,
           rendered,
           filePath: path.relative(process.cwd(), file.abs),
-          digest,
+          // a forced render (an island it renders at build time changed, a note
+          // it lists was fixed) is stored even though its own text is the same
+          digest: force ? ctx.generateDigest(digest + rendered.html) : digest,
         })
         return true
       }
@@ -190,6 +198,16 @@ export function basaltLoader(): Loader {
         }
         for (const abs of [...bus().noteErrors.keys(), ...bus().noteWarnings.keys()]) {
           if (!reg.byAbs.get(abs)?.isNote) noteGone(abs)
+        }
+        // which notes' frontmatter doesn't parse, first: the notes that embed
+        // or list them depend on it
+        for (const f of notes) {
+          const raw = fs.readFileSync(f.abs, "utf8")
+          try {
+            parseFrontmatter(raw)
+          } catch (err) {
+            noteFailed(f.abs, problemOf(err, raw, rel(f)))
+          }
         }
         for (const f of notes) {
           try {
@@ -228,18 +246,19 @@ export function basaltLoader(): Loader {
         const file = registry().byAbs.get(p)
         if (!file?.isNote) return
         void round(async () => {
-          const wasBroken = bus().noteErrors.has(file.abs)
           let changed = await sync(file)
           const nowBroken = bus().noteErrors.has(file.abs)
           for (const other of registry().files) {
             if (!other.isNote || other === file) continue
             const entry = store.get(other.slug)
             const embeds = (entry?.data.transcludes as string[] | undefined) ?? []
-            // every note that embeds it; and once it's fixed, every note that
-            // embeds or lists notes (it was missing from those while broken)
-            // (while it's broken, they keep showing its last good version)
-            const again = (!nowBroken && embeds.includes(file.slug)) || (wasBroken && !nowBroken && dependsOnOthers(other))
-            if (again && (await sync(other, true))) {
+            // while it's broken, the notes that show it keep its last good version
+            if (nowBroken) break
+            // every note that embeds it, and any that embeds or lists others
+            // (whether they show it, or what of it, may have changed)
+            const embedsIt = embeds.includes(file.slug)
+            if (!embedsIt && !dependsOnOthers(other)) continue
+            if (await sync(other, embedsIt)) {
               changed = true
               logger.info(`${rel(other)}: shows ${rel(file)}, rendered again`)
             }
@@ -253,9 +272,10 @@ export function basaltLoader(): Loader {
         const name = path.basename(p).replace(/\.\w+$/, "")
         const users = registry().files.filter((f) => {
           const html = f.isNote ? store.get(f.slug)?.rendered?.html : undefined
-          return !!html && html.includes(`data-island="${name}"`) && html.includes("data-island-ssr")
+          return !!html && new RegExp(`<[^>]*\\bdata-island="${name}"[^>]*\\bdata-island-ssr`).test(html)
         })
         if (!users.length) return
+        logger.info(`islands/${path.basename(p)}: rendering ${users.map(rel).join(", ")} again`)
         void round(async () => {
           let changed = false
           for (const f of users) if (await sync(f, true)) changed = true

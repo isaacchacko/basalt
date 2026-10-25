@@ -52,6 +52,8 @@ if (import.meta.hot) {
 const PERSIST = "data-astro-transition-persist"
 /** islands moving to the next page with their state: the old page's end leaves them running */
 const carried = new WeakSet<HTMLElement>()
+/** islands carried into this page: they run the newest code already (hot-updated in place) */
+const arrived = new WeakSet<HTMLElement>()
 const islandKeys = (root: ParentNode) => {
   const keys = new Map<string, HTMLElement>()
   const count = new Map<string, number>()
@@ -77,6 +79,7 @@ if (import.meta.hot) {
       el.setAttribute(PERSIST, id)
       twin.setAttribute(PERSIST, id)
       carried.add(el)
+      arrived.add(el)
     }
   })
   document.addEventListener("astro:after-swap", () => {
@@ -244,7 +247,8 @@ export function startIslands(signal: AbortSignal) {
     const running = hot.mounted.get(el)
     // the same page again, after a hot swap of something else (or an island
     // carried into this page by one): leave it be
-    if (running && !running.signal.aborted && hot.live.get(name) === versionOf(name)) {
+    if (running && !running.signal.aborted && (arrived.has(el) || hot.live.get(name) === versionOf(name))) {
+      arrived.delete(el)
       tie(signal, el, running)
       continue
     }

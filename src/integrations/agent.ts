@@ -333,7 +333,8 @@ function setup(server: ViteDevServer) {
     if (b.busy > 0 || b.rounds < build.rounds) return
     const now = Date.now()
     // the content store tells the pages after the loader stores a note
-    if (build.notes && b.stored && !build.reload) {
+    // (not the server's first round: no page is open to be told)
+    if (b.stored && !build.reload && build.seen !== "reload" && !build.rounds) {
       const wait = 800 - (now - build.loaderDone)
       if (build.loaderDone && wait > 0) return void armFallback(wait)
       if (!build.loaderDone) return void armFallback(800)
@@ -351,7 +352,7 @@ function setup(server: ViteDevServer) {
       const build = a.build
       if (!build) return
       // nothing more is coming: finish with what there is
-      if (build.notes && bus().stored) build.reload = true
+      if (bus().stored && build.seen !== "reload") build.reload = true
       if (build.vite && !build.seen) build.seen = "none"
       check()
     }, ms)
@@ -462,9 +463,12 @@ function setup(server: ViteDevServer) {
   const swappable = (f: string) =>
     /\.(md|astro|json)$/.test(f) ||
     (/\.(ts|tsx|js|mjs)$/.test(f) && !f.includes(`${path.sep}client${path.sep}`) && !f.includes(`${path.sep}islands${path.sep}`))
+  // an island is hot-updated in place (islands.ts); the notes that render it
+  // at build time (ssr) come back from the content store as a reload: a swap
+  const islandsDir = path.join(site.dir, "islands") + path.sep
   const kind = (files: Set<string>) => {
     const list = [...files]
-    if (list.some((f) => !swappable(f) && !STYLE.test(f))) return "client"
+    if (list.some((f) => !swappable(f) && !STYLE.test(f) && !f.startsWith(islandsDir))) return "client"
     if (list.length && list.every((f) => STYLE.test(f))) return "style"
     return "swap"
   }
