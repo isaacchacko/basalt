@@ -1,22 +1,24 @@
 // Basalt's look: what makes a Basalt site not look like a Quartz one
 // (ported from quartz/styles/basalt.scss).
 //
-// The palette is stone paper, basalt ink and an ember accent, with a dark
-// mode. Type is Palatino throughout, as a book is set. Small labels
+// The palette is black ink on white paper with a cobalt accent, and cobalt
+// paper at night. Type is Palatino throughout, as a book is set. Small labels
 // (a sidebar section, a date) are set like the titles, in italic, never in
 // small caps or monospace. Lists are hung on hexagons, basalt's columns.
 // A site changes any of it in its styles/custom.scss.
 
 :root {
-  --light: #f4f1ec;
-  --lightgray: #e2ddd4;
-  --gray: #9a948a;
-  --darkgray: #3a3835;
-  --dark: #1d1c1a;
-  --secondary: #2f4a5a;
-  --tertiary: #d4572a;
-  --highlight: rgba(212, 87, 42, 0.12);
-  --textHighlight: #f2c14e66;
+  // black ink on white paper, with cobalt (the ocean dither's blue) as the
+  // accent: links, note numbers, the page you're on
+  --light: #ffffff;
+  --lightgray: #e3e5ec;
+  --gray: #6b6e78;
+  --darkgray: #1c1c1e;
+  --dark: #000000;
+  --secondary: #1b3fd0;
+  --tertiary: #1b3fd0;
+  --highlight: rgba(27, 63, 208, 0.07);
+  --textHighlight: #c8d3f7;
 
   // Palatino, Zapf's book face, for everything but code: on a Mac it's
   // Palatino, on Windows Palatino Linotype or Book Antiqua, elsewhere one of
@@ -32,15 +34,16 @@
 }
 
 :root[saved-theme="dark"] {
-  --light: #141413;
-  --lightgray: #2a2926;
-  --gray: #6f6b64;
-  --darkgray: #d6d2ca;
-  --dark: #f0ece4;
-  --secondary: #8fb0c2;
-  --tertiary: #ef7a45;
-  --highlight: rgba(239, 122, 69, 0.15);
-  --textHighlight: #b8862b66;
+  // the same blue at night: pale blue ink on deep cobalt paper
+  --light: #0a1440;
+  --lightgray: #1f2f78;
+  --gray: #8a9cf0;
+  --darkgray: #d4dcf8;
+  --dark: #eef1fd;
+  --secondary: #a9b9ff;
+  --tertiary: #8ea4ff;
+  --highlight: rgba(142, 164, 255, 0.16);
+  --textHighlight: #2c3f9a;
 
   color-scheme: dark;
 }
@@ -327,4 +330,11 @@ article .marginfigure img,
 .margin .in-margin img {
   border-radius: 4px;
   box-shadow: 0 0 0 1px var(--lightgray);
+}
+
+// a theme toggle changes every colour at once (darkmode.ts)
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
 }

@@ -12,12 +12,12 @@ const SOURCES = "pre:has(> code.mermaid), pre:has(> code.language-mermaid), pre[
 
 // a page without Basalt's colours still gets a drawing (mermaid throws on an empty colour)
 const FALLBACK: Record<string, [light: string, dark: string]> = {
-  "--light": ["#f4f1ec", "#141413"],
-  "--lightgray": ["#e2ddd4", "#2a2926"],
-  "--gray": ["#9a948a", "#6f6b64"],
-  "--darkgray": ["#3a3835", "#d6d2ca"],
-  "--dark": ["#1d1c1a", "#f0ece4"],
-  "--secondary": ["#2f4a5a", "#8fb0c2"],
+  "--light": ["#ffffff", "#0a1440"],
+  "--lightgray": ["#e3e5ec", "#1f2f78"],
+  "--gray": ["#6b6e78", "#8a9cf0"],
+  "--darkgray": ["#1c1c1e", "#d4dcf8"],
+  "--dark": ["#000000", "#eef1fd"],
+  "--secondary": ["#1b3fd0", "#a9b9ff"],
 }
 
 function css(name: string) {

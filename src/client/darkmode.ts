@@ -6,7 +6,13 @@ const root = document.documentElement
 const current = () => (root.getAttribute("saved-theme") === "dark" ? "dark" : "light")
 
 function setTheme(theme: "light" | "dark", remember: boolean) {
+  // the whole page changes at once: nothing eases into the new colours
+  // (the navbar's drawer, which fades its background as it opens, lagged
+  // behind the page)
+  root.classList.add("theme-switching")
   root.setAttribute("saved-theme", theme)
+  void root.offsetWidth
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("theme-switching")))
   if (remember) {
     try {
       localStorage.setItem("theme", theme)
