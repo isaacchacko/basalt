@@ -23,10 +23,9 @@ import "../styles/tree.scss"
   import { startIslands as islandsAtLoad } from "../client/islands"
   import { startGraphs } from "../client/graphembed"
   import { startMermaid } from "../client/mermaid"
-  import { startTrees } from "../client/tree"
 
   let startIslands = islandsAtLoad
-  const parts = [startEmbeds, startCodeControls, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startTrees, startViewer]
+  const parts = [startEmbeds, startCodeControls, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startViewer]
   let page: AbortController | null = null
 
   function start() {
