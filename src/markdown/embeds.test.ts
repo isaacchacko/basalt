@@ -168,6 +168,12 @@ describe("rehypeEmbeds", () => {
     assert.deepStrictEqual(fileEmbedOptions("fullscreen"), { title: undefined, fullscreen: true })
   })
 
+  test("a code file embed's line range isn't its title", () => {
+    assert.deepStrictEqual(fileEmbedOptions("L3-L9"), { title: undefined, fullscreen: false })
+    assert.deepStrictEqual(fileEmbedOptions("L7"), { title: undefined, fullscreen: false })
+    assert.deepStrictEqual(fileEmbedOptions("the sieve itself"), { title: "the sieve itself", fullscreen: false })
+  })
+
   test("a youtube link becomes a facade that is still a link", async () => {
     const html = await render("![a talk](https://youtu.be/dQw4w9WgXcQ?t=42)")
     assert.match(html, /^<figure class="embed embed-youtube"/)
