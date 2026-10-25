@@ -26,11 +26,11 @@ showcase/
     assets/…             # pictures, left out
 ```
 
-Each line is an entry. A name ending in `/` (or with entries under it) is a folder; click it, or tab to it and press enter, to fold it. `# ` after a name is its note, and a note can hold `code` and [[links]].
+Each line is an entry. A name ending in `/` (or with entries under it) is a folder: click it, or tab to it and press enter, to fold it. `# ` after a name is its note, and a note can hold `code` and [[links]].
 
 ## What changed
 
-A sign before a name marks it: `+` added, `-` removed, `~` changed, `!` worth looking at. Two marked trees, side by side, say what one has that the other hasn't.
+A sign before a name marks it: `+` added, `-` removed, `~` changed, `!` highlighted. Two marked trees, side by side, say what one has that the other hasn't.
 
 ```tree title="A pull request"
 basalt/
@@ -46,9 +46,9 @@ basalt/
 
 ## Pasted from `tree`
 
-The output of the `tree` command works as it is, branches and all. A folder you'd rather not show in full can end in `/…`, and a line of `…` says there's more.
+The output of the `tree` command works as it is, branches and all. A folder you'd rather not show in full can end in `/…`.
 
-```tree open=1
+```tree
 .
 ├── astro.config.ts
 ├── bin
@@ -57,12 +57,10 @@ The output of the `tree` command works as it is, branches and all. A folder you'
 └── src
     ├── client
     │   ├── embeds.ts
-    │   └── tree.ts
+    │   └── viewer.ts
     └── markdown
         ├── diagrams.ts
         └── tree.ts
 
 5 directories, 6 files
 ```
-
-`open=1` after the language starts every folder below the first level folded.
