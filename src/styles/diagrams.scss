@@ -1,0 +1,120 @@
+figure.diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+  color: var(--darkgray);
+  overflow-x: auto;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    font-family: var(--titleFont);
+    font-style: italic;
+    font-variation-settings: "SOFT" 100;
+    font-size: 0.9rem;
+    color: var(--gray);
+  }
+}
+
+// graphviz's text is drawn in the theme's ink, its edges a step lighter
+figure.diagram-graphviz svg {
+  .edge path,
+  .edge polygon {
+    stroke: var(--gray);
+  }
+  .edge polygon {
+    fill: var(--gray);
+  }
+  .node polygon,
+  .node ellipse,
+  .node path {
+    stroke: var(--secondary);
+  }
+}
+
+.diagram-error {
+  border: 1px dashed var(--tertiary);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+
+  pre {
+    margin: 0.5rem 0 0;
+    white-space: pre-wrap;
+  }
+}
+
+// a ```graph: the build-time svg until the live renderer replaces it
+figure.diagram-graph {
+  align-items: stretch;
+
+  .graph-embed {
+    position: relative;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    overflow: hidden;
+
+    & > svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  figcaption {
+    align-self: center;
+  }
+
+  // full screen (the viewer's expand): the graph takes the whole screen, and
+  // graphembed.ts refits its camera to it
+  &:fullscreen {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    margin: 0;
+    padding: 1.5rem;
+    background: var(--light);
+    overflow: hidden;
+
+    .graph-embed {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: auto !important;
+      border: none;
+    }
+  }
+}
+
+// ```mermaid: drawn in the browser, in the page's colours; until then (or
+// without JavaScript) its source shows as code
+figure.diagram-mermaid {
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+  .mermaid-drawing:empty {
+    display: none;
+  }
+  .mermaid-drawing svg {
+    display: block;
+    margin: 0 auto;
+  }
+  // drawn, the source steps aside; still drawing, or failed, it shows
+  &:not([data-drawing], [data-failed]) > .mermaid-source {
+    display: none;
+  }
+  & > .mermaid-source {
+    align-self: stretch;
+    margin: 0;
+  }
+  &[data-drawing] > .mermaid-source {
+    opacity: 0.5;
+  }
+}

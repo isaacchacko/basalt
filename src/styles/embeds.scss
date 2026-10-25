@@ -1,0 +1,276 @@
+// Basalt's embeds: every one is a <figure class="embed embed-KIND">, a live
+// part and an optional caption with a link back to where it came from.
+
+figure.embed {
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: var(--embed-width, 100%);
+  min-width: 0;
+
+  & > iframe,
+  & > video,
+  & > object,
+  & > .embed-facade {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    background: var(--lightgray);
+  }
+
+  & > iframe {
+    aspect-ratio: var(--embed-aspect, auto);
+    height: var(--embed-height, auto);
+  }
+
+  & > object {
+    height: var(--embed-height, 720px);
+  }
+
+  // a video keeps to the column, at its own shape: a width it asked for is a
+  // most, never more than the column
+  & > video {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: auto;
+    align-self: flex-start;
+    background: #000;
+    &:not([width]) {
+      width: 100%;
+    }
+  }
+
+  & > img {
+    margin: 0;
+    max-width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.6rem;
+    justify-content: space-between;
+    font-family: var(--titleFont);
+    font-style: italic;
+    font-variation-settings: "SOFT" 100;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--gray);
+  }
+
+  .embed-source {
+    font-weight: 400;
+    color: var(--gray);
+    margin-left: auto;
+  }
+
+  .embed-fallback {
+    padding: 1rem;
+    margin: 0;
+  }
+}
+
+// ---------- audio: a slim bar in the page's colours ----------
+
+figure.embed-audio {
+  & > audio {
+    width: 100%;
+  }
+  & > audio[data-themed] {
+    display: none;
+  }
+}
+
+.audio-player {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 0.9rem 0.45rem 0.45rem;
+  border: 1px solid var(--lightgray);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lightgray) 35%, var(--light));
+  color: var(--darkgray);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+
+  .audio-play {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--dark);
+    color: var(--light);
+    cursor: pointer;
+    transition:
+      background 0.2s ease,
+      transform 0.2s var(--basalt-ease, ease);
+
+    &:hover {
+      background: var(--tertiary);
+    }
+    &:active {
+      transform: scale(0.94);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--tertiary);
+      outline-offset: 2px;
+    }
+  }
+
+  .audio-time {
+    flex: none;
+    min-width: 2.6em;
+    color: var(--gray);
+  }
+
+  .audio-seek {
+    --done: 0%;
+    flex: 1;
+    min-width: 0;
+    height: 1.2rem;
+    margin: 0;
+    background: transparent;
+    appearance: none;
+    cursor: pointer;
+
+    &::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(var(--tertiary), var(--tertiary)) 0 / var(--done) 100% no-repeat,
+        var(--lightgray);
+    }
+    &::-moz-range-track {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--lightgray);
+    }
+    &::-moz-range-progress {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--tertiary);
+    }
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      margin-top: -4px;
+      border: none;
+      border-radius: 50%;
+      background: var(--dark);
+    }
+    &::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border: none;
+      border-radius: 50%;
+      background: var(--dark);
+    }
+    &:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+}
+
+// ---------- a video that's only a thumbnail until it's clicked ----------
+
+.embed-facade {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    margin: 0;
+    transition: transform 0.4s var(--basalt-ease, ease);
+  }
+
+  &:hover img {
+    transform: scale(1.02);
+  }
+
+  // a round button with a real triangle, a little right of centre the way
+  // a triangle's weight sits
+  .embed-play {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 64px;
+    height: 64px;
+    translate: -50% -50%;
+    border-radius: 50%;
+    background: rgb(20 20 19 / 0.72);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+    transition:
+      background 0.2s ease,
+      scale 0.3s var(--basalt-ease, ease);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M26 20.5v23a1.5 1.5 0 0 0 2.3 1.3l18-11.5a1.5 1.5 0 0 0 0-2.6l-18-11.5a1.5 1.5 0 0 0-2.3 1.3z'/%3E%3C/svg%3E")
+        center / 100% 100% no-repeat;
+    }
+  }
+
+  &:hover .embed-play,
+  &:focus-visible .embed-play {
+    background: var(--tertiary);
+    scale: 1.06;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tertiary);
+    outline-offset: 2px;
+  }
+}
+
+figure.embed > iframe.embed-playing {
+  aspect-ratio: 16 / 9;
+}
+
+.embed-facade + figcaption,
+figure.embed > iframe + figcaption {
+  margin-top: 0;
+}
+
+// the blockquote a tweet is before widgets.js gets to it
+figure.embed-tweet blockquote.twitter-tweet {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--lightgray);
+  border-left: 3px solid var(--secondary);
+  border-radius: 6px;
+
+  p {
+    margin: 0 0 0.4rem;
+  }
+}
+
+figure.embed-tweet .twitter-tweet-rendered {
+  margin: 0 !important;
+}
+
+.embed-missing,
+.transclude-missing {
+  padding: 0.5rem 0.8rem;
+  border: 1px dashed var(--gray);
+  border-radius: 6px;
+  color: var(--gray);
+  font-size: 0.9rem;
+}

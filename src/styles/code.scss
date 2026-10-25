@@ -1,0 +1,98 @@
+// Code blocks' bars: a titled block's header, and a code file's (src/client/codefile.ts).
+
+// ---------- a titled code block is one thing: a bar, then the code ----------
+
+// Quartz floats a code block's title as its own little box above the block,
+// where it reads as something else on the page. Basalt joins them: the title
+// is the frame's header bar.
+figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-title] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 1rem;
+  width: auto;
+  margin: 0;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--lightgray);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: color-mix(in srgb, var(--lightgray) 45%, transparent);
+  color: var(--dark);
+  font-size: 0.85rem;
+
+  & + pre {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}
+
+// a code file, embedded with ![[file.py]]: its name, then what you can do
+// with it: see the raw file, copy the code, and (if it asked) go full screen
+figure.code-file {
+  margin: 1.5rem 0;
+
+  & > figcaption[data-rehype-pretty-code-title] {
+    align-items: center;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .code-file-name {
+    font-family: var(--codeFont);
+    font-weight: 600;
+  }
+
+  .code-file-actions {
+    display: flex;
+    gap: 0.15rem;
+    margin-left: auto;
+  }
+
+  .code-file-action {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gray);
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      background 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--dark);
+      background: var(--light);
+    }
+
+    &[data-done] {
+      color: var(--tertiary);
+    }
+  }
+
+  // the copy button lives in the bar; Quartz's own floats over the code
+  pre > .clipboard-button {
+    display: none;
+  }
+
+  &:fullscreen {
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 3rem;
+    background: var(--light);
+    overflow: auto;
+
+    & > pre {
+      flex: 1;
+      max-height: none;
+      font-size: 1rem;
+    }
+  }
+}
+

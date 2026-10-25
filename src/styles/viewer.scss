@@ -1,0 +1,220 @@
+// The viewer: any picture, full screen (src/client/viewer.ts).
+
+$viewer-ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+
+img.zoomable {
+  cursor: zoom-in;
+}
+
+figure.diagram-graphviz,
+figure.diagram-svg,
+figure.diagram-mermaid {
+  cursor: zoom-in;
+}
+
+// a diagram or a frame shows a way into the viewer when you reach for it
+:is(figure.diagram, figure.embed-frame, figure.diagram-mermaid) {
+  position: relative;
+
+  & > .viewer-expand {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: color-mix(in srgb, var(--light) 88%, transparent);
+    border: 1px solid var(--lightgray);
+  }
+  &:hover > .viewer-expand,
+  & > .viewer-expand:focus-visible {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    & > .viewer-expand {
+      opacity: 1;
+    }
+  }
+}
+
+img.zoomable:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 3px;
+}
+
+.viewer-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--darkgray);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--lightgray) 70%, transparent);
+    color: var(--dark);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 1px;
+  }
+  &[hidden] {
+    display: none;
+  }
+  @media (pointer: coarse) {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+dialog.basalt-viewer {
+  // the whole viewport, as the page dimming rather than a box on top of it
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  color: var(--darkgray);
+  background: color-mix(in srgb, var(--light) 96%, transparent);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+
+  &[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  &::backdrop {
+    background: transparent;
+  }
+  &[data-pointer] .viewer-close:focus-visible {
+    outline: none;
+  }
+
+  .viewer-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.6rem 0.75rem;
+    z-index: 2;
+  }
+  .viewer-count {
+    padding-left: 0.5rem;
+    font-family: var(--bodyFont);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--gray);
+  }
+  .viewer-spacer {
+    flex: 1;
+  }
+
+  .viewer-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    margin: 0 clamp(1rem, 5vw, 4.5rem);
+    overflow: hidden;
+    touch-action: none;
+    cursor: zoom-out;
+  }
+
+  .viewer-leaving {
+    pointer-events: none;
+  }
+  .viewer-media,
+  .viewer-leaving {
+    grid-area: 1 / 1;
+    display: block;
+    max-width: none;
+    margin: 0;
+    border-radius: 3px;
+    transform-origin: center;
+    user-select: none;
+    // a page may give its images content-visibility: auto, which would let the
+    // browser skip laying out a just-opened image, so it measures as 0 wide
+    content-visibility: visible;
+    cursor: zoom-in;
+
+    &[data-kind="image"] {
+      // a faint ring, so a dark screenshot keeps its edges
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--darkgray) 14%, transparent),
+        0 18px 50px rgb(0 0 0 / 0.16);
+    }
+    &[data-kind="svg"] svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+    }
+    &[data-kind="frame"] {
+      border: 1px solid var(--lightgray);
+      border-radius: 8px;
+      background: white;
+      cursor: auto;
+    }
+  }
+  &[data-zoomed="true"] .viewer-media {
+    cursor: grab;
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  .viewer-prev,
+  .viewer-next {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    z-index: 2;
+  }
+  .viewer-prev {
+    left: 0.75rem;
+  }
+  .viewer-next {
+    right: 0.75rem;
+  }
+
+  .viewer-caption {
+    margin: 0 auto;
+    padding: 0.75rem 1rem 1.1rem;
+    max-width: 40em;
+    text-align: center;
+    font-family: var(--titleFont);
+    font-style: italic;
+    font-size: 0.98rem;
+    line-height: 1.45;
+    color: var(--darkgray);
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .viewer-stage {
+      margin: 0;
+    }
+    .viewer-prev,
+    .viewer-next {
+      display: none;
+    }
+  }
+}
+
+html[data-viewer] {
+  overflow: hidden;
+}
+

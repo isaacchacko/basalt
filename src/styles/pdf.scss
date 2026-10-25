@@ -1,0 +1,246 @@
+// The pdf viewer (src/client/pdf.ts).
+
+$pdf-ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+
+figure.embed-pdf {
+  & > .pdf-viewer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: var(--embed-height, 720px);
+    border: 1px solid var(--lightgray);
+    border-radius: 8px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--lightgray) 45%, var(--light));
+
+    // until the viewer draws (or with no script): the browser's own
+    & > object {
+      flex: 1;
+      width: 100%;
+      border: none;
+    }
+  }
+
+  // full screen: the viewer is the screen
+  &:fullscreen {
+    margin: 0;
+    background: var(--light);
+
+    & > .pdf-viewer {
+      height: 100%;
+      border: none;
+      border-radius: 0;
+    }
+
+    & > figcaption {
+      display: none;
+    }
+  }
+}
+
+.pdf-stage {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  outline: none;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tertiary) 45%, transparent);
+  }
+}
+
+.pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.pdf-page {
+  position: relative;
+  flex: none;
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 6px 18px -10px rgb(0 0 0 / 0.35);
+
+  canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    animation: pdf-page-in 0.35s $pdf-ease;
+  }
+}
+
+@keyframes pdf-page-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.pdf-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 4px 6px;
+  border-top: 1px solid var(--lightgray);
+  background: var(--light);
+  font-size: 0.82rem;
+  color: var(--gray);
+}
+
+.pdf-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pdf-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--highlight);
+    color: var(--dark);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--tertiary) 55%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+.pdf-page-input {
+  width: 2.6em;
+  height: 24px;
+  margin: 0 2px;
+  padding: 0;
+  border: 1px solid var(--lightgray);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dark);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+    border-color: var(--tertiary);
+  }
+}
+
+.pdf-total,
+.pdf-zoom {
+  min-width: 3.2em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.pdf-total {
+  min-width: 0;
+  margin-right: 4px;
+}
+
+// a phone: no room for a zoom readout
+@media (max-width: 600px) {
+  .pdf-zoom,
+  .pdf-fit {
+    display: none;
+  }
+}
+
+// ---------- the text layer: invisible text over the drawn page, to select and find ----------
+// (pdf.js's own rules, from pdfjs-dist/web/pdf_viewer.css, trimmed to what a
+// reader needs)
+
+.pdf-page .textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  text-align: initial;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+
+  :is(span, br) {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+  }
+
+  > :not(.markedContent),
+  .markedContent span:not(.markedContent) {
+    z-index: 1;
+    --font-height: 0;
+    font-size: calc(var(--text-scale-factor) * var(--font-height));
+    --scale-x: 1;
+    --rotate: 0deg;
+    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+  }
+
+  .markedContent {
+    display: contents;
+  }
+
+  span[role="img"] {
+    user-select: none;
+    cursor: default;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--tertiary) 30%, transparent);
+    color: transparent;
+  }
+
+  br::selection {
+    background: transparent;
+  }
+
+  .endOfContent {
+    display: block;
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+    cursor: default;
+    user-select: none;
+  }
+
+  &.selecting .endOfContent {
+    top: 0;
+  }
+}

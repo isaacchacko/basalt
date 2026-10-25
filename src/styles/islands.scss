@@ -1,0 +1,26 @@
+// Islands (src/client/islands.ts): a component, a frame, a live html block.
+
+div.island {
+  margin: 1rem 0;
+}
+
+figure.island-frame {
+  height: 600px;
+
+  & > iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+  }
+}
+
+iframe.island-html {
+  display: block;
+  width: 100%;
+  margin: 1rem 0;
+  border: 1px solid var(--lightgray);
+  border-radius: 6px;
+  background: var(--light);
+}
