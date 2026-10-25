@@ -1,0 +1,19 @@
+diff --git a/sieve.py b/sieve.py
+index 0f7954f..3c20fe7 100644
+--- a/sieve.py
++++ b/sieve.py
+@@ -2,6 +2,8 @@
+ 
+ 
+ def sieve(n: int) -> list[int]:
++    if n < 2:
++        return []
+     is_prime = [True] * n
+     is_prime[0] = is_prime[1] = False
+     for p in range(2, int(n**0.5) + 1):
+@@ -13,4 +15,4 @@ def sieve(n: int) -> list[int]:
+ 
+ 
+ if __name__ == "__main__":
+-    print(sieve(100))
++    print(sieve(1000)[-10:])
