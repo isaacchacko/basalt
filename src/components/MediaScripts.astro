@@ -24,11 +24,10 @@ import "../styles/compare.scss"
   import { startIslands as islandsAtLoad } from "../client/islands"
   import { startGraphs } from "../client/graphembed"
   import { startMermaid } from "../client/mermaid"
-  import { startTrees } from "../client/tree"
   import { startCompare } from "../client/compare"
 
   let startIslands = islandsAtLoad
-  const parts = [startEmbeds, startCodeFiles, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startTrees, startCompare, startViewer]
+  const parts = [startEmbeds, startCodeFiles, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startCompare, startViewer]
   let page: AbortController | null = null
 
   function start() {
