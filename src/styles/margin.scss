@@ -1,0 +1,308 @@
+// Basalt's margin column (Margin.astro, src/client/margin.ts), after Tufte:
+// notes small, in the page's ink, beside their lines; their numbers in ember.
+
+$ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+
+.margin {
+  position: relative;
+  min-width: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--darkgray);
+}
+
+// ---------- in the text ----------
+
+// a sidenote's number: raised, but taking no room, so its line keeps the
+// paragraph's leading
+article sup:has(> a[data-sidenote]) {
+  position: relative;
+  top: -0.45em;
+  font-size: 0.75em;
+  line-height: 0;
+  vertical-align: baseline;
+
+  a {
+    padding: 0 0.12em;
+    border-radius: 3px;
+    background: none;
+    color: var(--tertiary);
+    font-family: var(--titleFont);
+    font-weight: 650;
+    text-decoration: none;
+    transition: background 0.2s ease;
+  }
+}
+
+.sidenote-number {
+  margin-right: 0.35em;
+  color: var(--tertiary);
+  font-family: var(--titleFont);
+  font-weight: 650;
+  font-variant-numeric: lining-nums;
+}
+
+.marginnote-title {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-family: var(--titleFont);
+  font-style: italic;
+  font-weight: 550;
+  color: var(--dark);
+}
+
+// no margin (a phone, or no script): a sidenote opens under its line when
+// its number is tapped; a margin note is a small aside where it was
+article .sidenote {
+  display: none;
+
+  &.open {
+    display: block;
+    margin: 0.4rem 0 0.6rem;
+    padding: 0.1rem 0 0.1rem 0.8rem;
+    border-left: 2px solid var(--tertiary);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--darkgray);
+    animation: margin-open 0.25s $ease;
+  }
+}
+
+article .marginnote {
+  display: block;
+  margin: 0.6rem 0 1rem;
+  padding: 0.1rem 0 0.1rem 0.8rem;
+  border-left: 2px solid var(--lightgray);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--darkgray);
+
+  p {
+    margin: 0 0 0.35rem;
+    line-height: inherit;
+  }
+
+  & > :last-child {
+    margin-bottom: 0;
+  }
+
+  img {
+    display: block;
+    max-width: min(100%, 20rem);
+    border-radius: 4px;
+  }
+}
+
+// beside a margin, the notes live there; the footnotes at the bottom stand
+// aside (they stay in the html, for feeds and readers)
+html[data-margin="beside"] article {
+  .sidenote,
+  .marginnote,
+  section[data-footnotes],
+  section.footnotes {
+    display: none;
+  }
+}
+
+// ---------- in the margin ----------
+
+.margin-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+
+  .in-margin {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 2px;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: var(--darkgray);
+    pointer-events: auto;
+    animation: margin-in 0.45s $ease backwards 0.25s;
+    transition:
+      opacity 0.2s ease,
+      color 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+
+    p {
+      margin: 0 0 0.4rem;
+      line-height: inherit;
+    }
+
+    & > :last-child {
+      margin-bottom: 0;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 0 0 0.4rem;
+      border-radius: 4px;
+    }
+
+    // a figure's image comes first: no break before its caption
+    &.marginfigure br:first-of-type {
+      display: none;
+    }
+  }
+}
+
+html:not([data-margin="beside"]) .margin-layer {
+  display: none;
+}
+
+// a number and its note light up together, lightly
+article sup a.is-paired {
+  background: var(--highlight);
+}
+
+.margin-layer .in-margin.is-paired,
+.margin-layer .in-margin.is-called {
+  color: var(--dark);
+  background: var(--highlight);
+  box-shadow: 0 0 0 0.3rem var(--highlight);
+}
+
+.margin-layer .in-margin.is-called {
+  animation: margin-called 1.2s ease forwards;
+}
+
+// what a preview lies over fades back; it doesn't move
+.margin .is-covered {
+  opacity: 0.1;
+}
+
+// ---------- what rests in the margin ----------
+
+.margin-resting {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+html[data-margin="beside"] .margin-resting {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  & > .margin-part {
+    position: absolute;
+    left: 0;
+    right: 0;
+    transition: opacity 0.2s ease;
+  }
+}
+
+// not beside the note: the parts are set under it
+html[data-margin="inline"] .margin-resting {
+  margin-top: 2.5rem;
+}
+
+.margin-label {
+  margin: 0 0 0.45rem;
+  font-family: var(--titleFont);
+  font-style: italic;
+  font-weight: 550;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  color: var(--dark);
+}
+
+.margin .toc,
+.margin .backlinks {
+  ol,
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    margin: 0;
+  }
+
+  a {
+    display: block;
+    padding: 0.12rem 0;
+    background: none;
+    color: var(--darkgray);
+    font-weight: 450;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--tertiary);
+    }
+  }
+}
+
+.margin .toc {
+  li {
+    padding-left: calc(0.85rem * var(--depth, 0));
+  }
+
+  a {
+    position: relative;
+    color: var(--gray);
+
+    // the section being read: in full ink, with an ember tick
+    &.is-current {
+      color: var(--dark);
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: -0.7rem;
+        top: 0.55em;
+        width: 0.35rem;
+        height: 1px;
+        background: var(--tertiary);
+      }
+    }
+  }
+}
+
+@keyframes margin-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+}
+
+@keyframes margin-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes margin-called {
+  0%,
+  60% {
+    background: var(--highlight);
+    box-shadow: 0 0 0 0.3rem var(--highlight);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 0.3rem transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .margin-layer .in-margin,
+  article .sidenote.open {
+    animation: none;
+  }
+}

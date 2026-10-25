@@ -1,0 +1,51 @@
+---
+// The note's contents, in the margin when the note asks for them: its
+// headings, the one being read lit.
+interface Props {
+  headings: { depth: number; slug: string; text: string }[]
+  label?: string
+}
+const { headings, label = "Contents" } = Astro.props
+const shown = headings.filter((h) => h.depth > 1 && h.depth <= 4)
+const top = Math.min(...shown.map((h) => h.depth))
+---
+
+<nav class="toc margin-part" aria-label="contents">
+  <p class="margin-label">{label}</p>
+  <ol>
+    {
+      shown.map((h) => (
+        <li style={`--depth: ${h.depth - top}`}>
+          <a href={`#${h.slug}`} data-for={h.slug}>{h.text}</a>
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+
+<script>
+  import { onPage } from "../client/margin"
+
+  // the heading being read is the last one above a line a third of the way down
+  onPage((signal) => {
+    const toc = document.querySelector<HTMLElement>(".margin .toc")
+    if (!toc) return
+    const links = [...toc.querySelectorAll<HTMLAnchorElement>("a[data-for]")]
+    const heads = links
+      .map((a) => document.getElementById(a.dataset.for!))
+      .filter((h): h is HTMLElement => !!h)
+    let frame = 0
+    const update = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const line = innerHeight / 3
+        let current: string | undefined
+        for (const h of heads) if (h.getBoundingClientRect().top <= line) current = h.id
+        for (const a of links) a.classList.toggle("is-current", a.dataset.for === current)
+      })
+    }
+    update()
+    addEventListener("scroll", update, { passive: true, signal })
+    addEventListener("resize", update, { signal })
+  })
+</script>

@@ -1,0 +1,62 @@
+// The graph view in the margin (Graph.astro, src/client/graph.ts).
+
+.graph-view {
+  .graph-view-outer {
+    position: relative;
+    height: 11rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .graph-view-local {
+    position: absolute;
+    inset: 0;
+  }
+
+  .graph-view-expand {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--gray);
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      background 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--dark);
+      background: var(--highlight);
+    }
+  }
+
+  dialog.graph-view-global {
+    width: min(90vw, 1100px);
+    height: min(85vh, 800px);
+    padding: 0;
+    border: 1px solid var(--lightgray);
+    border-radius: 8px;
+    background: var(--light);
+    color: var(--darkgray);
+
+    &::backdrop {
+      background: rgb(0 0 0 / 0.35);
+      backdrop-filter: blur(3px);
+    }
+  }
+
+  .graph-view-global-canvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+}
