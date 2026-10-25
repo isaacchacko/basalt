@@ -10,6 +10,13 @@
 // unless the pointer is on it.
 //
 // Only beside a margin: on a phone, a link is just a link.
+//
+// A marked card that asks to open on a click ([data-secondary-open="click"],
+// on it or the element it's in) doesn't show on hover: a click on its element
+// (or enter or space) opens it and keeps it, so its links and ▶ rows can be
+// used, until that element is clicked again, escape, a click elsewhere, or
+// another opens. While it's open, nothing else shows here. On a phone it opens
+// as a sheet at the foot of the screen.
 
 import { enhanceCopy, isDark, isImageLink, themedPair } from "./embeds"
 import { isBeside, levelWith, lineOf, onPage } from "./margin"
@@ -263,6 +270,17 @@ function soundCard(word: HTMLElement): Item {
   }
 }
 
+/** an element whose marked card opens on a click, not a hover */
+const CLICK = '[data-secondary-open="click"]'
+function clickTrigger(target: Element | null, article: Element): HTMLElement | null {
+  for (let node = target; node && node !== article.parentElement; node = node.parentElement) {
+    if (!(node instanceof HTMLElement)) continue
+    const card = node.querySelector<HTMLElement>(":scope > [data-secondary]")
+    if (card && (card.matches(CLICK) || node.matches(CLICK))) return node
+  }
+  return null
+}
+
 /** What, if anything, the margin has to say about what's under the pointer. */
 function itemFor(target: Element, article: Element): [Item, Element] | null {
   if (!article.contains(target)) return null
@@ -272,7 +290,9 @@ function itemFor(target: Element, article: Element): [Item, Element] | null {
     if (node.matches(".sidenote, .marginnote, sup:has(> a[data-footnote-ref])")) return null
     // a <sound>: its card, unless it's playing (its now-playing card is up)
     if (node.matches(".sound")) return node.hasAttribute("data-playing") ? null : [soundCard(node as HTMLElement), node]
-    const content = node.querySelector<HTMLElement>(":scope > [data-secondary]")
+    const content: HTMLElement | null = node.querySelector<HTMLElement>(":scope > [data-secondary]")
+    // a card that opens on a click says nothing to a hover
+    if (content && (content.matches(CLICK) || node.matches(CLICK))) return null
     if (content) return [marked(content), node]
     if (node instanceof HTMLAnchorElement) {
       if (isImageLink(node)) return [imagePreview(node), node]
@@ -307,6 +327,12 @@ onPage((signal) => {
   margin.append(hover)
 
   let shown: { key: string; node: HTMLElement; anchor: Element; y: number } | null = null
+  // the card a click opened, and what opened it
+  let pinned: HTMLElement | null = null
+  // a phone's sheet, for a card opened by a tap
+  let sheet: HTMLElement | null = null
+  for (const t of article.querySelectorAll<HTMLElement>(`${CLICK}, :has(> ${CLICK})`))
+    if (t.querySelector(":scope > [data-secondary]")) t.setAttribute("aria-expanded", "false")
   let showTimer: ReturnType<typeof setTimeout> | undefined
   let hideTimer: ReturnType<typeof setTimeout> | undefined
   let wanted: string | undefined
@@ -342,6 +368,14 @@ onPage((signal) => {
     wanted = undefined
     if (shown) leave(shown.node)
     shown = null
+    pinned?.setAttribute("aria-expanded", "false")
+    pinned = null
+    if (sheet) {
+      const gone = sheet
+      gone.dataset.leaving = "true"
+      setTimeout(() => gone.remove(), 180)
+      sheet = null
+    }
     uncover()
     delete document.documentElement.dataset.marginHover
   }
@@ -350,6 +384,8 @@ onPage((signal) => {
   document.addEventListener("basalt:sound", hide, { signal })
 
   const hideSoon = () => {
+    // what a click opened stays until it's closed
+    if (pinned) return
     clearTimeout(showTimer)
     wanted = undefined
     if (!shown) return
@@ -357,7 +393,65 @@ onPage((signal) => {
     hideTimer = setTimeout(hide, HIDE_MS)
   }
 
+  /** a card opened by a click: shown at once, and kept */
+  const pin = async (trigger: HTMLElement) => {
+    const content = trigger.querySelector<HTMLElement>(":scope > [data-secondary]")
+    if (!content) return
+    hide()
+    const item = marked(content)
+    const node = await item.build().catch(() => null)
+    if (!node || signal.aborted) return
+    pinned = trigger
+    trigger.setAttribute("aria-expanded", "true")
+    node.dataset.key = item.key
+    if (isBeside()) {
+      hover.append(node)
+      shown = { key: item.key, node, anchor: trigger, y: trigger.getBoundingClientRect().top + 1 }
+      document.documentElement.dataset.marginHover = node.className
+      place()
+      node.querySelectorAll("img").forEach((img) => img.addEventListener("load", place, { once: true }))
+    } else {
+      sheet = el("div", "margin-sheet")
+      sheet.setAttribute("role", "dialog")
+      sheet.append(node)
+      document.body.append(sheet)
+    }
+  }
+
+  document.addEventListener(
+    "click",
+    (e) => {
+      const target = e.target as Element
+      // inside the open card: its links and rows do what they do
+      if (hover.contains(target) || sheet?.contains(target)) return
+      const trigger = clickTrigger(target, article)
+      if (trigger) {
+        e.preventDefault()
+        if (trigger === pinned) hide()
+        else void pin(trigger)
+      } else if (pinned) hide()
+    },
+    { signal },
+  )
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return
+      const target = e.target as HTMLElement
+      // a button or a link clicks itself on enter
+      if (target.matches?.("button, a[href]") && e.key === "Enter") return
+      const trigger = clickTrigger(target, article)
+      if (!trigger || trigger !== target) return
+      e.preventDefault()
+      if (trigger === pinned) hide()
+      else void pin(trigger)
+    },
+    { signal },
+  )
+
   const show = (item: Item, anchor: Element, y: number) => {
+    // while a card a click opened is up, nothing else shows
+    if (pinned) return
     clearTimeout(hideTimer)
     if (shown?.key === item.key && shown.anchor === anchor) return
     if (wanted === item.key) return
@@ -412,7 +506,7 @@ onPage((signal) => {
     },
     { signal },
   )
-  document.addEventListener("focusout", () => shown && hideSoon(), { signal })
+  document.addEventListener("focusout", () => shown && !pinned && hideSoon(), { signal })
   document.addEventListener("keydown", (e) => e.key === "Escape" && hide(), { signal })
   // the theme turned: a shown picture swaps to its other version
   document.addEventListener(
@@ -430,6 +524,7 @@ onPage((signal) => {
     clearTimeout(showTimer)
     clearTimeout(hideTimer)
     hover.remove()
+    sheet?.remove()
     uncover()
     delete document.documentElement.dataset.marginHover
   })

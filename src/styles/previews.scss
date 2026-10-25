@@ -280,3 +280,29 @@ body [data-secondary] {
     transition: opacity 0.18s ease;
   }
 }
+
+// a card a tap opened, with no side content to open it in: a sheet at the
+// foot of the screen (previews.ts)
+.margin-sheet {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 0.7rem 0.4rem 0.5rem 1.1rem;
+  border: 1px solid var(--lightgray);
+  border-radius: 8px;
+  background: var(--light);
+  box-shadow: 0 10px 30px -14px rgb(0 0 0 / 0.35);
+  animation: margin-hover-in 0.24s $ease;
+  transition: opacity 0.18s ease;
+
+  &[data-leaving] {
+    opacity: 0;
+  }
+  & > .margin-marked {
+    position: static;
+  }
+}
