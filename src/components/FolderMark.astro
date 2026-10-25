@@ -1,44 +1,35 @@
 ---
-// A folder, drawn the way a textbook draws a figure: thin ink, no fill, a
-// ruled sheet showing above the pocket, and the tab in the accent. Beside a
-// folder's title, and beside a folder in a list of notes.
+// A folder glyph, beside a folder's title and beside a folder in a list of
+// notes, drawn like Basalt's other icons (a 24px outline, in the text's ink).
 interface Props {
   size?: string
 }
-const { size = "0.95em" } = Astro.props
+const { size = "0.9em" } = Astro.props
 ---
 
 <svg
   class="folder-mark"
-  viewBox="0 0 24 20"
+  viewBox="0 0 24 24"
   width={size}
   height={size}
   fill="none"
   stroke="currentColor"
-  stroke-width="1.2"
+  stroke-width="2"
   stroke-linecap="round"
   stroke-linejoin="round"
   aria-hidden="true"
 >
-  <!-- the back, with its tab -->
-  <path d="M2.5 16.5V4.2c0-.6.4-1 1-1h5l1.8 2.1h10.2c.6 0 1 .4 1 1v10.2" />
-  <path class="folder-mark-tab" d="M3.5 3.2h5l1.8 2.1" />
-  <!-- a ruled sheet, showing above the pocket -->
-  <path d="M5.5 9V7.4h13V9" stroke-width="0.9" />
-  <path d="M7.5 8.4h6" stroke-width="0.7" opacity="0.7" />
-  <!-- the pocket in front -->
-  <path d="M1.8 9.6c0-.4.3-.6.7-.6h19c.4 0 .7.3.6.7l-1.2 7.3c-.1.4-.4.6-.8.6H3.7c-.4 0-.7-.3-.8-.6L1.8 9.6Z" />
+  <path
+    d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+  ></path>
 </svg>
 
 <style>
   .folder-mark {
     display: inline-block;
     flex: none;
-    vertical-align: -0.08em;
+    vertical-align: -0.1em;
     margin-right: 0.35em;
-    color: var(--darkgray);
-  }
-  .folder-mark-tab {
-    stroke: var(--tertiary);
+    color: var(--gray);
   }
 </style>
