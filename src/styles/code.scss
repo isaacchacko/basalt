@@ -60,15 +60,13 @@ $phone-navbar: 3.75rem;
   }
 }
 
-// opaque, since code scrolls under it while it sticks (basalt.scss's tint is see-through)
-figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-title]:has(> .code-actions) {
+figure[data-rehype-pretty-code-figure] > figcaption[data-rehype-pretty-code-title]:has(> :is(.code-actions, .code-file-actions)) {
   @include sticks-to-the-top;
   z-index: 3;
   flex-wrap: nowrap;
   align-items: center;
   padding-top: 0.2rem;
   padding-bottom: 0.2rem;
-  background: color-mix(in srgb, var(--lightgray) 45%, var(--light));
   // for what else is in the bar to give way when it's narrow: @container code-bar (max-width: …)
   container: code-bar / inline-size;
 }
@@ -123,7 +121,9 @@ figure:has(> .code-corner) {
   }
 }
 
-.code-actions {
+// a code file's are made at build time (embeds.ts); codefile.ts gives them these classes too
+.code-actions,
+.code-file-actions {
   display: flex;
   align-items: center;
   gap: 0.15rem;
@@ -147,7 +147,8 @@ figure:has(> .code-corner) {
   }
 }
 
-.code-action {
+.code-action,
+.code-file-action {
   display: grid;
   place-items: center;
   width: 28px;
