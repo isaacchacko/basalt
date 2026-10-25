@@ -14,7 +14,7 @@
 
 import fs from "node:fs"
 import path from "node:path"
-import { slugifyFilePath, type FilePath, type FullSlug } from "./path"
+import { slugifyFilePath, type FilePath, type FullSlug } from "./path.ts"
 
 export interface SiteConfig {
   title: string

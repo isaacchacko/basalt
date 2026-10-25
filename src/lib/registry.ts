@@ -3,8 +3,8 @@
 // Astro loads the config (where the plugins live) and the content loader
 // through different module graphs, and both must see one registry.
 
-import { loadSite, walkSite, type Site, type SiteFile } from "./site"
-import type { FullSlug } from "./path"
+import { loadSite, walkSite, type Site, type SiteFile } from "./site.ts"
+import type { FullSlug } from "./path.ts"
 
 export interface Registry {
   site: Site

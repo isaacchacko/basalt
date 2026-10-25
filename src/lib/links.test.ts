@@ -1,7 +1,7 @@
 import "../markdown/test-hooks.ts"
 import test, { describe } from "node:test"
 import assert from "node:assert"
-import type { FullSlug } from "./path"
+import type { FullSlug } from "./path.ts"
 const { resolveLink, hrefOf } = await import("./links.ts")
 
 const slugs = ["index", "margin", "sources/garden-ideas", "blog/index", "blog/a-post", "assets/card.png", "a/dup", "b/dup"] as FullSlug[]
