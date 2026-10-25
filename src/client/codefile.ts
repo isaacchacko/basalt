@@ -22,27 +22,9 @@ function control(cls: string, label: string, glyph: string) {
   return button
 }
 
-/**
- * the title (its text, or a code file's name) in a span of its own, so a long
- * one gives way to the controls (code.scss); what else is in the bar (a diff's
- * stat) stays beside it
- */
-function setTitleApart(titleBar: HTMLElement) {
-  const words = [...titleBar.childNodes].filter((n) => n instanceof Text || (n instanceof Element && n.matches(".code-file-name")))
-  const title = document.createElement("span")
-  title.className = "code-title"
-  const text = document.createElement("span")
-  text.append(...words)
-  title.append(text)
-  titleBar.prepend(title)
-}
-
 function titleBarOrCorner(block: HTMLElement): HTMLElement {
   const titleBar = block.querySelector<HTMLElement>(":scope > figcaption[data-rehype-pretty-code-title]")
-  if (titleBar) {
-    setTitleApart(titleBar)
-    return titleBar
-  }
+  if (titleBar) return titleBar
   const corner = document.createElement("div")
   corner.className = "code-corner"
   block.prepend(corner)
@@ -57,6 +39,9 @@ export function startCodeControls(signal: AbortSignal) {
     if (block.closest(NOT_THIS_PAGES_CODE) || block.querySelector(".code-actions")) continue
     const code = block.querySelector<HTMLElement>("pre > code")
     if (!code || code.matches(".mermaid")) continue
+    // one tab stop, on what scrolls: the code (a browser makes it one of its own when it overflows)
+    code.parentElement!.removeAttribute("tabindex")
+    code.tabIndex = 0
 
     const bar = titleBarOrCorner(block)
     // a code file's bar comes with a raw link and copy (embeds.ts)

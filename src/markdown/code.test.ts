@@ -19,3 +19,18 @@ describe("outsideCode", () => {
     assert.strictEqual(outsideCode(src, mark), "~~~\n```\n[[a]]\n~~~\n<b>")
   })
 })
+
+test("a code block's title gets a span of its own; what else is in its bar stays beside it", async () => {
+  const { rehypeCodeTitles } = await import("./code.ts")
+  const { fromHtml } = await import("hast-util-from-html")
+  const { toHtml } = await import("hast-util-to-html")
+  const tree = fromHtml(
+    '<figure><figcaption data-rehype-pretty-code-title="">a/long/path.diff<span class="diff-stat"></span></figcaption></figure>' +
+      '<figure><figcaption data-rehype-pretty-code-title=""><span class="code-file-name">sieve.py</span><span class="code-file-actions"></span></figcaption></figure>',
+    { fragment: true },
+  )
+  rehypeCodeTitles()(tree)
+  const html = toHtml(tree)
+  assert.match(html, /<span class="code-title"><span>a\/long\/path\.diff<\/span><\/span><span class="diff-stat">/)
+  assert.match(html, /<span class="code-title"><span><span class="code-file-name">sieve\.py<\/span><\/span><\/span><span class="code-file-actions">/)
+})

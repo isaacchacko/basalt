@@ -28,7 +28,8 @@ describe("compare blocks", () => {
 
   test("a fence's line anchors come off its info string and onto its block", () => {
     assert.match(code, /data-compare-lines="\[\[&#x22;markup&#x22;,&#x22;2&#x22;\],\[&#x22;handlers&#x22;,&#x22;\/onPointerMove\/&#x22;\]\]"/)
-    assert.match(code, /data-rehype-pretty-code-title="[^"]*"[^>]*>music.tsx<\/figcaption>/)
+    assert.match(code, /data-rehype-pretty-code-title="[^"]*"[^>]*>(?:<[^>]+>)*music\.tsx</)
+    assert.doesNotMatch(code, /\^markup|\^handlers/)
   })
 
   test("line anchors: a number or /text/, several, the rest of the info string kept", () => {

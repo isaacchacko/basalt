@@ -49,6 +49,7 @@ import { ofmText, rehypeOfm, remarkOfm } from "./ofm.ts"
 import { remarkDiagrams } from "./diagrams.ts"
 import { remarkTree } from "./tree.ts"
 import { rehypeEmbeds, remarkFileEmbeds } from "./embeds.ts"
+import { rehypeCodeTitles } from "./code.ts"
 import { rehypeIslands, remarkIslands } from "./islands.ts"
 import { rehypeMargin } from "./margin.ts"
 import { rehypeCompare, remarkCompare } from "./compare.ts"
@@ -129,6 +130,8 @@ const basaltRehype: PluggableList = [
   ],
   rehypeLinks,
   () => rehypeEmbeds({ web: true, files: true, lightbox: true }),
+  // after a code file's bar is made
+  rehypeCodeTitles,
   // a picture with a dark version beside it follows the theme
   rehypeThemedMedia,
   rehypeIslands,
