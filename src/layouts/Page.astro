@@ -7,7 +7,7 @@
 // ones show is the site's layout (src/lib/config.ts).
 import type { CollectionEntry } from "astro:content"
 import { registry } from "../lib/registry"
-import { features, layout as siteLayout } from "../lib/config"
+import { layout as siteLayout } from "../lib/config"
 import { ancestry, backlinksOf, notes, tree, type TreeNode } from "./notes"
 import Head from "basalt:components/Head"
 import Nav from "basalt:components/Nav"
@@ -19,6 +19,8 @@ import Footer from "basalt:components/Footer"
 import Motion from "basalt:components/Motion"
 import Margin from "basalt:components/Margin"
 import MediaScripts from "basalt:components/MediaScripts"
+// KaTeX's own stylesheet and fonts, the installed version rehype-katex renders with
+import "katex/dist/katex.min.css"
 import "../styles/base.scss"
 import "../styles/basalt.scss"
 import "../styles/nav.scss"
@@ -65,7 +67,6 @@ const all = await notes()
 const root: TreeNode = tree(all)
 const trail = ancestry(root, crumb ? "" : slug)
 const backlinks = note ? backlinksOf(note.id, all) : []
-const show = note ? features(note.data as Record<string, unknown>, layout) : undefined
 const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.replace(/\/$/, "") || "/"
 ---
 
@@ -101,7 +102,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
           <div class="page-footer"></div>
         </div>
         <div class="right sidebar">
-          {note && <Margin note={note} headings={headings} backlinks={backlinks} show={show} />}
+          {note && <Margin note={note} headings={headings} backlinks={backlinks} />}
         </div>
         {layout.components.footer && <Footer links={layout.footer.links} />}
       </div>

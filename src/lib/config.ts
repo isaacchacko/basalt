@@ -100,6 +100,8 @@ async function siteConfig(dir: string): Promise<BasaltConfig> {
   }
 }
 
+let last: LayoutConfig | undefined
+
 /** The site's layout, read fresh each page (basalt.json and basalt.config.ts can change while serving). */
 export async function layout(): Promise<LayoutConfig> {
   const dir = siteDir()
@@ -107,7 +109,25 @@ export async function layout(): Promise<LayoutConfig> {
   try {
     json = JSON.parse(fs.readFileSync(path.join(dir, "basalt.json"), "utf8"))
   } catch {}
-  return merge(merge(defaults, json.layout), (await siteConfig(dir)).layout)
+  last = merge(merge(defaults, json.layout), (await siteConfig(dir)).layout)
+  return last
+}
+
+/**
+ * The margin's opt-in parts, as the site sets them (all off by default), for
+ * Margin.astro: the layout the page being rendered read (Page.astro reads it
+ * before its margin renders).
+ */
+export const margin = {
+  get graph() {
+    return (last ?? defaults).graph
+  },
+  get toc() {
+    return (last ?? defaults).toc
+  },
+  get backlinks() {
+    return (last ?? defaults).backlinks
+  },
 }
 
 export interface Features {
