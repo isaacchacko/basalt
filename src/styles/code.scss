@@ -52,6 +52,11 @@ $phone-navbar: 3.75rem;
 
   @media all and ($narrow) {
     top: $phone-navbar;
+
+    // in the viewer (compare's reader) there's no navbar above it
+    .basalt-viewer & {
+      top: 0;
+    }
   }
 }
 
