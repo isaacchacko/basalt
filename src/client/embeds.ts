@@ -196,6 +196,26 @@ function themeAudio(audio: HTMLAudioElement, signal: AbortSignal) {
   })
 }
 
+/**
+ * A copy of the page's own content (a marked card in the side content,
+ * previews.ts) has the enhanced markup but none of its listeners: build its
+ * audio players and video facades again, on the copy.
+ */
+export function enhanceCopy(root: HTMLElement) {
+  const signal = new AbortController().signal
+  for (const bar of root.querySelectorAll(".audio-player")) bar.remove()
+  for (const audio of root.querySelectorAll<HTMLAudioElement>("audio[data-themed]")) {
+    delete audio.dataset.themed
+    themeAudio(audio, signal)
+  }
+  for (const facade of root.querySelectorAll<HTMLAnchorElement>("a.embed-facade"))
+    facade.addEventListener("click", (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+      e.preventDefault()
+      playFacade(facade)
+    })
+}
+
 export function startEmbeds(signal: AbortSignal) {
   const article = document.querySelector("article") ?? document.body
   const onFacade = (e: MouseEvent) => {

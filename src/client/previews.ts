@@ -11,7 +11,7 @@
 //
 // Only beside a margin: on a phone, a link is just a link.
 
-import { isDark, isImageLink, themedPair } from "./embeds"
+import { enhanceCopy, isDark, isImageLink, themedPair } from "./embeds"
 import { isBeside, levelWith, lineOf, onPage } from "./margin"
 
 const SHOW_MS = 90
@@ -208,6 +208,8 @@ function marked(content: HTMLElement): Item {
       copy.removeAttribute("data-secondary")
       copy.removeAttribute("hidden")
       copy.querySelectorAll("[id]").forEach((x) => x.removeAttribute("id"))
+      // a copy keeps the markup, not the listeners: its players work again
+      enhanceCopy(copy)
       const body = el("div", "margin-marked-body")
       body.append(copy)
       box.append(body)
