@@ -28,6 +28,16 @@ figure.diff {
     --diff-word: 40%;
   }
 
+  // a split view's side: one number per line, its own
+  &[data-side] {
+    --diff-numbers: calc(0.6ch + var(--diff-num));
+  }
+
+  &[data-side="old"] .diff-gutter::after,
+  &[data-side="new"] .diff-gutter::before {
+    content: none;
+  }
+
   &:not([data-numbered]) {
     --diff-numbers: 0.5ch;
 
@@ -61,6 +71,11 @@ figure.diff {
 
     & > [data-diff="ctx"] {
       background: var(--light);
+    }
+
+    // where the other side has a line and this one has none
+    & > [data-diff="empty"] {
+      background: color-mix(in srgb, var(--lightgray) 30%, var(--light));
     }
 
     & > :is([data-diff="file"], [data-diff="note"]) {
