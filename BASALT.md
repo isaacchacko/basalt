@@ -34,7 +34,7 @@ my-garden/
 
 `icon` is a file in the site's tree for the tab's icon (`"icon": "assets/icon.svg"`); without it the tab shows Basalt's mark. A site's own mark in the navbar is a `components/Mark.astro`.
 
-Basalt sets everything in Palatino (and code in JetBrains Mono). A site picks its own type with `theme.fonts`: `title` (titles and labels), `header` (headings), `body` and `code`, each a CSS font-family, and `load`, stylesheets that bring in fonts visitors may not have. `theme.colors` does the same for the palette. `theme.bullets` is what lists hang on: `"circle"` (Basalt's round dot), `"hexagon"` or `"none"`; for anything else, set the `--basalt-bullet-shape` (a clip-path), `-color`, `-size`, `-height`, `-opacity` and `-hover-transform` properties in `styles/custom.scss`.
+Basalt sets everything in Palatino (and code in JetBrains Mono). A site picks its own type with `theme.fonts`: `title` (titles and labels), `header` (headings), `body` and `code`, each a CSS font-family, and `load`, stylesheets that bring in fonts visitors may not have. `theme.colors` does the same for the palette. `theme.nowPlaying` is where a playing `<sound>`'s card sits: `"beside"` its word (Basalt's), or `"screen"`, at the foot of the screen in the side content for as long as it plays. `theme.bullets` is what lists hang on: `"circle"` (Basalt's round dot), `"hexagon"` or `"none"`; for anything else, set the `--basalt-bullet-shape` (a clip-path), `-color`, `-size`, `-height`, `-opacity` and `-hover-transform` properties in `styles/custom.scss`.
 
 Basalt writes only under `<site>/.basalt/astro`. That folder holds the site's own Astro root, which is links to Basalt's files plus its cache, its content store and its build (`dist/`).
 

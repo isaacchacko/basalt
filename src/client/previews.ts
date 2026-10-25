@@ -348,7 +348,10 @@ onPage((signal) => {
     const height = node.offsetHeight
     const want = levelWith(node, lineOf(anchor, y), column)
     const highest = 16 - column.top
-    const lowest = innerHeight - column.top - height - 16
+    // a playing sound's card held on screen (sound.ts): stop short of it
+    const playing = document.querySelector<HTMLElement>(".basalt-now-playing-rail.is-screen > .basalt-now-playing")
+    const floor = playing ? playing.getBoundingClientRect().top - 12 : innerHeight - 16
+    const lowest = floor - column.top - height
     const top = Math.max(highest, Math.min(want, lowest))
     node.style.top = `${top}px`
     for (const n of covered()) {

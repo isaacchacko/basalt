@@ -134,6 +134,19 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
     border-left: 2px solid var(--tertiary);
   }
 }
+// theme.nowPlaying "screen": the rail is the whole side content, and the card
+// keeps to the foot of the screen in it, wherever you scroll
+.basalt-now-playing-rail.is-screen {
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  & > .basalt-now-playing {
+    top: auto;
+    bottom: 1rem;
+  }
+}
 @keyframes basalt-now-playing-in {
   from {
     opacity: 0;

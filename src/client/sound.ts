@@ -85,9 +85,29 @@ function cardFor(clip: Clip, word: HTMLElement | null) {
   return card
 }
 
-/** Where the card goes: beside the word, held at the top past it; or, with no side content, the foot of the screen. */
+/** the site's theme.nowPlaying is "screen": the card stays at the foot of the screen */
+const onScreen = () =>
+  getComputedStyle(document.documentElement).getPropertyValue("--basalt-now-playing").trim() === "screen"
+
+/**
+ * Where the card goes: beside the word, held at the top past it (or, with
+ * theme.nowPlaying "screen", at the foot of the screen in the side content,
+ * wherever the word is); with no side content, the foot of the screen.
+ */
 function place(card: HTMLElement, word: HTMLElement | null): HTMLElement {
   const margin = document.querySelector<HTMLElement>("aside.margin")
+  // the side column runs the page's whole height (the side content in it only
+  // as far as its notes): the card keeps to the foot of the screen in it
+  const column = margin?.closest<HTMLElement>(".sidebar.right") ?? margin?.parentElement
+  if (isBeside() && margin && column && onScreen()) {
+    const rail = el("div", "basalt-now-playing-rail is-screen")
+    const pad = getComputedStyle(column)
+    rail.style.left = pad.paddingLeft
+    rail.style.right = pad.paddingRight
+    rail.append(card)
+    column.append(rail)
+    return rail
+  }
   if (isBeside() && margin && word && word.closest("article")) {
     const rail = el("div", "basalt-now-playing-rail")
     rail.style.top = `${Math.max(0, lineOf(word).top - margin.getBoundingClientRect().top)}px`

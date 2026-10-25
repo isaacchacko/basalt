@@ -84,6 +84,12 @@ export interface LayoutConfig {
      * the --basalt-bullet-* properties (styles/basalt.scss).
      */
     bullets?: "circle" | "hexagon" | "none"
+    /**
+     * Where a playing <sound>'s card sits: beside its word, then held at the
+     * top as you read on ("beside", Basalt's), or at the foot of the screen in
+     * the side content the whole time it plays ("screen").
+     */
+    nowPlaying?: "beside" | "screen"
   }
 }
 
@@ -233,9 +239,11 @@ export function paletteCss(cfg: LayoutConfig): string {
   const bullets = Object.entries(BULLETS[cfg.theme.bullets ?? "circle"] ?? {})
     .map(([k, v]) => `--${k}: ${v};`)
     .join(" ")
+  const nowPlaying = cfg.theme.nowPlaying === "screen" ? ":root { --basalt-now-playing: screen; }" : ""
   return [
     block(":root", { ...(cfg.theme.colors.lightMode ?? {}), ...type }),
     bullets ? `:root { ${bullets} }` : "",
+    nowPlaying,
     block(':root[saved-theme="dark"]', cfg.theme.colors.darkMode ?? {}),
   ]
     .filter(Boolean)
