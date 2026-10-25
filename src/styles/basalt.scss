@@ -149,20 +149,11 @@ article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li
   }
 }
 
-// the note you're on, in the explorer, gets a column too
+// the note you're on, in the explorer: in the accent, and underlined
 .explorer .explorer-content ul.explorer-ul li > a.active {
-  position: relative;
-
-  &::before {
-    content: "";
-    position: absolute;
-    left: -0.85em;
-    top: 0.55em;
-    width: 0.45em;
-    height: 0.4em;
-    clip-path: $hex;
-    background: currentColor;
-  }
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.22em;
 }
 
 // ---------- links: the underline draws itself ----------
