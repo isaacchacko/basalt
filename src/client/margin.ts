@@ -26,6 +26,8 @@ const BLOCKED_ABOVE = 8
 const BLOCKED_BELOW = 12
 /** room kept between the notes and the resting parts, and between parts */
 const PART_GAP = 24
+/** how far a margin figure may push the next numbered note off its line before it gives way */
+const YIELD = 48
 
 /**
  * Runs `start` for each page: on the first load, and after every navigation
@@ -270,18 +272,37 @@ onPage((signal) => {
       return top
     }
 
+    // in reading order, each under the one before; but a margin figure that
+    // would push the next numbered note more than two lines off its sentence
+    // gives way, and goes in the first room after (a few lines of aside
+    // are read with their paragraph, so they keep their place)
     const taken: [number, number][] = []
+    const notesAt: [number, number][] = []
     let floor = -Infinity
     let lowest = 0
-    for (const { note, copy } of copies) {
+    const put = (copy: HTMLElement, want: number, top: number) => {
       const height = copy.offsetHeight
-      const want = levelWith(copy, anchorOf(note), column)
-      const top = clear(Math.max(want, floor), height, blocked)
       copy.style.top = `${top}px`
       copy.dataset.offset = String(Math.round(top - want))
       taken.push([top - PART_GAP, top + height + PART_GAP])
-      floor = top + height + GAP
+      notesAt.push([top - GAP, top + height + GAP])
       lowest = Math.max(lowest, top + height)
+    }
+    const wants = copies.map(({ note, copy }) => levelWith(copy, anchorOf(note), column))
+    const deferred: number[] = []
+    copies.forEach(({ note, copy }, i) => {
+      const height = copy.offsetHeight
+      const top = clear(Math.max(wants[i], floor), height, blocked)
+      if (note.classList.contains("marginfigure")) {
+        const next = copies.findIndex((c, j) => j > i && c.note.classList.contains("sidenote"))
+        if (next >= 0 && top + height + GAP > wants[next] + YIELD) return void deferred.push(i)
+      }
+      put(copy, wants[i], top)
+      floor = top + height + GAP
+    })
+    for (const i of deferred) {
+      const { copy } = copies[i]
+      put(copy, wants[i], clear(wants[i], copy.offsetHeight, [...blocked, ...notesAt]))
     }
 
     // each resting part takes the first room the notes leave, from the top
@@ -325,6 +346,9 @@ onPage((signal) => {
     again()
   }
   document.fonts?.ready.then(() => !signal.aborted && fontsChanged())
+  // and once everything has loaded: a module or a font that came late (a
+  // cold dev server) never leaves the margin empty or misplaced
+  if (document.readyState !== "complete") addEventListener("load", fontsChanged, { signal, once: true })
   document.fonts?.addEventListener("loadingdone", fontsChanged, { signal })
   // images change heights when they arrive: a figure is measured after its image loads
   for (const img of [...article.querySelectorAll("img"), ...layer.querySelectorAll("img")])
