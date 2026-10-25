@@ -46,7 +46,7 @@ $semiBoldWeight: 600;
 
   html .page > #quartz-body:has(> .sidebar.left:hover),
   html .page > #quartz-body:has(> .sidebar.left:focus-within) {
-    grid-template-columns: $open minmax(0, 3fr) minmax(280px, 1fr);
+    --nav-width: #{$open};
   }
 
   // a pointer passing through the margin on its way somewhere doesn't move the page

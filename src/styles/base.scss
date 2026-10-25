@@ -1,7 +1,8 @@
 // The page under everything: Quartz's base styles (quartz/styles/base.scss),
-// on Basalt's grid. On a wide screen a page is three parts side by side,
-// 56px | 3 parts | 1 part: the navbar folded to its margin, the note, and the
-// margin column. Below that it's one column under a bar across the top.
+// on Basalt's grid. On a wide screen a page is three parts: the navbar folded
+// to its margin, the note, and the margin column right beside it, Tufte's
+// way (the note and its margin centred in what's left). Below that it's one
+// column under a bar across the top.
 
 $mobile: "(max-width: 800px)";
 $narrow: "(max-width: 1199.98px)";
@@ -9,6 +10,13 @@ $desktop: "(min-width: 1200px)";
 $topSpacing: 6rem;
 $semiBoldWeight: 600;
 $boldWeight: 700;
+
+:root {
+  // the note: a measure of prose (34em) with a little room for figures
+  --text-width: 36rem;
+  // the margin beside it
+  --margin-width: 22rem;
+}
 
 html {
   scroll-behavior: smooth;
@@ -164,9 +172,12 @@ a {
   & > #quartz-body {
     position: relative;
     display: grid;
-    grid-template-columns: 56px minmax(0, 3fr) minmax(280px, 1fr);
+    // navbar | room | the note | its margin | room
+    grid-template-columns: var(--nav-width, 56px) minmax(0, 1fr) minmax(0, var(--text-width)) minmax(
+        15rem,
+        var(--margin-width)
+      ) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
-    column-gap: 5px;
 
     & > .sidebar.left {
       grid-column: 1;
@@ -174,23 +185,23 @@ a {
     }
 
     & > .center {
-      grid-column: 2;
+      grid-column: 3;
       grid-row: 1;
       min-width: 0;
     }
 
     // the margin: it scrolls with the note, its notes beside their lines
     & > .sidebar.right {
-      grid-column: 3;
+      grid-column: 4;
       grid-row: 1 / span 2;
       position: relative;
       min-width: 0;
       box-sizing: border-box;
-      padding: $topSpacing 2rem 2rem 1.5rem;
+      padding: $topSpacing 1rem 2rem 2.25rem;
     }
 
     & > footer {
-      grid-column: 2;
+      grid-column: 3;
       grid-row: 2;
     }
 
