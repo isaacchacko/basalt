@@ -92,7 +92,7 @@ export async function renderGraphviz(source: string, engine?: string): Promise<s
 export function graphFigure(node: Code, caption?: string): string {
   const { data, errors } = parseGraph(node.value)
   if (errors.length) {
-    const message = errors.map((e) => `line ${e.line + 1}: ${e.message}`).join("; ")
+    const message = errors.map((e) => `line ${e.line}: ${e.message}`).join("; ")
     return failure("graph", message, node.value)
   }
   const meta = node.meta ?? ""

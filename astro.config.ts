@@ -88,6 +88,6 @@ export default defineConfig({
       },
     },
     // found up front, so a lazy import of one doesn't fail after Vite re-optimises
-    optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact", "graph/packages/graph-view/src/renderer"] },
+    optimizeDeps: { include: ["mermaid", "pdfjs-dist", "preact", "@isaacchacko/graph"] },
   },
 })

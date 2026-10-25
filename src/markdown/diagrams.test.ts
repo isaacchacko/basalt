@@ -67,6 +67,7 @@ describe("diagrams", () => {
       node.type === "html" && node.value.startsWith('<div class="diagram-error">'),
       node.type === "html" ? node.value : "",
     )
+    assert.match(node.type === "html" ? node.value : "", /line 1: /, "lines count from 1, as the parser reports them")
   })
 
   test("a math block is display math, like GitHub's", async () => {

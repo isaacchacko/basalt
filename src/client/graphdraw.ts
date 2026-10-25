@@ -6,8 +6,7 @@
 // pdf's opens it in the viewer; anything else opens the file.
 
 import { navigate } from "astro:transitions/client"
-import { GraphRenderer } from "graph/packages/graph-view/src/renderer"
-import type { GraphData, Theme } from "graph/packages/graph-view/src/types"
+import { GraphRenderer, type GraphData, type Theme } from "@isaacchacko/graph"
 
 export type Note = { id: string; title: string; links: string[]; files?: string[] }
 
