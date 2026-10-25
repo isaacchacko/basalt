@@ -28,6 +28,10 @@ describe("the explorer's order", () => {
     const some = ordered<{ slug: string }>(["now", "/arch/"], () => 0)
     assert.deepStrictEqual([...nodes].sort(some).map((n) => n.slug), ["now", "arch", "blog", "about", "library", "running"])
   })
+  test("home is always first", () => {
+    const sort = ordered<{ slug: string }>(["about", "index"], () => 0)
+    assert.deepStrictEqual([{ slug: "about" }, { slug: "blog" }, { slug: "index" }].sort(sort).map((n) => n.slug), ["index", "about", "blog"])
+  })
   test("no order keeps Basalt's", () => {
     const sort = ordered<{ slug: string }>([], () => 0)
     assert.deepStrictEqual([...nodes].sort(sort), nodes)

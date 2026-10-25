@@ -50,6 +50,7 @@ export interface LayoutConfig {
     /**
      * Entries that come first, in this order, by slug: ["about", "now",
      * "blog", "blog/a-post"]. The rest follow, folders first, then by name.
+     * Home, if the explorer lists it, is always first.
      */
     order: string[]
   }
@@ -209,7 +210,8 @@ export function paletteCss(cfg: LayoutConfig): string {
  */
 export function ordered<T extends { slug: string }>(order: string[], rest: (a: T, b: T) => number) {
   const rank = new Map(order.map((slug, i) => [slug.replace(/^\/+|\/+$/g, "").replace(/(^|\/)index$/, ""), i]))
-  const of = (n: T) => rank.get(n.slug) ?? Infinity
+  // home ("" or "index"), when the explorer lists it, is always first
+  const of = (n: T) => (n.slug === "" || n.slug === "index" ? -1 : (rank.get(n.slug) ?? Infinity))
   return (a: T, b: T) => {
     const ra = of(a)
     const rb = of(b)
