@@ -95,6 +95,7 @@ const Content = rendered?.Content
       description={descriptionOf(props.note)}
       date={dateOf(props.note)}
       dated={props.note.data.dated === true}
+      cssclasses={(props.note.data.cssclasses as string[] | undefined) ?? []}
       minutes={readingTimeOf(props.note)}
       tags={tagsOf(props.note)}
       meta={folderNode ? count : undefined}

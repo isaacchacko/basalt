@@ -38,6 +38,8 @@ interface Props {
   title: string
   description?: string
   date?: Date
+  /** frontmatter `cssclasses`: classes on the note's article, for a site's styles */
+  cssclasses?: string[]
   /** the note gives its own date (else `date` is when its file was made) */
   dated?: boolean
   minutes?: number
@@ -57,6 +59,7 @@ const {
   description,
   date,
   dated = false,
+  cssclasses = [],
   minutes,
   meta,
   tags = [],
@@ -99,7 +102,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
               {layout.components.tags && <TagList tags={tags} />}
             </div>
           </div>
-          <article class="popover-hint">
+          <article class:list={["popover-hint", ...cssclasses]}>
             <slot />
           </article>
           <slot name="listing" />
