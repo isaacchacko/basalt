@@ -34,6 +34,7 @@ export const strings = {
   graph: "Graph",
   backlinks: "Linked from",
   theme: "Switch theme",
+  source: "Show the markdown",
   /** the feed's description, when the site gives none */
   feed: "The last {n} notes on {title}",
 }

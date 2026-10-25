@@ -20,6 +20,7 @@ import Motion from "basalt:components/Motion"
 import FolderMark from "../components/FolderMark.astro"
 import Margin from "basalt:components/Margin"
 import MediaScripts from "basalt:components/MediaScripts"
+import { highlightSource } from "../markdown/source"
 // KaTeX's own stylesheet and fonts, the installed version rehype-katex renders with
 import "katex/dist/katex.min.css"
 import "../styles/base.scss"
@@ -29,6 +30,7 @@ import "../styles/themed.scss"
 import "../styles/gardengraph.scss"
 import "../styles/nav.scss"
 import "../styles/search.scss"
+import "../styles/source.scss"
 // the site's own styles/custom.scss, last, over Basalt's
 import "basalt:site-styles"
 
@@ -80,6 +82,8 @@ const all = await notes()
 const root: TreeNode = tree(all)
 const trail = ancestry(root, crumb ? "" : slug)
 const backlinks = note ? backlinksOf(note.id, all) : []
+const source = note?.body !== undefined ? await highlightSource(note.body) : undefined
+const lineNumberDigits = String(note?.body?.split("\n").length ?? 0).length
 const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.replace(/\/$/, "") || "/"
 ---
 
@@ -118,6 +122,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
             <slot />
           </article>
           <slot name="listing" />
+          {source && <div class="page-source" style={`--digits: ${lineNumberDigits}`} set:html={source} />}
           <div class="page-footer"></div>
         </div>
         <div class="right sidebar">

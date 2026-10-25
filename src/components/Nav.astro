@@ -5,7 +5,7 @@
 // ember for the page you're on), or with `layout.nav: "chevron"` one chevron
 // halfway down; reach into the strip (or tab into it, or tap it) and after a
 // beat it slides out over the page. Open, it has the mark and the site's
-// title, the explorer, and a bottom tray with the theme toggle (and, on a
+// title, the explorer, and a bottom tray with the theme and source toggles (and, on a
 // screen without a keyboard, search). Below desktop width it's a bar across
 // the top instead.
 //
@@ -13,6 +13,7 @@
 import Mark from "basalt:components/Mark"
 import Explorer from "basalt:components/Explorer"
 import Darkmode from "basalt:components/Darkmode"
+import SourceToggle from "basalt:components/SourceToggle"
 import NavExtra from "basalt:components/NavExtra"
 import { words } from "../layouts/words"
 import type { TreeNode } from "../layouts/notes"
@@ -68,7 +69,7 @@ for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.ch
     )
   }
   {
-    (layout.components.darkmode || layout.components.search) && (
+    (layout.components.darkmode || layout.components.source || layout.components.search) && (
       <div class="nav-tray">
         {layout.components.search && (
           <button class="nav-search" type="button" aria-label={t("search")}>
@@ -79,6 +80,7 @@ for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.ch
           </button>
         )}
         {layout.components.darkmode && <Darkmode />}
+        {layout.components.source && <SourceToggle />}
       </div>
     )
   }
