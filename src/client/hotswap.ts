@@ -22,6 +22,9 @@ if (import.meta.hot) {
     if (payload.basaltRecover) payload.path = "/__basalt/recovered.html"
   })
 
+  // the router, imported once, up front: imported at each save it cost 40-70ms
+  // of every one (in dev, Vite answers the import again after a content change)
+  const router = import("astro:transitions/client")
   let latest = 0
   import.meta.hot.on("basalt:swap", async () => {
     const mine = ++latest
@@ -41,7 +44,7 @@ if (import.meta.hot) {
     doc.querySelectorAll("noscript").forEach((el) => el.remove())
     if (!doc.querySelector('[name="astro-view-transitions-enabled"]')) return void location.reload()
 
-    const { navigate } = await import("astro:transitions/client")
+    const { navigate } = await router
     const x = scrollX
     const y = scrollY
     window.basaltHotSwap = true
