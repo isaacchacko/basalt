@@ -112,7 +112,7 @@ export function cardSvg(card: Card): string {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">` +
     `<rect width="100%" height="100%" fill="${c.light}"/>` +
-    `<rect x="${PAD}" y="${foot - 58}" width="72" height="4" fill="${c.secondary}"/>` +
+    (card.where ? `<rect x="${PAD}" y="${foot - 58}" width="72" height="4" fill="${c.secondary}"/>` : "") +
     mark +
     paths.join("") +
     `</svg>`
