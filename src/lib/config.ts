@@ -14,9 +14,13 @@
 //
 //   { "theme": { "colors": { "lightMode": { "light": "#f5eedd" }, "darkMode": { ... } } } }
 //
-// and a top-level "strings" for the words Basalt puts on the page (strings.ts):
+// a top-level "strings" for the words Basalt puts on the page (strings.ts):
 //
 //   { "strings": { "explorer": "the garden", "noTags": "no tags yet." } }
+//
+// and a top-level "analytics" for who's reading (analytics.ts):
+//
+//   { "analytics": { "provider": "vercel" } }
 //
 // A page turns an opt-in part on (or off) for itself in its frontmatter:
 // `graph: true`, `toc: true`, `backlinks: true`.
@@ -27,6 +31,7 @@ import { pathToFileURL } from "node:url"
 import { hookResolution, nativeImport } from "../markdown/siteconfig"
 import { siteDir } from "./site"
 import { strings, type Strings } from "./strings"
+import type { Analytics } from "./analytics"
 
 export interface LayoutConfig {
   /** which of the page's parts show */
@@ -72,6 +77,8 @@ export interface LayoutConfig {
   }
   /** the words Basalt puts on the page, over its own (strings.ts); a top-level "strings" in basalt.json */
   strings: Strings
+  /** the site's analytics (analytics.ts); a top-level "analytics" in basalt.json */
+  analytics?: Analytics
   /**
    * The site's palette, over Basalt's (src/styles/basalt.scss): any of
    * light, lightgray, gray, darkgray, dark, secondary, tertiary, highlight,
@@ -172,7 +179,15 @@ async function siteConfig(dir: string): Promise<BasaltConfig> {
     const lay = (mod.layout ?? own.layout ?? {}) as Record<string, unknown>
     const theme = mod.theme ?? own.theme
     const words = mod.strings ?? own.strings
-    return { layout: { ...lay, ...(theme ? { theme } : {}), ...(words ? { strings: words } : {}) } as BasaltConfig["layout"] }
+    const analytics = mod.analytics ?? (own as { analytics?: unknown }).analytics
+    return {
+      layout: {
+        ...lay,
+        ...(theme ? { theme } : {}),
+        ...(words ? { strings: words } : {}),
+        ...(analytics ? { analytics } : {}),
+      } as BasaltConfig["layout"],
+    }
   } catch (err) {
     console.error(`basalt: ${file}: ${(err as Error).message}`)
     return {}
@@ -184,7 +199,7 @@ let last: LayoutConfig | undefined
 /** The site's layout, read fresh each page (basalt.json and basalt.config.ts can change while serving). */
 export async function layout(): Promise<LayoutConfig> {
   const dir = siteDir()
-  let json: { layout?: Record<string, unknown>; theme?: unknown; strings?: unknown } = {}
+  let json: { layout?: Record<string, unknown>; theme?: unknown; strings?: unknown; analytics?: unknown } = {}
   try {
     json = JSON.parse(fs.readFileSync(path.join(dir, "basalt.json"), "utf8"))
   } catch {}
@@ -192,6 +207,7 @@ export async function layout(): Promise<LayoutConfig> {
     ...json.layout,
     ...(json.theme ? { theme: json.theme } : {}),
     ...(json.strings ? { strings: json.strings } : {}),
+    ...(json.analytics ? { analytics: json.analytics } : {}),
   }
   last = merge(merge(defaults, fromJson), (await siteConfig(dir)).layout)
   return last
