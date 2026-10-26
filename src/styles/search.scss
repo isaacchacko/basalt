@@ -187,7 +187,7 @@ $normalWeight: 400;
             width: min($pageWidth, 100%);
           }
 
-          a[role="anchor"] {
+          a[data-anchor] {
             background-color: transparent;
           }
         }
