@@ -252,17 +252,28 @@ async function measureWeight() {
 
 const lhRoutes = (routes) => ["/", "/about", routes.find((r) => r.startsWith("/blog/") && r !== "/blog")].filter((r) => r && routes.includes(r))
 
+/**
+ * The garden's own islands (its backdrop, its music shelf): Quartz can't run
+ * them, so Basalt is scored with their scripts blocked too ("bare"), and as
+ * shipped apart.
+ */
+function islandPatterns() {
+  const dir = path.join(garden, "islands")
+  if (!fs.existsSync(dir)) return []
+  return fs.readdirSync(dir).filter((f) => /\.(tsx?|jsx?|mjs)$/.test(f)).map((f) => `*/_astro/${f.replace(/\.\w+$/, "")}.*`)
+}
+
 async function measureLighthouse(routes) {
   const { default: lighthouse } = await import(require.resolve("lighthouse"))
   const chromeLauncher = await import(require.resolve("chrome-launcher"))
   const chrome = await chromeLauncher.launch({ chromePath, chromeFlags: ["--headless=new", "--no-sandbox"] })
-  const res = { routes: lhRoutes(routes), basalt: {}, quartz: {} }
-  for (const name of ["basalt", "quartz"]) {
-    const srv = await serve(sites[name].out)
+  const res = { routes: lhRoutes(routes), blocked: islandPatterns(), basalt: {}, basaltShipped: {}, quartz: {} }
+  for (const [name, site, blocked] of [["basalt", "basalt", res.blocked], ["basaltShipped", "basalt", []], ["quartz", "quartz", []]]) {
+    const srv = await serve(sites[site].out)
     for (const r of res.routes) {
       const scores = []
       for (let i = 0; i < runs; i++) {
-        const { lhr } = await lighthouse(srv.url + r, { port: chrome.port, output: "json", logLevel: "error", onlyCategories: ["performance", "accessibility", "best-practices", "seo"] })
+        const { lhr } = await lighthouse(srv.url + r, { port: chrome.port, output: "json", logLevel: "error", blockedUrlPatterns: blocked, onlyCategories: ["performance", "accessibility", "best-practices", "seo"] })
         scores.push({
           performance: lhr.categories.performance.score * 100,
           accessibility: lhr.categories.accessibility.score * 100,
@@ -511,7 +522,7 @@ function report(R) {
     L.push("", "</details>", "")
   }
   if (R.lighthouse) {
-    table("Lighthouse", `Lighthouse ${R.meta.lighthouse}, mobile, simulated throttling, on ${R.lighthouse.routes.map((r) => "`" + r + "`").join(", ")}.`, () => {
+    table("Lighthouse", `Lighthouse ${R.meta.lighthouse}, mobile, simulated throttling, median of ${R.meta.runs}, on ${R.lighthouse.routes.map((r) => "`" + r + "`").join(", ")}.`, () => {
       for (const r of R.lighthouse.routes) {
         const b = R.lighthouse.basalt[r], q = R.lighthouse.quartz[r]
         add(`\`${r}\` performance`, b.performance, q.performance, String, false)
@@ -520,6 +531,15 @@ function report(R) {
         add(`\`${r}\` blocking time`, b.tbt, q.tbt, msf)
       }
     })
+    if (Object.keys(R.lighthouse.basaltShipped ?? {}).length) {
+      L.push(`Basalt above has the garden's own islands blocked (${R.lighthouse.blocked.map((b) => "`" + b + "`").join(", ")}), since Quartz can't run them. As shipped, with them:`, "")
+      L.push("| page | performance | blocking time | largest paint |", "|---|---|---|---|")
+      for (const r of R.lighthouse.routes) {
+        const x = R.lighthouse.basaltShipped[r]
+        L.push(`| \`${r}\` | ${x.performance} | ${msf(x.tbt)} | ${msf(x.lcp)} |`)
+      }
+      L.push("", "Nearly all of that blocking time is the backdrop's WebGL surf, drawn every frame on headless Chrome's software GPU.", "")
+    }
     const fails = (name) => [...new Set(R.lighthouse.routes.flatMap((r) => R.lighthouse[name][r].a11yFails))]
     L.push(`Accessibility audits failed: Basalt ${fails("basalt").map((f) => "`" + f + "`").join(", ") || "none"}; Quartz ${fails("quartz").map((f) => "`" + f + "`").join(", ") || "none"}.`, "")
   }

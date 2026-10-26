@@ -1,12 +1,12 @@
 {
   "meta": {
-    "at": "2026-10-26 01:09 UTC",
+    "at": "2026-10-26 01:16 UTC",
     "cpu": "Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz",
     "cores": 8,
     "mem": 39,
     "node": "25.9.0",
     "chrome": "148.0.7778.167",
-    "basalt": "75198a2",
+    "basalt": "a59a6e5",
     "quartz": "d25a6ea",
     "quartzVersion": "4.5.2",
     "garden": "a1f80a3",
@@ -537,15 +537,72 @@
       "/about",
       "/blog/ci-cannot-be-that-hard-for-monorepos"
     ],
+    "blocked": [
+      "*/_astro/backdrop.*",
+      "*/_astro/library.*",
+      "*/_astro/music.*",
+      "*/_astro/now-playing.*",
+      "*/_astro/sf-clock.*"
+    ],
     "basalt": {
+      "/": {
+        "performance": 96,
+        "accessibility": 80,
+        "bestPractices": 96,
+        "seo": 100,
+        "fcp": 1554.04795,
+        "lcp": 2605.8759999999997,
+        "tbt": 0,
+        "cls": 0,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "aria-roles",
+          "color-contrast",
+          "landmark-one-main",
+          "link-name"
+        ]
+      },
+      "/about": {
+        "performance": 97,
+        "accessibility": 91,
+        "bestPractices": 96,
+        "seo": 91,
+        "fcp": 1400.181,
+        "lcp": 2458.02565,
+        "tbt": 0,
+        "cls": 0,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "landmark-one-main"
+        ]
+      },
+      "/blog/ci-cannot-be-that-hard-for-monorepos": {
+        "performance": 97,
+        "accessibility": 80,
+        "bestPractices": 96,
+        "seo": 91,
+        "fcp": 1397.2097000000003,
+        "lcp": 2455.33655,
+        "tbt": 0,
+        "cls": 0.000669,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "aria-roles",
+          "color-contrast",
+          "landmark-one-main",
+          "link-name"
+        ]
+      }
+    },
+    "basaltShipped": {
       "/": {
         "performance": 63,
         "accessibility": 80,
         "bestPractices": 100,
         "seo": 100,
-        "fcp": 1524.7202499999999,
-        "lcp": 3176.9793999999993,
-        "tbt": 5772.999999999999,
+        "fcp": 1526.3628499999995,
+        "lcp": 3123.6548499999994,
+        "tbt": 5238.496,
         "cls": 0.003102,
         "a11yFails": [
           "aria-allowed-attr",
@@ -556,13 +613,13 @@
         ]
       },
       "/about": {
-        "performance": 66,
+        "performance": 65,
         "accessibility": 91,
         "bestPractices": 100,
         "seo": 91,
-        "fcp": 1525.4185000000002,
-        "lcp": 2785.4003000000002,
-        "tbt": 4379,
+        "fcp": 1523.7504000000001,
+        "lcp": 2773.982325,
+        "tbt": 4349,
         "cls": 0,
         "a11yFails": [
           "aria-allowed-attr",
@@ -570,13 +627,13 @@
         ]
       },
       "/blog/ci-cannot-be-that-hard-for-monorepos": {
-        "performance": 63,
+        "performance": 65,
         "accessibility": 80,
         "bestPractices": 100,
         "seo": 91,
-        "fcp": 2304.3419000000004,
-        "lcp": 2930.88655,
-        "tbt": 4288,
+        "fcp": 1525.2786999999998,
+        "lcp": 2919.137775,
+        "tbt": 4289.500000000001,
         "cls": 0,
         "a11yFails": [
           "aria-allowed-attr",
@@ -593,9 +650,9 @@
         "accessibility": 83,
         "bestPractices": 100,
         "seo": 100,
-        "fcp": 2550.7803,
-        "lcp": 2851.0133,
-        "tbt": 237.5,
+        "fcp": 2403.5514,
+        "lcp": 2851.1446,
+        "tbt": 211.49999999999955,
         "cls": 0.274883,
         "a11yFails": [
           "aria-allowed-attr",
@@ -605,13 +662,13 @@
         ]
       },
       "/about": {
-        "performance": 88,
+        "performance": 86,
         "accessibility": 83,
         "bestPractices": 100,
         "seo": 100,
-        "fcp": 2550.9101,
-        "lcp": 2700.9101,
-        "tbt": 254,
+        "fcp": 2550.8453,
+        "lcp": 2700.8453,
+        "tbt": 295.5,
         "cls": 0.013222,
         "a11yFails": [
           "aria-allowed-attr",
@@ -625,9 +682,9 @@
         "accessibility": 82,
         "bestPractices": 100,
         "seo": 100,
-        "fcp": 2700.8527999999997,
-        "lcp": 2850.8527999999997,
-        "tbt": 274.5,
+        "fcp": 2700.8261,
+        "lcp": 2850.8261,
+        "tbt": 276,
         "cls": 0.002534,
         "a11yFails": [
           "aria-allowed-attr",
