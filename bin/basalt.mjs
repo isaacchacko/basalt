@@ -64,7 +64,8 @@ function run(args, stdio) {
     cwd: work,
     stdio,
     encoding: "utf8",
-    env: { ...process.env, BASALT_SITE: dir },
+    // Astro's telemetry posts to the network on every build: off, unless asked for
+    env: { ASTRO_TELEMETRY_DISABLED: "1", ...process.env, BASALT_SITE: dir },
   })
   return result
 }

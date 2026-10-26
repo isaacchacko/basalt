@@ -58,7 +58,10 @@ export default defineConfig({
   trailingSlash: "ignore",
   // Astro's own dev toolbar: not part of a Basalt page (it also appeared inside island frames)
   devToolbar: { enabled: false },
-  integrations: [preact({ compat: true }), agentApi()],
+  // JSX is only in .tsx and .jsx (islands): left to its default, the preset runs
+  // Babel over every .ts and .js outside node_modules, Basalt's own client code
+  // included, which is ~0.6 s of every build
+  integrations: [preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi()],
   markdown: {
     syntaxHighlight,
     // unified's PluggableList and Astro's plugin types describe the same thing
