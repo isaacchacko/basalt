@@ -13,6 +13,6 @@ test("a note's source is its whole file, as written", async () => {
 
 test("it's highlighted as markdown, in the light and the dark theme", async () => {
   const html = await highlightSource(note)
-  assert.match(html, /<code data-language="md" data-theme="github-light github-dark"/)
+  assert.match(html, /<code data-language="md" data-theme="github-light-default github-dark-default"/)
   assert.match(html, /--shiki-dark-font-weight:bold"># Tides<\/span>/)
 })

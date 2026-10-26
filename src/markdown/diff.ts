@@ -167,7 +167,7 @@ export function wordDiff(a: string, b: string): [Array<[number, number]>, Array<
 
 // ---------- highlighting ----------
 
-const THEMES = { light: "github-light", dark: "github-dark" } as const
+const THEMES = { light: "github-light-default", dark: "github-dark-default" } as const
 let highlighter: Promise<Highlighter> | undefined
 
 /** shiki's name for a file's language, from its extension or name */
