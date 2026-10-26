@@ -300,7 +300,7 @@ function itemFor(target: Element, article: Element): [Item, Element] | null {
         node.matches("a.internal[data-slug]") &&
         node.dataset.footnoteRef === undefined &&
         node.dataset.noPopover !== "true" &&
-        node.getAttribute("role") !== "anchor" &&
+        node.dataset.anchor === undefined &&
         new URL(node.href).pathname !== location.pathname
       )
         return [notePreview(node), node]

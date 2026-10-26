@@ -484,7 +484,7 @@ thead {
   font-weight: revert;
   margin-bottom: 0;
 
-  article > & > a[role="anchor"] {
+  article > & > a[data-anchor] {
     color: var(--dark);
     background-color: transparent;
   }
@@ -509,7 +509,7 @@ h6 {
     opacity: 1;
   }
 
-  &:not([id]) > a[role="anchor"] {
+  &:not([id]) > a[data-anchor] {
     display: none;
   }
 }

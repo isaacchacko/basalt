@@ -96,7 +96,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
     <div id="quartz-root" class="page">
       <div id="quartz-body">
         <Nav title={site.config.title} root={root} current={slug} layout={layout} />
-        <div class="center">
+        <main class="center">
           <div class="page-header">
             {
               layout.components.search && (
@@ -124,7 +124,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
           <slot name="listing" />
           {source && <div class="page-source" style={`--digits: ${lineNumberDigits}`} set:html={source} />}
           <div class="page-footer"></div>
-        </div>
+        </main>
         <div class="right sidebar">
           {note && <Margin note={note} headings={headings} backlinks={backlinks} />}
         </div>

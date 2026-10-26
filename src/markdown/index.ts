@@ -122,7 +122,7 @@ const basaltRehype: PluggableList = [
     rehypeAutolinkHeadings,
     {
       behavior: "append",
-      properties: { role: "anchor", ariaHidden: true, tabIndex: -1, "data-no-popover": true },
+      properties: { "data-anchor": true, ariaHidden: "true", tabIndex: -1, "data-no-popover": true },
       content: AUTOLINK_ICON,
     },
   ],

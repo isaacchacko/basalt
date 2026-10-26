@@ -62,7 +62,6 @@ function toggleExplorer(button: Element) {
   const explorer = button.closest<HTMLElement>(".explorer")
   if (!explorer) return
   const collapsed = explorer.classList.toggle("collapsed")
-  explorer.setAttribute("aria-expanded", String(!collapsed))
   button.setAttribute("aria-expanded", String(!collapsed))
   // the phone's drawer: the page under it doesn't scroll
   if (button.classList.contains("mobile-explorer")) root.classList.toggle("mobile-no-scroll", !collapsed)
@@ -86,7 +85,6 @@ function shutDrawer() {
   const menu = explorer?.querySelector<HTMLElement>(".mobile-explorer")
   if (explorer && menu?.checkVisibility()) {
     explorer.classList.add("collapsed")
-    explorer.setAttribute("aria-expanded", "false")
     root.classList.remove("mobile-no-scroll")
   }
 }
