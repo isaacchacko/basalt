@@ -39,7 +39,7 @@ async function draw(note: Note): Promise<Buffer | null> {
       title: titleOf(note),
       description: descriptionOf(note),
       site: site.config.title,
-      where: (site.config.baseUrl ?? "").replace(/\/$/, "") + (href === "/" ? "" : href),
+      where: site.config.baseUrl ? site.config.baseUrl.replace(/\/$/, "") + (href === "/" ? "" : href) : undefined,
       colors: cfg.theme.colors.lightMode,
       icon,
     },

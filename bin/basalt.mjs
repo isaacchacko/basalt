@@ -307,6 +307,9 @@ switch (command) {
       }
     })()
     const problems = [...failed, ...check(path.join(work, "dist"), notes, { islands: islandNames(dir), reached })]
+    // without a host, nothing that must be absolute can be: say so once
+    if (!loadSite(dir).config.baseUrl)
+      problems.push({ kind: "no baseUrl", note: shown(path.join(dir, "basalt.json")), line: null, detail: 'set "baseUrl" (e.g. "garden.example.com"): the sitemap, the feed, canonical links and social cards need the site\'s address', warning: true })
     report(problems, flags.json)
     process.exit(problems.some((p) => !p.warning) ? 1 : 0)
   }
