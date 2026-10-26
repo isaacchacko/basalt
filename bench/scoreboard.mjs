@@ -435,6 +435,19 @@ async function measureReload() {
     } finally {
       sh(process.execPath, [basaltCli, "stop", stagedGarden], stagedRoot, { ok: true })
     }
+    // again, from cold, with the page opened a few seconds after the server
+    // answers, as a person (or an agent) opens it
+    sites.basalt.clean()
+    sh(process.execPath, [basaltCli, "dev", stagedGarden, "--port", String(port)], stagedRoot)
+    try {
+      await until(() => ok(`http://localhost:${port}/__basalt/status`), 120000, 50)
+      await sleep(3000)
+      const w0 = performance.now()
+      await until(() => ok(`http://localhost:${port}${target.route}`), 120000, 100)
+      res.basalt.warm = performance.now() - w0
+    } finally {
+      sh(process.execPath, [basaltCli, "stop", stagedGarden], stagedRoot, { ok: true })
+    }
   }
   // Quartz
   {
@@ -446,10 +459,14 @@ async function measureReload() {
       const url = `http://localhost:${port}${target.route}`
       await until(() => ok(url), 120000, 100)
       const start = performance.now() - t0
+      await sleep(3000)
+      const w0 = performance.now()
+      await ok(url)
+      const warm = performance.now() - w0
       const page = await b.newPage()
       await page.setViewport({ width: 1440, height: 900 })
       await open(page, url)
-      res.quartz = { start, ...(await timeReloads(page, path.join(quartzContent, target.qrel), "quartz")) }
+      res.quartz = { start, warm, ...(await timeReloads(page, path.join(quartzContent, target.qrel), "quartz")) }
       await page.close()
     } finally {
       process.kill(-child.pid, "SIGTERM")
@@ -624,8 +641,9 @@ function report(R) {
   }
   if (R.reload) {
     const b = R.reload.basalt, q = R.reload.quartz
-    table("Dev server", `\`basalt dev\` against \`quartz build --serve\`. Start: from the command to \`${R.reload.route}\` answering. Reload: from saving \`${R.reload.route}\`'s note with a new line to the open page showing it, ${b.tries} saves, the page scrolled halfway down first.`, () => {
+    table("Dev server", `\`basalt dev\` against \`quartz build --serve\`. Start: from the command to \`${R.reload.route}\` answering, asked at once. Then the same page asked 3 s after the server first answers. Reload: from saving \`${R.reload.route}\`'s note with a new line to the open page showing it, ${b.tries} saves, the page scrolled halfway down first.`, () => {
       add("start to first page", b.start, q.start, s)
+      if (b.warm != null && q.warm != null) add("a page opened 3 s after start", b.warm, q.warm, msf)
       add("save to visible in the page", b.reload, q.reload, msf)
       rows.push(["scroll kept through the reload", `${b.scrollKept}/${b.tries}`, `${q.scrollKept}/${q.tries}`, verdict(b.scrollKept, q.scrollKept, false)])
     })
