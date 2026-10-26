@@ -200,7 +200,8 @@ function copyOf(note: HTMLElement): HTMLElement {
   copy.classList.remove("open")
   copy.removeAttribute("id")
   copy.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"))
-  copy.setAttribute("aria-hidden", "true")
+  // not aria-hidden: beside the text the copy is the only one there is (the
+  // note in the text is display: none), and inline the margin's layer is
   return copy
 }
 
