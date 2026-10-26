@@ -87,4 +87,10 @@ describe("ofm's text pass", () => {
     assert.match(blocks[0], /<p class="tab-label">Basalt<\/p>/)
     assert.match(code, /<blockquote class="callout tab" data-callout="tab">[\s\S]*Alone/)
   })
+
+  test("a mermaid block stays mermaid's, for the browser to draw (not highlighted as plain text)", async () => {
+    const { code } = await render("diagrams.md")
+    assert.match(code, /<pre><button class="expand-button"[^>]*>[\s\S]*?<code class="mermaid" data-clipboard=/)
+    assert.doesNotMatch(code, /data-language="plaintext"[^>]*>[^<]*<span data-line=""><span>(graph|sequenceDiagram|flowchart)/)
+  })
 })

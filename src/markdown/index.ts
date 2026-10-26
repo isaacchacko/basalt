@@ -45,7 +45,7 @@ import { siteDir, type SiteFile } from "../lib/site"
 import type { FullSlug } from "../lib/path"
 import { useRegistry } from "./context.ts"
 import { remarkNote, rehypeLinks, rehypeNoteData } from "./frontmatter.ts"
-import { ofmText, rehypeOfm, remarkOfm } from "./ofm.ts"
+import { ofmText, rehypeMermaid, rehypeOfm, remarkOfm } from "./ofm.ts"
 import { remarkDiagrams } from "./diagrams.ts"
 import { remarkTree } from "./tree.ts"
 import { rehypeEmbeds, remarkFileEmbeds } from "./embeds.ts"
@@ -110,6 +110,7 @@ const AUTOLINK_ICON = {
 const basaltRehype: PluggableList = [
   // Quartz highlighted first, before raw html is parsed; diffs before the rest
   rehypeDiff,
+  rehypeMermaid,
   [rehypePrettyCode, prettyCode],
   rehypeRaw,
   // <copy>text</copy>, before links are made of what's in it

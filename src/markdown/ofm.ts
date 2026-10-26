@@ -414,6 +414,16 @@ function mermaid(tree: HtmlRoot) {
 export function rehypeOfm() {
   return (tree: HtmlRoot, file: VFile) => {
     blockReferences(tree, file)
+  }
+}
+
+/**
+ * A mermaid block's button and dialog, before code is highlighted: a <pre>
+ * with more than its <code> isn't one rehype-pretty-code highlights, so the
+ * block keeps its source and its `mermaid` class for the browser to draw.
+ */
+export function rehypeMermaid() {
+  return (tree: HtmlRoot, file: VFile) => {
     if (file.data.hasMermaidDiagram) mermaid(tree)
   }
 }
