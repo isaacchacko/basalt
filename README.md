@@ -32,6 +32,8 @@ Your notes go in `my-garden/notes/`. [BASALT.md](https://github.com/isaacchacko/
 
 To work on Basalt itself, clone it, `npm install`, and run `node bin/basalt.mjs` in place of `basalt`.
 
+To release it, run `npm version patch` (or `minor`), then `git push --follow-tags`. The tag publishes it to npm from GitHub Actions ([publish.yml](.github/workflows/publish.yml)), through npm's trusted publishing, with no token and no passkey.
+
 ## Made from
 
 [Astro](https://astro.build), with markdown from [Quartz](https://quartz.jzhao.xyz)'s plugins and margins after [Tufte CSS](https://edwardtufte.github.io/tufte-css/). Set in [Palatino](https://en.wikipedia.org/wiki/Palatino), or any font a site chooses. Graphs by [graph](https://graph.isaacchacko.com), PDFs by [pdf.js](https://mozilla.github.io/pdf.js/), math by [KaTeX](https://katex.org). MIT licensed.

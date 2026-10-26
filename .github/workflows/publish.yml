@@ -1,0 +1,30 @@
+# A tag v* publishes @isaacchacko/basalt to npm. npm trusts this workflow
+# (trusted publishing, set up on npmjs.com), so there's no token and no
+# passkey, and the release carries provenance from the commit it was built from.
+#
+#   npm version patch && git push --follow-tags
+
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: The tag is the package's version
+        run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+      - run: npm ci
+      - run: npm test
+      - run: npm publish --access public
