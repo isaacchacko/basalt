@@ -2,11 +2,25 @@
 // again when the page turns light or dark). The code block becomes a
 // figure.diagram-mermaid, which the viewer opens like any other diagram.
 // Without JavaScript, or if mermaid can't parse it, the source shows.
+//
+// Mermaid comes from a CDN, pinned, and only to a page with a mermaid block,
+// as Quartz does: bundled, it was 126 MB of every install and some sixty
+// chunks of every build, for a diagram most sites never draw. (Offline, its
+// source shows.)
 import { onTheme, isDark } from "./embeds"
+
+const MERMAID = "https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.esm.min.mjs"
 
 type Mermaid = typeof import("mermaid").default
 let mermaid: Promise<Mermaid> | null = null
-const load = () => (mermaid ??= import("mermaid").then((m) => m.default))
+const load = () =>
+  (mermaid ??= (import(/* @vite-ignore */ MERMAID) as Promise<{ default: Mermaid }>).then(
+    (m) => m.default,
+    (err) => {
+      mermaid = null
+      throw err
+    },
+  ))
 
 const SOURCES = "pre:has(> code.mermaid), pre:has(> code.language-mermaid), pre[data-language='mermaid']"
 
@@ -41,7 +55,17 @@ function sourceOf(pre: HTMLElement): string {
 let ids = 0
 
 async function draw(figures: HTMLElement[]) {
-  const m = await load()
+  let m: Mermaid
+  try {
+    m = await load()
+  } catch {
+    // offline, or the CDN is down: the source stays, as it would without JavaScript
+    for (const figure of figures) {
+      figure.dataset.failed = "true"
+      delete figure.dataset.drawing
+    }
+    return
+  }
   const dark = isDark()
   const font = css("--bodyFont") || "system-ui, sans-serif"
   m.initialize({
