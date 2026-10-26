@@ -26,6 +26,7 @@ if (import.meta.hot) {
   import.meta.hot.on("basalt:swap", async () => {
     const mine = ++latest
     const url = location.pathname + location.search
+    const hash = location.hash
     let html: string
     try {
       const res = await fetch(url, { headers: { accept: "text/html" } })
@@ -60,6 +61,7 @@ if (import.meta.hot) {
     document.addEventListener(
       "astro:page-load",
       () => {
+        if (hash) history.replaceState(history.state, "", url + hash)
         restore()
         // and once more after anything laid out on load (the margin) settles
         requestAnimationFrame(() => requestAnimationFrame(restore))
@@ -68,7 +70,9 @@ if (import.meta.hot) {
       { once: true },
     )
     try {
-      await navigate(url + location.hash, { history: "replace" })
+      // not to its #part: Astro takes that for a scroll down this page, and
+      // swaps nothing. The #part goes back once it's in
+      await navigate(url, { history: "replace" })
     } finally {
       document.removeEventListener("astro:before-preparation", prepare)
     }
