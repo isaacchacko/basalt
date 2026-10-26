@@ -8,6 +8,7 @@ import { ClientRouter } from "astro:transitions"
 import { registry } from "../lib/registry"
 import { loadSite } from "../lib/site"
 import { layout, paletteCss } from "../lib/config"
+import { analyticsHtml } from "../lib/analytics"
 
 interface Props {
   title: string
@@ -26,6 +27,8 @@ const url = base ? `${base}${path === "/" ? "/" : path}` : undefined
 // the site's palette, over Basalt's (doubled :root, so it wins wherever the
 // stylesheets land in the head)
 const palette = paletteCss(await layout()).replaceAll(":root", ":root:root")
+// the site's analytics, in a built site only
+const analytics = analyticsHtml((await layout()).analytics, { built: import.meta.env.PROD, baseUrl: cfg.baseUrl })
 
 // Basalt's type is Palatino, which visitors have (or a clone of it); only the
 // code face is fetched, and without holding up the first paint (code shows in
@@ -99,3 +102,4 @@ const icon = ownIcon
 {palette && <style is:inline set:html={palette} />}
 
 <ClientRouter fallback="swap" />
+{analytics && <Fragment set:html={analytics} />}
