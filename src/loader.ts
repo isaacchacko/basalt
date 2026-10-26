@@ -17,6 +17,7 @@ import type { Loader, LoaderContext } from "astro/loaders"
 import { parseFrontmatter } from "@astrojs/markdown-remark"
 import { refreshRegistry, registry } from "./lib/registry"
 import { linkOne, linkPublic, sourceDirs, type SiteFile } from "./lib/site"
+import { datesOf } from "./lib/gitdates"
 import { textTransforms } from "./markdown"
 import { findIslands } from "./markdown/islands"
 import { resolveFile } from "./markdown/embeds"
@@ -32,6 +33,13 @@ function codeDigest(siteDir: string): string {
     path.join(siteDir, "basalt.config.ts"),
   ]
   return files.map((f) => (fs.existsSync(f) ? fs.statSync(f).mtimeMs : 0)).join(",")
+}
+
+/** a frontmatter date as ISO, or undefined when it isn't one */
+function isoOf(v: unknown): string | undefined {
+  if (v === undefined || v === null || v === "") return undefined
+  const d = v instanceof Date ? v : new Date(String(v))
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
 }
 
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(\r?\n|$)/
@@ -168,13 +176,16 @@ export function basaltLoader(): Loader {
         }
         noteFailed(file.abs, null)
         noteWarned(file.abs, unknownIslands(rendered.html, raw, rel(file), findIslands(islandsDir)))
-        const stat = fs.statSync(file.abs)
+        // the frontmatter's dates, else git's, else the file system's (a fresh
+        // clone's are all the clone's)
+        const fm = (rendered.metadata?.frontmatter ?? {}) as Record<string, unknown>
+        const dates = datesOf(file.abs, sourceDirs(reg.site))
         const data = {
-          ...rendered.metadata?.frontmatter,
+          ...fm,
           slug: file.slug,
           rel: file.rel,
-          modified: stat.mtime.toISOString(),
-          created: stat.birthtime.toISOString(),
+          modified: isoOf(fm.modified ?? fm.updated ?? fm.lastmod) ?? dates.modified.toISOString(),
+          created: isoOf(fm.created) ?? dates.created.toISOString(),
         }
         store.set({
           id: file.slug,

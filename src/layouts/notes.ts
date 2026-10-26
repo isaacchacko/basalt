@@ -43,6 +43,13 @@ export function dateOf(note: Note): Date | undefined {
   return date && !isNaN(date.getTime()) ? date : undefined
 }
 
+/** When a note last changed: its frontmatter's say, else git's, else the file's. */
+export function modifiedOf(note: Note): Date | undefined {
+  const d = (note.data as Data).modified
+  const date = d ? new Date(d) : undefined
+  return date && !isNaN(date.getTime()) ? date : dateOf(note)
+}
+
 export function readingTimeOf(note: Note): number {
   const t = (note.data as Data).readingTime
   if (typeof t === "number") return Math.max(1, Math.ceil(t))

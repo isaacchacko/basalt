@@ -1,13 +1,13 @@
 // Every published page, at the site's baseUrl.
 import type { APIRoute } from "astro"
 import { registry } from "../lib/registry"
-import { dateOf, folders, hrefOf, notes, tagIndex, tree } from "../layouts/notes"
+import { modifiedOf, folders, hrefOf, notes, tagIndex, tree } from "../layouts/notes"
 
 export const GET: APIRoute = async () => {
   const { config } = registry().site
   const base = `https://${(config.baseUrl ?? "example.com").replace(/\/$/, "")}`
   const all = await notes()
-  const urls: { loc: string; lastmod?: Date }[] = all.map((n) => ({ loc: hrefOf(n.id), lastmod: dateOf(n) }))
+  const urls: { loc: string; lastmod?: Date }[] = all.map((n) => ({ loc: hrefOf(n.id), lastmod: modifiedOf(n) }))
   const seen = new Set(urls.map((u) => u.loc))
   for (const f of folders(tree(all))) if (!seen.has(hrefOf(f.slug))) urls.push({ loc: hrefOf(f.slug) })
   const tags = [...tagIndex(all).keys()]

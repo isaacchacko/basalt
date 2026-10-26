@@ -14,6 +14,8 @@ import { parseFrontmatter } from "@astrojs/markdown-remark"
 import { simplifySlug, slugTag, type FullSlug } from "../lib/path"
 import { hrefOf } from "../lib/links.ts"
 import { reg } from "./context.ts"
+import { datesOf } from "../lib/gitdates.ts"
+import { sourceDirs } from "../lib/site.ts"
 
 export interface Listed {
   slug: FullSlug
@@ -39,7 +41,7 @@ export function listed(): Listed[] {
       return {
         slug: f.slug,
         title: fm.title ? String(fm.title) : (f.slug.split("/").pop() ?? f.slug),
-        date: asDate(fm.date ?? fm.created ?? fm.published) ?? fs.statSync(f.abs).mtime,
+        date: asDate(fm.date ?? fm.created ?? fm.published) ?? datesOf(f.abs, sourceDirs(reg().site)).created,
         tags: (Array.isArray(tags) ? tags : typeof tags === "string" ? tags.split(",") : [])
           .map((t) => slugTag(String(t).trim())),
         draft: fm.draft === true || fm.draft === "true" || fm.private === true || fm.private === "true",
