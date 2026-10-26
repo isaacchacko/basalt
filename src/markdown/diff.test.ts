@@ -124,7 +124,7 @@ describe("renderDiff", () => {
     assert.strictEqual(html.match(/data-line=""/g)?.length, 11)
     assert.match(html, /data-diff="del"><span class="diff-gutter" aria-hidden="true" data-old="2" data-new=""><\/span><span class="diff-sign">-<\/span>/)
     // highlighted as typescript, both themes
-    assert.match(html, /<span style="--shiki-light:#D73A49;--shiki-dark:#F97583">const<\/span>/)
+    assert.match(html, /<span style="--shiki-light:#CF222E;--shiki-dark:#FF7B72">const<\/span>/)
     // 1 became 2
     assert.match(html, /<span class="diff-word"><span[^>]*>2<\/span><\/span>/)
   })

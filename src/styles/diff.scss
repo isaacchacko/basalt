@@ -148,8 +148,8 @@ figure.diff {
     }
 
     & > span.diff-hunk-range {
+      // full grey: faded, it fell under 4.5:1 on the hunk's band in the dark
       color: var(--gray);
-      opacity: 0.8;
     }
 
     & > span.diff-hunk-context {

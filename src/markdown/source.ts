@@ -9,7 +9,7 @@ import { unified } from "unified"
 
 /** how code is highlighted: a light and a dark theme, the page's own background */
 export const prettyCode: Options = {
-  theme: { light: "github-light", dark: "github-dark" },
+  theme: { light: "github-light-default", dark: "github-dark-default" },
   keepBackground: false,
   defaultLang: { block: "plaintext" },
 }
