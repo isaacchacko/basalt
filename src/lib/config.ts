@@ -69,6 +69,12 @@ export interface LayoutConfig {
   }
   breadcrumbs: { rootName: string }
   footer: { links: Record<string, string> }
+  /**
+   * Each note's card for where it's shared (og:image, made by Basalt in the
+   * site's palette): on unless false. A note's frontmatter `image` (a file in
+   * the site, or a url) is its card instead.
+   */
+  socialImages: boolean
   /** how many notes rss.xml carries */
   rssLimit: number
   feed: {
@@ -144,6 +150,7 @@ export const defaults: LayoutConfig = {
   explorer: { folderDefaultState: "collapsed", order: [] },
   breadcrumbs: { rootName: "Home" },
   footer: { links: {} },
+  socialImages: true,
   rssLimit: 10,
   feed: { folders: [] },
   strings,
