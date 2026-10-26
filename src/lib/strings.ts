@@ -37,6 +37,10 @@ export const strings = {
   source: "Show the markdown",
   /** the feed's description, when the site gives none */
   feed: "The last {n} notes on {title}",
+  /** the login page of a site with a password */
+  password: "Password",
+  enter: "Enter",
+  wrongPassword: "That isn't the password.",
 }
 
 export type Strings = typeof strings

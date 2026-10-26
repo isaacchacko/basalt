@@ -8,7 +8,9 @@ import { canDrawCards, cardPng } from "../../lib/socialimage"
 import { descriptionOf, hrefOf, notes, titleOf, type Note } from "../../layouts/notes"
 
 export async function getStaticPaths() {
-  if (!(await layout()).socialImages || !canDrawCards()) return []
+  const cfg = await layout()
+  // behind a password, a card would show the note to anyone it's shared with
+  if (!cfg.socialImages || cfg.password === true || !canDrawCards()) return []
   const all = (await notes()).filter((n) => !n.id.startsWith("tags/"))
   // building: every card drawn at once (sharp draws on its own threads), each
   // page then takes its own

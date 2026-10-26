@@ -26,7 +26,9 @@ const fullTitle = title === cfg.title ? title : `${title} · ${cfg.title}`
 const desc = description ?? cfg.description
 const base = cfg.baseUrl ? `https://${cfg.baseUrl.replace(/\/$/, "")}` : undefined
 const url = base ? `${base}${path === "/" ? "/" : path}` : undefined
-const imageUrl = image && (/^https?:\/\//.test(image) || !base ? image : base + image)
+// behind a password, there's no feed, and no card for a link to show
+const locked = (await layout()).password === true
+const imageUrl = !locked && image && (/^https?:\/\//.test(image) || !base ? image : base + image)
 // the site's palette, over Basalt's (doubled :root, so it wins wherever the
 // stylesheets land in the head)
 const palette = paletteCss(await layout()).replaceAll(":root", ":root:root")
@@ -56,7 +58,7 @@ const icon = ownIcon
 {noindex && <meta name="robots" content="noindex" />}
 <meta name="generator" content="Basalt" />
 <link rel="icon" href={icon} />
-<link rel="alternate" type="application/rss+xml" title={cfg.title} href="/rss.xml" />
+{!locked && <link rel="alternate" type="application/rss+xml" title={cfg.title} href="/rss.xml" />}
 
 <meta property="og:site_name" content={cfg.title} />
 <meta property="og:title" content={fullTitle} />

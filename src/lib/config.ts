@@ -18,9 +18,14 @@
 //
 //   { "strings": { "explorer": "the garden", "noTags": "no tags yet." } }
 //
-// and a top-level "analytics" for who's reading (analytics.ts):
+// a top-level "analytics" for who's reading (analytics.ts):
 //
 //   { "analytics": { "provider": "vercel" } }
+//
+// and a top-level "password" for who can (integrations/password.ts), its
+// password the BASALT_PASSWORD env var, never a file:
+//
+//   { "password": true }
 //
 // A page turns an opt-in part on (or off) for itself in its frontmatter:
 // `graph: true`, `toc: true`, `backlinks: true`.
@@ -85,6 +90,12 @@ export interface LayoutConfig {
   strings: Strings
   /** the site's analytics (analytics.ts); a top-level "analytics" in basalt.json */
   analytics?: Analytics
+  /**
+   * The built site behind a password (integrations/password.ts), which is
+   * the BASALT_PASSWORD env var where it's served; a top-level "password" in
+   * basalt.json. Its feeds, sitemap and cards aren't built.
+   */
+  password?: boolean
   /**
    * The site's palette, over Basalt's (src/styles/basalt.scss): any of
    * light, lightgray, gray, darkgray, dark, secondary, tertiary, highlight,
@@ -187,12 +198,14 @@ async function siteConfig(dir: string): Promise<BasaltConfig> {
     const theme = mod.theme ?? own.theme
     const words = mod.strings ?? own.strings
     const analytics = mod.analytics ?? (own as { analytics?: unknown }).analytics
+    const password = mod.password ?? (own as { password?: unknown }).password
     return {
       layout: {
         ...lay,
         ...(theme ? { theme } : {}),
         ...(words ? { strings: words } : {}),
         ...(analytics ? { analytics } : {}),
+        ...(password !== undefined ? { password } : {}),
       } as BasaltConfig["layout"],
     }
   } catch (err) {
@@ -206,7 +219,7 @@ let last: LayoutConfig | undefined
 /** The site's layout, read fresh each page (basalt.json and basalt.config.ts can change while serving). */
 export async function layout(): Promise<LayoutConfig> {
   const dir = siteDir()
-  let json: { layout?: Record<string, unknown>; theme?: unknown; strings?: unknown; analytics?: unknown } = {}
+  let json: { layout?: Record<string, unknown>; theme?: unknown; strings?: unknown; analytics?: unknown; password?: unknown } = {}
   try {
     json = JSON.parse(fs.readFileSync(path.join(dir, "basalt.json"), "utf8"))
   } catch {}
@@ -215,6 +228,7 @@ export async function layout(): Promise<LayoutConfig> {
     ...(json.theme ? { theme: json.theme } : {}),
     ...(json.strings ? { strings: json.strings } : {}),
     ...(json.analytics ? { analytics: json.analytics } : {}),
+    ...(json.password !== undefined ? { password: json.password } : {}),
   }
   last = merge(merge(defaults, fromJson), (await siteConfig(dir)).layout)
   return last
