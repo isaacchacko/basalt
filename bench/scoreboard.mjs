@@ -38,7 +38,7 @@ const quartzSrc = expand(flags.quartz ?? "~/bench/quartz-upstream")
 const work = expand(flags.work ?? "~/.cache/basalt-bench")
 const runs = Number(flags.runs ?? 3)
 const chromePath = flags.chrome ?? ["/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"].find((p) => fs.existsSync(p))
-const sections = ["config", "deps", "build", "weight", "lighthouse", "reload"]
+const sections = ["config", "deps", "build", "weight", "lighthouse", "axe", "reload"]
 const only = flags.only ? String(flags.only).split(",") : sections
 const resultsFile = path.join(here, "results.json")
 const outFile = path.join(basalt, "BENCHMARKS.md")
@@ -313,6 +313,47 @@ async function measureLighthouse(routes) {
   return res
 }
 
+// ---------------------------------------------------------------- accessibility, every page
+
+/** axe-core (Lighthouse's engine), WCAG 2 A and AA, on every page both builds have, light and dark */
+async function measureAxe(routes) {
+  const axe = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8")
+  const b = await browser()
+  const res = { routes, rules: "wcag2a, wcag2aa" }
+  for (const [name, site, blocked] of [["basalt", "basalt", islandPatterns()], ["quartz", "quartz", []]]) {
+    const srv = await serve(sites[site].out)
+    const out = { light: {}, dark: {} }
+    for (const theme of ["light", "dark"]) {
+      for (const r of routes) {
+        const page = await b.newPage()
+        await page.setViewport({ width: 1440, height: 900 })
+        await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: theme }, { name: "prefers-reduced-motion", value: "reduce" }])
+        await page.evaluateOnNewDocument((t) => {
+          try {
+            localStorage.setItem("theme", t)
+          } catch {}
+        }, theme)
+        if (blocked.length) {
+          const cdp = await page.createCDPSession()
+          await cdp.send("Network.setBlockedURLs", { urls: blocked })
+        }
+        await page.goto(srv.url + r, { waitUntil: "load", timeout: 60000 })
+        await sleep(1200)
+        await page.evaluate(axe)
+        out[theme][r] = await page.evaluate(async () =>
+          (await window.axe.run(document, { runOnly: ["wcag2a", "wcag2aa"] })).violations.map((v) => ({ id: v.id, nodes: v.nodes.length })),
+        )
+        await page.close()
+      }
+    }
+    srv.close()
+    res[name] = out
+    log(name, "axe", routes.length, "pages")
+  }
+  await b.close()
+  return res
+}
+
 // ---------------------------------------------------------------- dev server: start and hot reload
 
 async function until(fn, ms = 60000, every = 50) {
@@ -565,6 +606,22 @@ function report(R) {
     const fails = (name) => [...new Set(R.lighthouse.routes.flatMap((r) => R.lighthouse[name][r].a11yFails))]
     L.push(`Accessibility audits failed: Basalt ${fails("basalt").map((f) => "`" + f + "`").join(", ") || "none"}; Quartz ${fails("quartz").map((f) => "`" + f + "`").join(", ") || "none"}.`, "")
   }
+  if (R.axe) {
+    const count = (name, theme, what) =>
+      R.axe.routes.reduce((n, r) => n + (what === "pages" ? +(R.axe[name][theme][r].length > 0) : R.axe[name][theme][r].reduce((m, v) => m + v.nodes, 0)), 0)
+    table("Accessibility, every page", `axe-core (Lighthouse's engine), ${R.axe.rules}, on all ${R.axe.routes.length} pages both builds have, in each theme (Basalt with the garden's islands blocked).`, () => {
+      for (const theme of ["light", "dark"]) {
+        add(`pages with a violation, ${theme}`, count("basalt", theme, "pages"), count("quartz", theme, "pages"), String)
+        add(`elements in violation, ${theme}`, count("basalt", theme, "nodes"), count("quartz", theme, "nodes"), String)
+      }
+    })
+    const kinds = (name) => {
+      const by = {}
+      for (const theme of ["light", "dark"]) for (const r of R.axe.routes) for (const v of R.axe[name][theme][r]) by[v.id] = (by[v.id] ?? 0) + v.nodes
+      return Object.entries(by).sort((a, b) => b[1] - a[1]).map(([id, n]) => `\`${id}\` ${n}`).join(", ") || "none"
+    }
+    L.push(`By rule, elements in both themes: Basalt ${kinds("basalt")}; Quartz ${kinds("quartz")}.`, "")
+  }
   if (R.reload) {
     const b = R.reload.basalt, q = R.reload.quartz
     table("Dev server", `\`basalt dev\` against \`quartz build --serve\`. Start: from the command to \`${R.reload.route}\` answering. Reload: from saving \`${R.reload.route}\`'s note with a new line to the open page showing it, ${b.tries} saves, the page scrolled halfway down first.`, () => {
@@ -622,7 +679,7 @@ R.meta = {
 fs.mkdirSync(work, { recursive: true })
 log("staging into", work)
 stage()
-const needBuild = only.some((x) => ["build", "weight", "lighthouse"].includes(x))
+const needBuild = only.some((x) => ["build", "weight", "lighthouse", "axe"].includes(x))
 const save = () => {
   fs.writeFileSync(resultsFile, JSON.stringify(R, null, 2) + "\n")
   fs.writeFileSync(outFile, report(R) + "\n")
@@ -633,6 +690,7 @@ if (only.includes("build")) { R.build = measureBuilds(); save() }
 else if (needBuild) for (const s of Object.values(sites)) s.build()
 if (only.includes("weight")) { R.weight = await measureWeight(); save() }
 if (only.includes("lighthouse")) { R.lighthouse = await measureLighthouse(sharedRoutes()); save() }
+if (only.includes("axe")) { R.axe = await measureAxe(sharedRoutes()); save() }
 if (only.includes("reload")) { R.reload = await measureReload(); save() }
 save()
 log("wrote", path.relative(process.cwd(), outFile))
