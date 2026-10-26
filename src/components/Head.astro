@@ -16,14 +16,17 @@ interface Props {
   /** the page's path, e.g. "/blog/a-post" */
   path: string
   noindex?: boolean
+  /** the card a link to the page shows where it's shared: a path in the site, or a url */
+  image?: string
 }
-const { title, description, path, noindex } = Astro.props
+const { title, description, path, noindex, image } = Astro.props
 const { site } = registry()
 const cfg = site.config
 const fullTitle = title === cfg.title ? title : `${title} · ${cfg.title}`
 const desc = description ?? cfg.description
 const base = cfg.baseUrl ? `https://${cfg.baseUrl.replace(/\/$/, "")}` : undefined
 const url = base ? `${base}${path === "/" ? "/" : path}` : undefined
+const imageUrl = image && (/^https?:\/\//.test(image) || !base ? image : base + image)
 // the site's palette, over Basalt's (doubled :root, so it wins wherever the
 // stylesheets land in the head)
 const palette = paletteCss(await layout()).replaceAll(":root", ":root:root")
@@ -60,7 +63,12 @@ const icon = ownIcon
 <meta property="og:type" content="website" />
 {desc && <meta property="og:description" content={desc} />}
 {url && <meta property="og:url" content={url} />}
-<meta name="twitter:card" content="summary" />
+{imageUrl && <meta property="og:image" content={imageUrl} />}
+{imageUrl && image?.startsWith("/og/") && <meta property="og:image:width" content="1200" />}
+{imageUrl && image?.startsWith("/og/") && <meta property="og:image:height" content="630" />}
+{imageUrl && <meta property="og:image:alt" content={fullTitle} />}
+<meta name="twitter:card" content={imageUrl ? "summary_large_image" : "summary"} />
+{imageUrl && <meta name="twitter:image" content={imageUrl} />}
 <meta name="twitter:title" content={fullTitle} />
 {desc && <meta name="twitter:description" content={desc} />}
 {cfg.baseUrl && <meta property="twitter:domain" content={cfg.baseUrl} />}
