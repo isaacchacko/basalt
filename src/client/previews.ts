@@ -21,6 +21,7 @@
 import { enhanceCopy, isDark, isImageLink, themedPair } from "./embeds"
 import { isBeside, levelWith, lineOf, onPage } from "./margin"
 import { clipsOf } from "./sound"
+import { adoptSheets } from "./sheets"
 
 const SHOW_MS = 90
 const HIDE_MS = 420
@@ -55,7 +56,10 @@ function page(url: URL) {
         })
         .catch(() => null),
     )
-  return pages.get(key)!
+  return pages.get(key)!.then((doc) => {
+    if (doc instanceof Document) adoptSheets(doc)
+    return doc
+  })
 }
 
 /** Relative hrefs and srcs in what came from `base`, made to work here. */

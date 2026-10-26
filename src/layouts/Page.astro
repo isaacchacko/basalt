@@ -21,8 +21,9 @@ import FolderMark from "../components/FolderMark.astro"
 import Margin from "basalt:components/Margin"
 import MediaScripts from "basalt:components/MediaScripts"
 import { highlightSource } from "../markdown/source"
-// KaTeX's own stylesheet and fonts, the installed version rehype-katex renders with
-import "katex/dist/katex.min.css"
+// KaTeX's own stylesheet and fonts, the installed version rehype-katex renders
+// with: only on a page with math (about 8 KB, gzipped, its fonts' faces most of it)
+import katexCss from "katex/dist/katex.min.css?url"
 import "../styles/base.scss"
 import "../styles/basalt.scss"
 import "../styles/print.scss"
@@ -84,6 +85,7 @@ const trail = ancestry(root, crumb ? "" : slug)
 const backlinks = note ? backlinksOf(note.id, all) : []
 const source = note?.body !== undefined ? await highlightSource(note.body) : undefined
 const lineNumberDigits = String(note?.body?.split("\n").length ?? 0).length
+const hasMath = !!note?.rendered?.html.includes('class="katex')
 const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.replace(/\/$/, "") || "/"
 ---
 
@@ -91,6 +93,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
 <html lang={site.config.locale}>
   <head>
     <Head title={title} description={description} path={path} noindex={noindex} />
+    {hasMath && <link rel="stylesheet" href={katexCss} data-basalt-sheet="katex" />}
   </head>
   <body data-slug={slug}>
     <div id="quartz-root" class="page">
