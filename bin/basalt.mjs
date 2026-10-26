@@ -295,7 +295,18 @@ switch (command) {
       col: p.col,
       detail: p.message,
     }))
-    const problems = [...failed, ...check(path.join(work, "dist"), notes, { islands: islandNames(dir) })]
+    // what the site's navigation links: its explorer's order, its footer's own pages
+    const reached = (() => {
+      try {
+        const layout = JSON.parse(fs.readFileSync(path.join(dir, "basalt.json"), "utf8")).layout ?? {}
+        const order = Array.isArray(layout.explorer?.order) ? layout.explorer.order : []
+        const footer = Object.values(layout.footer?.links ?? {}).filter((u) => typeof u === "string" && u.startsWith("/"))
+        return [...order, ...footer].map(String)
+      } catch {
+        return []
+      }
+    })()
+    const problems = [...failed, ...check(path.join(work, "dist"), notes, { islands: islandNames(dir), reached })]
     report(problems, flags.json)
     process.exit(problems.some((p) => !p.warning) ? 1 : 0)
   }
