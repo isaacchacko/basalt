@@ -686,6 +686,15 @@ function setup(server: ViteDevServer) {
   }
   write()
 
+  // the first page renders as the server comes up, not when it's first asked
+  // for: its modules are transformed then (2-3s), so the page a reader or an
+  // agent opens next is ready
+  server.httpServer?.once("listening", () => {
+    const address = server.httpServer?.address()
+    const port = typeof address === "object" && address ? address.port : 4321
+    setTimeout(() => void fetch(`http://localhost:${port}/`, { headers: { "x-basalt-probe": "1", accept: "text/html" } }).then((r) => r.text()).catch(() => {}), 0)
+  })
+
   const stop = () => {
     status.state = "stopped"
     write()
