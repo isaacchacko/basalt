@@ -77,7 +77,10 @@ export default defineConfig({
     // keep their paths inside the root, so Vite treats them as the project's
     resolve: {
       preserveSymlinks: true,
-      alias: { "@site": site.dir, "@basalt": path.join(basalt, "src") },
+      // @basalt by the root's own link to Basalt's src, as Basalt's own imports
+      // are: by its real path, a component a site's file imports is a second
+      // module, and outside a home folder its compiled script goes missing
+      alias: { "@site": site.dir, "@basalt": path.join(site.work, "src") },
     },
     // (merged with resolve above)
     server: { fs: { allow: [site.dir, basalt] } },
