@@ -38,7 +38,9 @@ Basalt sets everything in Palatino (and code in JetBrains Mono). A site picks it
 
 A top-level `analytics` counts readers in the built site (never while serving): `{ "provider": "vercel" }` (Web Analytics and Speed Insights; `"speedInsights": false` for only the first), `{ "provider": "plausible" }` (the `baseUrl`'s domain, or `domain`; `host` for your own), `{ "provider": "umami", "websiteId": "…" }`, `{ "provider": "goatcounter", "code": "…" }` or `{ "provider": "google", "tagId": "G-…" }`. Its script loads once and counts every page the reader goes to.
 
-Basalt writes only under `<site>/.basalt/astro`. That folder holds the site's own Astro root, which is links to Basalt's files plus its cache, its content store and its build (`dist/`).
+A top-level `"password": true` puts the built site behind a password, on Vercel. The password itself is the `BASALT_PASSWORD` env var in the Vercel project, never a file; a password written into `basalt.json` fails the build. `basalt build` then also writes the site as Vercel's [Build Output API](https://vercel.com/docs/build-output-api) in `<site>/.vercel/output` (keep `.vercel/` out of git), which Vercel deploys in place of a plain folder. Every request goes through middleware first, and without the cookie it answers 401 with a login page in the site's palette and type. That covers pages, pictures, the search index, scripts and the 404 page. The right password sets a signed cookie for 30 days and goes on to the page the reader asked for. `/__basalt/logout` clears it, and changing the password logs everyone out. Without `BASALT_PASSWORD` the site lets no one in. The sitemap, the feeds (`rss.xml`, `index.xml`) and the social cards aren't built, since they would show the notes to anyone. `basalt dev` stays open. To deploy, point a Vercel project at the site's folder with the "Other" framework preset, `npx @isaacchacko/basalt build` as its build command and `BASALT_PASSWORD` set. The words on the login page are `password`, `enter` and `wrongPassword` in `strings`.
+
+Basalt writes only under `<site>/.basalt/astro`, and, for a site with a password, `<site>/.vercel/output`. That first folder holds the site's own Astro root, which is links to Basalt's files plus its cache, its content store and its build (`dist/`).
 
 ## The CLI
 
@@ -118,4 +120,5 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 - `src/layouts/`, `src/components/`, `src/pages/`: the page and its routes.
 - `src/client/`: the browser side (margin, previews, viewer, pdf, islands, search, nav).
 - `src/integrations/agent.ts`: the agent API and hot swap.
+- `src/integrations/password.ts`, `src/lib/gate.ts`: a site behind a password (Vercel's Build Output API, and the middleware in it).
 - `bin/basalt.mjs`: the CLI.

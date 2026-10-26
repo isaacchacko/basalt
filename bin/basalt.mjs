@@ -174,7 +174,7 @@ function scaffold() {
     "basalt.config.ts": `// Optional. The site's layout and theme in code (over basalt.json's), and its own\n// markdown plugins. A change to \`markdown\` restarts the dev server; the rest\n// shows on the next page.\nexport default {\n  layout: {\n    // components: { breadcrumbs: false },\n    // footer: { links: { GitHub: "https://github.com/me" } },\n  },\n  // markdown: { remarkPlugins: [], rehypePlugins: [], textTransforms: [] },\n}\n`,
     "components/README.md":
       "A file here named like one of Basalt's components (src/components/*.astro) replaces it.\n",
-    ".gitignore": ".basalt/\n",
+    ".gitignore": ".basalt/\n.vercel/\n",
   }
   for (const [name, text] of Object.entries(files)) {
     const file = path.join(dir, name)
