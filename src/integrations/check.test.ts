@@ -52,3 +52,21 @@ test("an unknown island is reported at its line", () => {
   const problems = check(dist, notes, { islands: ["tally"] })
   assert.deepEqual(problems, [{ kind: "unknown island", note: "notes/z.md", line: 3, detail: '"anemometer" (have: tally)' }])
 })
+
+test("an orphan is a note nothing reaches: not a folder's own note, nor one the navigation links", () => {
+  const dist = site({
+    "index.html": `<p>home</p>`,
+    "about/index.html": `<p>about</p>`,
+    "blog/index.html": `<p>the blog</p>`,
+    "blog/a-post/index.html": `<p>a post</p>`,
+    "stray/index.html": `<p>nobody comes here</p>`,
+  })
+  const notes = new Map(
+    ["index", "about", "blog", "blog/a-post", "stray"].map((s) => [s, { file: `notes/${s}.md`, abs: `/nowhere/${s}.md` }]),
+  )
+  const orphans = (reached?: string[]) =>
+    check(dist, notes, { reached }).filter((p) => p.kind === "orphan").map((p) => p.note)
+  // blog is a folder's own note: its folder's page
+  assert.deepEqual(orphans(), ["notes/about.md", "notes/blog/a-post.md", "notes/stray.md"])
+  assert.deepEqual(orphans(["about", "blog/a-post/"]), ["notes/stray.md"])
+})

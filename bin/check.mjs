@@ -6,7 +6,9 @@
 //                       whose target isn't in the build
 //   missing embeds      an ![[embed]] Basalt couldn't find
 //   unknown islands     an <island name="x"> with no islands/x.tsx (or .ts, .jsx, .js)
-//   orphans             notes nothing links to (a warning)
+//   orphans             notes nothing links to (a warning): not a folder's own
+//                       note, and not one the site's navigation reaches (its
+//                       explorer's `order`, its footer's links)
 //
 // Each problem names the note's file (the one you edit) and, where it can be
 // told, the line: `notes/field-log.md:10  broken link: [[nudibranch]]: no such note`.
@@ -73,13 +75,14 @@ export function locate(text, target) {
 /**
  * The problems in a build (dist), for the site's notes: `notes` maps each
  * note's slug to { file, abs } (file as shown, abs to read its source), and
- * `islands` names the site's islands (null: don't check them).
+ * `islands` names the site's islands (null: don't check them), and
+ * `reached` the slugs the site's own navigation links (they aren't orphans).
  *
  * @param {string} dist
  * @param {Map<string, { file: string, abs: string }>} notes
- * @param {{ islands?: string[] | null }} [opts]
+ * @param {{ islands?: string[] | null, reached?: string[] }} [opts]
  */
-export function check(dist, notes, { islands = null } = {}) {
+export function check(dist, notes, { islands = null, reached = [] } = {}) {
   const pages = []
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -162,8 +165,11 @@ export function check(dist, notes, { islands = null } = {}) {
       }
     })
   }
+  for (const r of reached) linkedTo.add(linkedSlug("/" + r))
+  // a folder's own note is its folder's page: the explorer and breadcrumbs reach it
+  const folders = new Set([...notes.keys()].flatMap((slug) => slug.split("/").slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join("/"))))
   for (const [slug, note] of notes) {
-    if (slug !== "index" && !linkedTo.has(slug)) problems.push({ kind: "orphan", note: note.file, line: null, detail: "nothing links here", warning: true })
+    if (slug !== "index" && !linkedTo.has(slug) && !folders.has(slug)) problems.push({ kind: "orphan", note: note.file, line: null, detail: "nothing links here", warning: true })
   }
   return problems
 }
