@@ -14,7 +14,8 @@ It's set the way [Edward Tufte](https://www.edwardtufte.com/) sets his books, wi
 - **Live components** in a still page, swapped in as you edit them
 - **Saves that land in place,** in under a second, keeping your scroll
 - **Built for agents:** the dev server says when a change is live, and what broke
-- **Light pages,** about a quarter of Quartz's weight
+- **Cards for where it's shared:** each note's own picture for links to it, in the site's colours
+- **Light pages,** about a third of Quartz's weight, and [measured against it](https://github.com/isaacchacko/basalt/blob/main/BENCHMARKS.md) on a real site
 
 ## Start
 
