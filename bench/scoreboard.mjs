@@ -178,6 +178,18 @@ function serve(root) {
     const type = types[path.extname(file)] ?? "application/octet-stream"
     let body = fs.readFileSync(file)
     const headers = { "content-type": type, "cache-control": "no-cache" }
+    // byte ranges, as any host answers them: without, a video's metadata costs the whole video
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "")
+    if (range && status === 200 && !compressible.test(file)) {
+      const size = body.length
+      const start = range[1] ? Number(range[1]) : size - Number(range[2])
+      const end = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1
+      if (start >= size || start > end) return res.writeHead(416, { "content-range": `bytes */${size}` }).end()
+      return res
+        .writeHead(206, { ...headers, "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${size}`, "content-length": end - start + 1 })
+        .end(body.subarray(start, end + 1))
+    }
+    if (!compressible.test(file)) headers["accept-ranges"] = "bytes"
     if (compressible.test(file) && /gzip/.test(req.headers["accept-encoding"] ?? "")) {
       if (!gz.has(file)) gz.set(file, zlib.gzipSync(body, { level: 9 }))
       body = gz.get(file)
@@ -196,11 +208,12 @@ async function browser() {
 }
 
 /** what a visit to the page loads, by kind, in bytes over the wire (gzip) */
-async function weigh(b, url) {
+async function weigh(b, url, blocked = []) {
   const page = await b.newPage()
   await page.setViewport({ width: 1440, height: 900 })
   const cdp = await page.createCDPSession()
   await cdp.send("Network.enable")
+  if (blocked.length) await cdp.send("Network.setBlockedURLs", { urls: blocked })
   await cdp.send("Network.setCacheDisabled", { cacheDisabled: true })
   const reqs = new Map()
   cdp.on("Network.responseReceived", (e) => reqs.set(e.requestId, { url: e.response.url, type: e.type, bytes: 0 }))
@@ -237,10 +250,11 @@ function sharedRoutes() {
 async function measureWeight() {
   const routes = sharedRoutes()
   const b = await browser()
-  const res = { routes, basalt: {}, quartz: {} }
-  for (const name of ["basalt", "quartz"]) {
-    const srv = await serve(sites[name].out)
-    for (const r of routes) res[name][r] = await weigh(b, srv.url + r)
+  // Basalt as Quartz sees the garden: its islands (which Quartz can't run) blocked; and as shipped
+  const res = { routes, blocked: islandPatterns(), basalt: {}, basaltShipped: {}, quartz: {} }
+  for (const [name, site, blocked] of [["basalt", "basalt", res.blocked], ["basaltShipped", "basalt", []], ["quartz", "quartz", []]]) {
+    const srv = await serve(sites[site].out)
+    for (const r of routes) res[name][r] = await weigh(b, srv.url + r, blocked)
     srv.close()
     log(name, "weighed", routes.length, "pages")
   }
@@ -503,17 +517,25 @@ function report(R) {
     const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length
     table(
       "Page weight",
-      `What a visit loads before the network goes quiet, over the wire (gzip, as a host serves it), cache off, at 1440×900, on the ${R.weight.routes.length} pages both builds have. Median page, then the heaviest.`,
+      `What a visit loads before the network goes quiet, over the wire (gzip and byte ranges, as a host serves it), cache off, at 1440×900, on the ${R.weight.routes.length} pages both builds have. Median page, then the heaviest.`,
       () => {
         for (const [k, label] of [["script", "JS"], ["stylesheet", "CSS"], ["document", "HTML"], ["font", "fonts"], ["image", "images"], ["other", "other (data, icons)"], ["page", "page, without video and sound"], ["media", "video and sound"]]) {
           add(`${label}, median page`, sum("basalt", k, median), sum("quartz", k, median), kb)
         }
-        add("page, heaviest", sum("basalt", "page", (x) => Math.max(...x)), sum("quartz", "page", (x) => Math.max(...x)), kb)
+        const heaviest = (name, k) => R.weight.routes.reduce((a, r) => (R.weight[name][r][k] > R.weight[name][a][k] ? r : a))
+        add(`page, heaviest (Basalt \`${heaviest("basalt", "page")}\`, Quartz \`${heaviest("quartz", "page")}\`)`, sum("basalt", "page", (x) => Math.max(...x)), sum("quartz", "page", (x) => Math.max(...x)), kb)
         add("everything, heaviest page", sum("basalt", "total", (x) => Math.max(...x)), sum("quartz", "total", (x) => Math.max(...x)), kb)
         add("requests, median page", sum("basalt", "requests", median), sum("quartz", "requests", median), String)
         add("third-party bytes, median page", sum("basalt", "thirdParty", median), sum("quartz", "thirdParty", median), kb)
       },
     )
+    if (Object.keys(R.weight.basaltShipped ?? {}).length) {
+      const ship = (k, agg) => agg(R.weight.routes.map((r) => R.weight.basaltShipped[r][k]))
+      L.push(
+        `Basalt above has the garden's own islands blocked, as for Lighthouse. As shipped, with them (its backdrop video, its music shelf's covers): median page ${kb(ship("total", median))}, heaviest ${kb(ship("total", (x) => Math.max(...x)))}, ${ship("requests", median)} requests on the median page.`,
+        "",
+      )
+    }
     L.push("<details><summary>Every page</summary>", "", "| page | Basalt JS | Quartz JS | Basalt CSS | Quartz CSS | Basalt page | Quartz page | Basalt video and sound | Quartz video and sound |", "|---|---|---|---|---|---|---|---|---|")
     for (const r of R.weight.routes) {
       const b = R.weight.basalt[r], q = R.weight.quartz[r]
