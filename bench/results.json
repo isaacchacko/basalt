@@ -1,0 +1,642 @@
+{
+  "meta": {
+    "at": "2026-10-26 01:09 UTC",
+    "cpu": "Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz",
+    "cores": 8,
+    "mem": 39,
+    "node": "25.9.0",
+    "chrome": "148.0.7778.167",
+    "basalt": "75198a2",
+    "quartz": "d25a6ea",
+    "quartzVersion": "4.5.2",
+    "garden": "a1f80a3",
+    "lighthouse": "13.5.0",
+    "runs": 3
+  },
+  "weight": {
+    "routes": [
+      "/",
+      "/about",
+      "/arch",
+      "/blog",
+      "/blog/ci-cannot-be-that-hard-for-monorepos",
+      "/blog/how-does-tailscale-work",
+      "/blog/new-additions-oct-2026",
+      "/collections",
+      "/collections/music",
+      "/collections/websites",
+      "/library",
+      "/music",
+      "/now",
+      "/running",
+      "/tags"
+    ],
+    "basalt": {
+      "/": {
+        "document": 6408,
+        "script": 54943,
+        "stylesheet": 29223,
+        "font": 31974,
+        "image": 168381,
+        "media": 1639408,
+        "other": 1662,
+        "requests": 28,
+        "thirdParty": 202178,
+        "quiet": true,
+        "page": 292591,
+        "total": 1931999
+      },
+      "/about": {
+        "document": 7133,
+        "script": 46522,
+        "stylesheet": 28875,
+        "font": 0,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 19,
+        "thirdParty": 813,
+        "quiet": true,
+        "page": 82530,
+        "total": 1721938
+      },
+      "/arch": {
+        "document": 6872,
+        "script": 46522,
+        "stylesheet": 28779,
+        "font": 31461,
+        "image": 0,
+        "media": 20782169,
+        "other": 0,
+        "requests": 22,
+        "thirdParty": 32178,
+        "quiet": true,
+        "page": 113634,
+        "total": 20895803
+      },
+      "/blog": {
+        "document": 5503,
+        "script": 46522,
+        "stylesheet": 28779,
+        "font": 0,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 19,
+        "thirdParty": 717,
+        "quiet": true,
+        "page": 80804,
+        "total": 1720212
+      },
+      "/blog/ci-cannot-be-that-hard-for-monorepos": {
+        "document": 13708,
+        "script": 56478,
+        "stylesheet": 28779,
+        "font": 31461,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 21,
+        "thirdParty": 32178,
+        "quiet": true,
+        "page": 130426,
+        "total": 1769834
+      },
+      "/blog/how-does-tailscale-work": {
+        "document": 7071,
+        "script": 46522,
+        "stylesheet": 28779,
+        "font": 31461,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 20,
+        "thirdParty": 32178,
+        "quiet": true,
+        "page": 113833,
+        "total": 1753241
+      },
+      "/blog/new-additions-oct-2026": {
+        "document": 6281,
+        "script": 46522,
+        "stylesheet": 28779,
+        "font": 31461,
+        "image": 70632,
+        "media": 1639408,
+        "other": 0,
+        "requests": 22,
+        "thirdParty": 32178,
+        "quiet": true,
+        "page": 183675,
+        "total": 1823083
+      },
+      "/collections": {
+        "document": 5439,
+        "script": 46522,
+        "stylesheet": 28779,
+        "font": 0,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 19,
+        "thirdParty": 717,
+        "quiet": true,
+        "page": 80740,
+        "total": 1720148
+      },
+      "/collections/music": {
+        "document": 14293,
+        "script": 53412,
+        "stylesheet": 28779,
+        "font": 0,
+        "image": 3233239,
+        "media": 1639408,
+        "other": 0,
+        "requests": 72,
+        "thirdParty": 717,
+        "quiet": true,
+        "page": 3329723,
+        "total": 4969131
+      },
+      "/collections/websites": {
+        "document": 7169,
+        "script": 53202,
+        "stylesheet": 28779,
+        "font": 0,
+        "image": 254795,
+        "media": 1639408,
+        "other": 0,
+        "requests": 42,
+        "thirdParty": 8681,
+        "quiet": true,
+        "page": 343945,
+        "total": 1983353
+      },
+      "/library": {
+        "document": 7652,
+        "script": 53202,
+        "stylesheet": 56841,
+        "font": 0,
+        "image": 253536,
+        "media": 1639408,
+        "other": 4878,
+        "requests": 46,
+        "thirdParty": 7422,
+        "quiet": true,
+        "page": 376109,
+        "total": 2015517
+      },
+      "/music": {
+        "document": 14776,
+        "script": 53412,
+        "stylesheet": 56841,
+        "font": 0,
+        "image": 3233239,
+        "media": 1639408,
+        "other": 0,
+        "requests": 75,
+        "thirdParty": 717,
+        "quiet": true,
+        "page": 3358268,
+        "total": 4997676
+      },
+      "/now": {
+        "document": 6713,
+        "script": 46522,
+        "stylesheet": 28779,
+        "font": 31461,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 20,
+        "thirdParty": 32178,
+        "quiet": true,
+        "page": 113475,
+        "total": 1752883
+      },
+      "/running": {
+        "document": 5350,
+        "script": 46522,
+        "stylesheet": 28779,
+        "font": 0,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 19,
+        "thirdParty": 717,
+        "quiet": true,
+        "page": 80651,
+        "total": 1720059
+      },
+      "/tags": {
+        "document": 4980,
+        "script": 42633,
+        "stylesheet": 28779,
+        "font": 0,
+        "image": 0,
+        "media": 1639408,
+        "other": 0,
+        "requests": 18,
+        "thirdParty": 717,
+        "quiet": true,
+        "page": 76392,
+        "total": 1715800
+      }
+    },
+    "quartz": {
+      "/": {
+        "document": 10911,
+        "script": 218918,
+        "stylesheet": 12737,
+        "font": 92069,
+        "image": 48744,
+        "media": 0,
+        "other": 26050,
+        "requests": 14,
+        "thirdParty": 98006,
+        "quiet": true,
+        "page": 409429,
+        "total": 409429
+      },
+      "/about": {
+        "document": 11711,
+        "script": 218819,
+        "stylesheet": 12341,
+        "font": 92069,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 12,
+        "thirdParty": 97511,
+        "quiet": true,
+        "page": 343428,
+        "total": 343428
+      },
+      "/arch": {
+        "document": 11369,
+        "script": 219166,
+        "stylesheet": 12654,
+        "font": 92069,
+        "image": 0,
+        "media": 19142761,
+        "other": 8488,
+        "requests": 14,
+        "thirdParty": 98171,
+        "quiet": true,
+        "page": 343746,
+        "total": 19486507
+      },
+      "/blog": {
+        "document": 8431,
+        "script": 219166,
+        "stylesheet": 12654,
+        "font": 76422,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 11,
+        "thirdParty": 82524,
+        "quiet": true,
+        "page": 325161,
+        "total": 325161
+      },
+      "/blog/ci-cannot-be-that-hard-for-monorepos": {
+        "document": 16228,
+        "script": 219166,
+        "stylesheet": 12654,
+        "font": 106804,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 13,
+        "thirdParty": 112906,
+        "quiet": true,
+        "page": 363340,
+        "total": 363340
+      },
+      "/blog/how-does-tailscale-work": {
+        "document": 11717,
+        "script": 219166,
+        "stylesheet": 12654,
+        "font": 106804,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 13,
+        "thirdParty": 112906,
+        "quiet": true,
+        "page": 358829,
+        "total": 358829
+      },
+      "/blog/new-additions-oct-2026": {
+        "document": 10977,
+        "script": 219166,
+        "stylesheet": 12654,
+        "font": 92069,
+        "image": 70632,
+        "media": 0,
+        "other": 8488,
+        "requests": 14,
+        "thirdParty": 98171,
+        "quiet": true,
+        "page": 413986,
+        "total": 413986
+      },
+      "/collections": {
+        "document": 8267,
+        "script": 219166,
+        "stylesheet": 12654,
+        "font": 76422,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 11,
+        "thirdParty": 82524,
+        "quiet": true,
+        "page": 324997,
+        "total": 324997
+      },
+      "/collections/music": {
+        "document": 10099,
+        "script": 219166,
+        "stylesheet": 12656,
+        "font": 76425,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 11,
+        "thirdParty": 82529,
+        "quiet": true,
+        "page": 326834,
+        "total": 326834
+      },
+      "/collections/websites": {
+        "document": 10142,
+        "script": 219166,
+        "stylesheet": 12657,
+        "font": 76433,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 11,
+        "thirdParty": 82538,
+        "quiet": true,
+        "page": 326886,
+        "total": 326886
+      },
+      "/library": {
+        "document": 10568,
+        "script": 219166,
+        "stylesheet": 12659,
+        "font": 76439,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 12,
+        "thirdParty": 82546,
+        "quiet": true,
+        "page": 327320,
+        "total": 327320
+      },
+      "/music": {
+        "document": 10522,
+        "script": 219166,
+        "stylesheet": 12662,
+        "font": 76439,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 12,
+        "thirdParty": 82549,
+        "quiet": false,
+        "page": 327277,
+        "total": 327277
+      },
+      "/now": {
+        "document": 11275,
+        "script": 219166,
+        "stylesheet": 12664,
+        "font": 92095,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 12,
+        "thirdParty": 98207,
+        "quiet": true,
+        "page": 343688,
+        "total": 343688
+      },
+      "/running": {
+        "document": 10299,
+        "script": 219166,
+        "stylesheet": 12664,
+        "font": 92101,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 12,
+        "thirdParty": 98213,
+        "quiet": true,
+        "page": 342718,
+        "total": 342718
+      },
+      "/tags": {
+        "document": 8036,
+        "script": 219166,
+        "stylesheet": 12664,
+        "font": 76449,
+        "image": 0,
+        "media": 0,
+        "other": 8488,
+        "requests": 11,
+        "thirdParty": 82561,
+        "quiet": true,
+        "page": 324803,
+        "total": 324803
+      }
+    }
+  },
+  "reload": {
+    "basalt": {
+      "start": 7027.0114049999975,
+      "reload": 470.09125400002813,
+      "misses": 0,
+      "scrollKept": 5,
+      "tries": 5,
+      "samples": [
+        518,
+        470,
+        450,
+        461,
+        491
+      ]
+    },
+    "quartz": {
+      "start": 3854.438701999956,
+      "reload": 495.532806000032,
+      "misses": 0,
+      "scrollKept": 0,
+      "tries": 5,
+      "samples": [
+        503,
+        492,
+        495,
+        502,
+        496
+      ]
+    },
+    "route": "/now"
+  },
+  "config": {
+    "basalt": {
+      "scratch": 8,
+      "files": [
+        "basalt.json"
+      ],
+      "garden": 128
+    },
+    "quartz": {
+      "scratch": 151,
+      "files": [
+        "quartz.config.ts",
+        "quartz.layout.ts"
+      ]
+    }
+  },
+  "deps": {
+    "basalt": {
+      "direct": 37,
+      "prod": 629,
+      "all": 650,
+      "bytes": 411142786,
+      "installMs": 5591.970092
+    },
+    "quartz": {
+      "direct": 61,
+      "prod": 550,
+      "all": 596,
+      "bytes": 376861168,
+      "installMs": 5152.385479
+    }
+  },
+  "build": {
+    "basalt": {
+      "cold": 7261.929490999999,
+      "warm": 5533.2028900000005,
+      "pages": 21
+    },
+    "quartz": {
+      "cold": 3489.522922999997,
+      "warm": 3424.0268609999985,
+      "pages": 16
+    }
+  },
+  "lighthouse": {
+    "routes": [
+      "/",
+      "/about",
+      "/blog/ci-cannot-be-that-hard-for-monorepos"
+    ],
+    "basalt": {
+      "/": {
+        "performance": 63,
+        "accessibility": 80,
+        "bestPractices": 100,
+        "seo": 100,
+        "fcp": 1524.7202499999999,
+        "lcp": 3176.9793999999993,
+        "tbt": 5772.999999999999,
+        "cls": 0.003102,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "aria-roles",
+          "color-contrast",
+          "landmark-one-main",
+          "link-name"
+        ]
+      },
+      "/about": {
+        "performance": 66,
+        "accessibility": 91,
+        "bestPractices": 100,
+        "seo": 91,
+        "fcp": 1525.4185000000002,
+        "lcp": 2785.4003000000002,
+        "tbt": 4379,
+        "cls": 0,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "landmark-one-main"
+        ]
+      },
+      "/blog/ci-cannot-be-that-hard-for-monorepos": {
+        "performance": 63,
+        "accessibility": 80,
+        "bestPractices": 100,
+        "seo": 91,
+        "fcp": 2304.3419000000004,
+        "lcp": 2930.88655,
+        "tbt": 4288,
+        "cls": 0,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "aria-roles",
+          "color-contrast",
+          "landmark-one-main",
+          "link-name"
+        ]
+      }
+    },
+    "quartz": {
+      "/": {
+        "performance": 74,
+        "accessibility": 83,
+        "bestPractices": 100,
+        "seo": 100,
+        "fcp": 2550.7803,
+        "lcp": 2851.0133,
+        "tbt": 237.5,
+        "cls": 0.274883,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "button-name",
+          "color-contrast",
+          "landmark-one-main"
+        ]
+      },
+      "/about": {
+        "performance": 88,
+        "accessibility": 83,
+        "bestPractices": 100,
+        "seo": 100,
+        "fcp": 2550.9101,
+        "lcp": 2700.9101,
+        "tbt": 254,
+        "cls": 0.013222,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "button-name",
+          "color-contrast",
+          "landmark-one-main"
+        ]
+      },
+      "/blog/ci-cannot-be-that-hard-for-monorepos": {
+        "performance": 85,
+        "accessibility": 82,
+        "bestPractices": 100,
+        "seo": 100,
+        "fcp": 2700.8527999999997,
+        "lcp": 2850.8527999999997,
+        "tbt": 274.5,
+        "cls": 0.002534,
+        "a11yFails": [
+          "aria-allowed-attr",
+          "button-name",
+          "color-contrast",
+          "heading-order",
+          "landmark-one-main"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "basalt-bench",
+  "private": true,
+  "type": "module",
+  "description": "The scoreboard's own tools, apart from Basalt's dependencies",
+  "dependencies": {
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^13.5.0",
+    "puppeteer-core": "^24.0.0"
+  }
+}
