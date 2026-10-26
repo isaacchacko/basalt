@@ -4,6 +4,7 @@
 // searches inside one page, and "@here query" the page you're on: each
 // result is a passage, and choosing one scrolls to it and marks it. The
 // index is built from /static/contentIndex.json the first time search opens.
+import { adoptSheets } from "./sheets"
 
 interface Details {
   slug: string
@@ -178,6 +179,7 @@ async function fetchWhole(slug: string): Promise<Element[]> {
   const hit = rawCache.get(slug)
   if (hit) return hit
   const html = new DOMParser().parseFromString(await (await fetch(new URL(hrefOf(slug), location.href))).text(), "text/html")
+  adoptSheets(html)
   const roots = [...html.querySelectorAll("article")]
   rawCache.set(slug, roots)
   return roots
@@ -189,6 +191,7 @@ async function fetchContent(slug: string): Promise<Element[]> {
   if (hit) return hit
   const url = new URL(hrefOf(slug), location.href)
   const html = new DOMParser().parseFromString(await (await fetch(url)).text(), "text/html")
+  adoptSheets(html)
   // a page's links are root-absolute already; ids would clash with this page's
   html.querySelectorAll("[id]").forEach((n) => (n.id = `search-preview-${n.id}`))
   // the margin's notes would be spliced into their sentences, numbers and

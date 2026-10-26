@@ -28,11 +28,11 @@ const url = base ? `${base}${path === "/" ? "/" : path}` : undefined
 const palette = paletteCss(await layout()).replaceAll(":root", ":root:root")
 
 // Basalt's type is Palatino, which visitors have (or a clone of it); only the
-// code face is fetched. A site's theme.fonts.load brings in its own.
-const fontSheets = [
-  "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap",
-  ...((await layout()).theme.fonts?.load ?? []),
-]
+// code face is fetched, and without holding up the first paint (code shows in
+// the system's monospace until it's in). A site's theme.fonts.load brings in
+// its own, which do wait: they're its titles and text.
+const codeFont = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+const fontSheets = (await layout()).theme.fonts?.load ?? []
 
 // the tab's icon: the site's own (basalt.json "icon", a file in its tree, read
 // fresh so a change shows while serving), or Basalt's mark
@@ -65,6 +65,8 @@ const icon = ownIcon
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href={codeFont} media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href={codeFont} /></noscript>
 {fontSheets.map((href) => <link rel="stylesheet" href={href} />)}
 
 <!--

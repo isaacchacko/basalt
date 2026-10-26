@@ -7,6 +7,9 @@
 
 import { navigate } from "astro:transitions/client"
 import { GraphRenderer, type GraphData, type Theme } from "@isaacchacko/graph"
+// static: every page has the viewer already (a dynamic import here made it a
+// namespace, whose helper landed in flexsearch's chunk, loaded by every page)
+import { viewSrc } from "./viewer"
 
 export type Note = { id: string; title: string; links: string[]; files?: string[] }
 
@@ -146,7 +149,6 @@ async function openFile(slug: string, at: { x: number; y: number }) {
   const kind = kindOf(slug)
   if (kind === "sound") return playSound(src)
   if (kind === "image" || kind === "pdf") {
-    const { viewSrc } = await import("./viewer")
     return viewSrc(src, kind === "image" ? "image" : "frame", fileName(slug), at)
   }
   window.open(src, "_blank", "noopener")
