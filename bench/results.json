@@ -1,12 +1,12 @@
 {
   "meta": {
-    "at": "2026-10-26 02:25 UTC",
+    "at": "2026-10-26 02:46 UTC",
     "cpu": "Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz",
     "cores": 8,
     "mem": 39,
     "node": "25.9.0",
     "chrome": "148.0.7778.167",
-    "basalt": "118be48",
+    "basalt": "6a195b4",
     "quartz": "d25a6ea",
     "quartzVersion": "4.5.2",
     "garden": "a1f80a3",
@@ -889,6 +889,346 @@
           "color-contrast",
           "heading-order",
           "landmark-one-main"
+        ]
+      }
+    }
+  },
+  "axe": {
+    "routes": [
+      "/",
+      "/about",
+      "/arch",
+      "/blog",
+      "/blog/ci-cannot-be-that-hard-for-monorepos",
+      "/blog/how-does-tailscale-work",
+      "/blog/new-additions-oct-2026",
+      "/collections",
+      "/collections/music",
+      "/collections/websites",
+      "/library",
+      "/music",
+      "/now",
+      "/running",
+      "/tags"
+    ],
+    "rules": "wcag2a, wcag2aa",
+    "basalt": {
+      "light": {
+        "/": [
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ],
+        "/about": [],
+        "/arch": [
+          {
+            "id": "color-contrast",
+            "nodes": 1
+          }
+        ],
+        "/blog": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/blog/ci-cannot-be-that-hard-for-monorepos": [
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ],
+        "/blog/how-does-tailscale-work": [
+          {
+            "id": "color-contrast",
+            "nodes": 2
+          }
+        ],
+        "/blog/new-additions-oct-2026": [
+          {
+            "id": "color-contrast",
+            "nodes": 2
+          }
+        ],
+        "/collections": [
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ],
+        "/collections/music": [],
+        "/collections/websites": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/library": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/music": [],
+        "/now": [],
+        "/running": [],
+        "/tags": [
+          {
+            "id": "color-contrast",
+            "nodes": 2
+          }
+        ]
+      },
+      "dark": {
+        "/": [],
+        "/about": [],
+        "/arch": [],
+        "/blog": [],
+        "/blog/ci-cannot-be-that-hard-for-monorepos": [],
+        "/blog/how-does-tailscale-work": [],
+        "/blog/new-additions-oct-2026": [],
+        "/collections": [],
+        "/collections/music": [],
+        "/collections/websites": [],
+        "/library": [],
+        "/music": [],
+        "/now": [],
+        "/running": [],
+        "/tags": []
+      }
+    },
+    "quartz": {
+      "light": {
+        "/": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 5
+          }
+        ],
+        "/about": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/arch": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 7
+          }
+        ],
+        "/blog": [
+          {
+            "id": "color-contrast",
+            "nodes": 8
+          }
+        ],
+        "/blog/ci-cannot-be-that-hard-for-monorepos": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 18
+          }
+        ],
+        "/blog/how-does-tailscale-work": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/blog/new-additions-oct-2026": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/collections": [
+          {
+            "id": "color-contrast",
+            "nodes": 7
+          }
+        ],
+        "/collections/music": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/collections/websites": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/library": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/music": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/now": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/running": [
+          {
+            "id": "color-contrast",
+            "nodes": 6
+          }
+        ],
+        "/tags": [
+          {
+            "id": "color-contrast",
+            "nodes": 5
+          }
+        ]
+      },
+      "dark": {
+        "/": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/about": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/arch": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 5
+          }
+        ],
+        "/blog": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/blog/ci-cannot-be-that-hard-for-monorepos": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 11
+          }
+        ],
+        "/blog/how-does-tailscale-work": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/blog/new-additions-oct-2026": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/collections": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/collections/music": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/collections/websites": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/library": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/music": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/now": [
+          {
+            "id": "aria-valid-attr-value",
+            "nodes": 1
+          },
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/running": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
+        ],
+        "/tags": [
+          {
+            "id": "color-contrast",
+            "nodes": 4
+          }
         ]
       }
     }
