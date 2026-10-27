@@ -32,7 +32,7 @@ my-garden/
 }
 ```
 
-In `layout.explorer`, `order` lists the entries that come first, by slug, and `byDate` the folders whose entries list newest first (`"byDate": ["blog"]`), as their folder's page does. `icon` is a file in the site's tree for the tab's icon (`"icon": "assets/icon.svg"`); without it the tab shows Basalt's mark. A site's own mark in the navbar is a `components/Mark.astro`.
+In `layout.explorer`, `order` lists the entries that come first, by slug, and `byDate` the folders whose entries list newest first (`"byDate": ["blog"]`), as their folder's page does. `icon` is a file in the site's tree for the tab's icon (`"icon": "assets/icon.svg"`); without it the tab shows Basalt's mark. Behind a password, the login page carries it inline (an svg, png, jpeg, gif, webp or ico), since the file itself is behind the gate. A site's own mark in the navbar is a `components/Mark.astro`.
 
 Basalt sets everything in Palatino (and code in JetBrains Mono). A site picks its own type with `theme.fonts`: `title` (titles and labels), `header` (headings), `body` and `code`, each a CSS font-family, and `load`, stylesheets that bring in fonts visitors may not have. `theme.colors` does the same for the palette. `theme.nowPlaying` is where a playing `<sound>`'s card sits: `"beside"` its word (Basalt's), or `"screen"`, at the foot of the screen in the side content for as long as it plays. `theme.bullets` is what lists hang on: `"circle"` (Basalt's round dot), `"hexagon"` or `"none"`; for anything else, set the `--basalt-bullet-shape` (a clip-path), `-color`, `-size`, `-height`, `-opacity` and `-hover-transform` properties in `styles/custom.scss`.
 

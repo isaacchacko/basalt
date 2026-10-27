@@ -2,8 +2,7 @@
 // The page's <head>: its title and description, the tags a link preview
 // reads (Open Graph, Twitter), the canonical url at the site's baseUrl, the
 // fonts, and the theme, set before the first paint.
-import { markSvg } from "../lib/mark"
-import { slugifyFilePath, type FilePath } from "../lib/path"
+import { iconHref } from "../lib/icon"
 import { ClientRouter } from "astro:transitions"
 import { registry } from "../lib/registry"
 import { loadSite } from "../lib/site"
@@ -44,10 +43,7 @@ const fontSheets = (await layout()).theme.fonts?.load ?? []
 
 // the tab's icon: the site's own (basalt.json "icon", a file in its tree, read
 // fresh so a change shows while serving), or Basalt's mark
-const ownIcon = loadSite(site.dir).config.icon
-const icon = ownIcon
-  ? "/" + encodeURI(slugifyFilePath(ownIcon.replace(/^\/+/, "") as FilePath))
-  : "data:image/svg+xml," + encodeURIComponent(markSvg())
+const icon = iconHref(loadSite(site.dir).config.icon)
 ---
 
 <meta charset="utf-8" />
