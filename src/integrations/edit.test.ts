@@ -171,3 +171,81 @@ describe("only the site's own pages write", () => {
     assert.equal(fs.readFileSync(note, "utf8"), "pwned\n")
   })
 })
+
+describe("POST /__basalt/render: the note as it would render with the text typed, saved or not", () => {
+  let renderServer: http.Server
+  let rbase: string
+  const asked: { abs: string; text: string }[] = []
+  before(async () => {
+    const hooks = editInPlace(async (abs, text) => {
+      asked.push({ abs, text })
+      return `<p data-src="5-5">${text.length}</p>`
+    }).hooks as Record<string, (arg: unknown) => void>
+    let mw: Middleware | undefined
+    hooks["astro:server:setup"]({ server: { middlewares: { use: (fn: Middleware) => (mw = fn) } } })
+    renderServer = http.createServer((req, res) => mw!(req, res, () => ((res.statusCode = 418), res.end())))
+    await new Promise<void>((resolve) => renderServer.listen(0, "127.0.0.1", resolve))
+    rbase = `http://127.0.0.1:${(renderServer.address() as AddressInfo).port}`
+  })
+  after(() => renderServer.close())
+  const post = (body: unknown, headers: Record<string, string> = json, method = "POST") =>
+    fetch(`${rbase}/__basalt/render`, { method, headers, body: method === "GET" ? undefined : JSON.stringify(body) })
+
+  test("renders the text it's sent for the note, with its sha, and doesn't touch the file", async () => {
+    reset()
+    asked.length = 0
+    const text = ORIGINAL + "\nTyped, not saved.\n"
+    const res = await post({ slug: "sub/a", text })
+    assert.equal(res.status, 200)
+    const body = (await res.json()) as { sha: string; html: string; ms: number }
+    assert.equal(body.sha, blobSha(text))
+    assert.equal(body.html, `<p data-src="5-5">${text.length}</p>`)
+    assert.equal(typeof body.ms, "number")
+    assert.deepEqual(asked, [{ abs: note, text }])
+    assert.equal(fs.readFileSync(note, "utf8"), ORIGINAL)
+  })
+
+  test("only POST", async () => {
+    assert.equal((await post(undefined, json, "GET")).status, 405)
+    assert.equal((await post({ slug: "sub/a", text: "x" }, json, "PUT")).status, 405)
+  })
+
+  test("404 for a note that isn't the site's, 400 for text that isn't a file", async () => {
+    asked.length = 0
+    assert.equal((await post({ slug: "../outside", text: "x" })).status, 404)
+    assert.equal((await post({ slug: "sub/a", text: 3 })).status, 400)
+    assert.deepEqual(asked, [])
+  })
+
+  test("only the site's own pages: the header, JSON and the origin", async () => {
+    asked.length = 0
+    assert.equal((await post({ slug: "sub/a", text: "x" }, { "content-type": "application/json" })).status, 403)
+    assert.equal((await post({ slug: "sub/a", text: "x" }, { "content-type": "text/plain", "x-basalt-edit": "1" })).status, 403)
+    assert.equal((await post({ slug: "sub/a", text: "x" }, { ...json, origin: "https://evil.example" })).status, 403)
+    assert.deepEqual(asked, [])
+    assert.equal((await post({ slug: "sub/a", text: "x" }, { ...json, origin: rbase })).status, 200)
+  })
+
+  test("a render that fails is a 500 with its message, and the server goes on", async () => {
+    const hooks = editInPlace(async () => {
+      throw new Error("the pipeline broke")
+    }).hooks as Record<string, (arg: unknown) => void>
+    let mw: Middleware | undefined
+    hooks["astro:server:setup"]({ server: { middlewares: { use: (fn: Middleware) => (mw = fn) } } })
+    const failing = http.createServer((req, res) => mw!(req, res, () => res.end()))
+    await new Promise<void>((resolve) => failing.listen(0, "127.0.0.1", resolve))
+    try {
+      const url = `http://127.0.0.1:${(failing.address() as AddressInfo).port}/__basalt/render`
+      const res = await fetch(url, { method: "POST", headers: json, body: JSON.stringify({ slug: "sub/a", text: "x" }) })
+      assert.equal(res.status, 500)
+      assert.match(((await res.json()) as { error: string }).error, /the pipeline broke/)
+      assert.equal((await fetch(url.replace("render", "source") + "?slug=sub/a")).status, 200)
+    } finally {
+      failing.close()
+    }
+  })
+})
+
+test("without a renderer (a build), /__basalt/render isn't answered", async () => {
+  assert.equal((await fetch(`${base}/__basalt/render`, { method: "POST", headers: json, body: "{}" })).status, 418)
+})
