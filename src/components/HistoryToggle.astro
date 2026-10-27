@@ -1,0 +1,33 @@
+---
+// The history toggle: a clock, beside the pencil, that shows a note's history
+// on a timeline in the left sidebar's place (client/history.ts). Only where a
+// note can have one (lib/history.ts): the navbar is kept from page to page,
+// so the button is, and it shows on the pages whose article says so
+// (data-history).
+import { registry } from "../lib/registry"
+import { historyOn } from "../lib/history"
+import { strings, type StringKey } from "../lib/strings"
+import { notes } from "../layouts/notes"
+import { words } from "../layouts/words"
+import "../styles/history.scss"
+const t = await words()
+const { site } = registry()
+const any = (await notes()).some((n) => historyOn(site, n.data as Record<string, unknown>))
+const said = Object.fromEntries((Object.keys(strings) as StringKey[]).filter((k) => k.startsWith("history")).map((k) => [k, t(k)]))
+---
+
+{
+  any && (
+    <button class="history-toggle" type="button" aria-label={t("history")} aria-pressed="false" hidden data-history-words={JSON.stringify(said)}>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+        <path d="M3 3v5h5"></path>
+        <path d="M12 7v5l3 2"></path>
+      </svg>
+    </button>
+  )
+}
+
+<script>
+  import "../client/history"
+</script>

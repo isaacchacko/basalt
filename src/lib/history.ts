@@ -19,6 +19,7 @@ import { toString } from "hast-util-to-string"
 import { diffArrays, diffWords } from "diff"
 import { commitsOf, topOf, type Commit } from "./gitdates.ts"
 import { commonLines } from "./linemap.ts"
+import { deepen } from "./deepen.ts"
 import { serving } from "./edit.ts"
 import { sourceDirs, type Site } from "./site.ts"
 
@@ -53,21 +54,12 @@ export function historyOn(site: Site, frontmatter: Record<string, unknown> | und
 const git = (cwd: string, args: string[]) =>
   execFileSync("git", ["-c", "core.quotePath=false", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 1 << 28 })
 
-/** the commits a shallow clone stops at (whose history before them isn't there) */
-function boundary(top: string): Set<string> {
-  try {
-    if (git(top, ["rev-parse", "--is-shallow-repository"]).trim() !== "true") return new Set()
-    return new Set(git(top, ["rev-list", "--boundary", "--max-parents=0", "HEAD"]).split("\n").filter(Boolean))
-  } catch {
-    return new Set()
-  }
-}
-
 /** The commits that touched a note, newest first (at most `most`). */
 export function commitsFor(site: Site, abs: string, slug: string, most = Infinity): Commits {
   const all = commitsOf(abs, sourceDirs(site))
   const top = topOf(path.dirname(abs))
-  const cut = top ? boundary(top) : new Set<string>()
+  // a shallow clone (deepen.ts couldn't fetch the rest): history before the commit it starts at isn't here
+  const cut = top ? deepen(top).boundary : new Set<string>()
   const shown = all.slice(0, most)
   return {
     slug,
@@ -84,11 +76,22 @@ export async function versionAt(site: Site, abs: string, sha: string, render: (a
   if (i < 0 || !top) return undefined
   const at = all[i]
   const base = all[i + 1]
-  const text = git(top, ["show", `${at.sha}:${at.path}`])
-  const html = await render(abs, text)
-  const was = base ? git(top, ["show", `${base.sha}:${base.path}`]) : ""
-  const wasHtml = base ? await render(abs, was) : ""
+  const [text, html] = await renderedAt(top, abs, at, render)
+  const [was, wasHtml] = base ? await renderedAt(top, abs, base, render) : ["", ""]
   return { sha: at.sha, base: base?.sha ?? null, path: at.path, html: marked(was, wasHtml, text, html), plain: html }
+}
+
+// a commit's text and its rendering: each is a version and the base of the one after
+const renderings = new Map<string, Promise<[string, string]>>()
+function renderedAt(top: string, abs: string, c: Commit, render: (abs: string, text: string) => Promise<string>) {
+  const key = `${abs}\0${c.sha}`
+  let got = renderings.get(key)
+  if (!got) {
+    const text = git(top, ["show", `${c.sha}:${c.path}`])
+    got = render(abs, text).then((html) => [text, html])
+    renderings.set(key, got)
+  }
+  return got
 }
 
 // ---------- the marks ----------
