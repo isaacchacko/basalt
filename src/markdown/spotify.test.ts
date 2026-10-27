@@ -47,12 +47,16 @@ test("the card: cover, name, artist, album, and the caption under it", () => {
       artist: "Artist",
       album: "Album",
       cover: "/basalt/cover/abc.jpg",
+      coverFull: "/basalt/cover/abc-full.jpg",
       url: "",
     }),
   )
-  assert.match(html, /^<a href="https:\/\/open.spotify.com\/track\/abc" target="_blank" rel="noopener noreferrer" class="basalt-song-card">/)
-  assert.match(html, /<img class="basalt-song-cover" src="\/basalt\/cover\/abc.jpg"/)
-  assert.match(html, /<span class="basalt-song-name">Song<\/span><span class="basalt-song-artist">Artist<\/span><span class="basalt-song-album">Album<\/span>/)
+  // the cover opens in the viewer, at full size, named by the song: it's beside the link, not in it
+  assert.match(html, /^<span class="basalt-song-card"><img class="basalt-song-cover zoomable" src="\/basalt\/cover\/abc.jpg" data-full="\/basalt\/cover\/abc-full.jpg" alt="Song"/)
+  assert.match(
+    html,
+    /<a href="https:\/\/open.spotify.com\/track\/abc" target="_blank" rel="noopener noreferrer" class="basalt-song-text"><span class="basalt-song-name">Song<\/span><span class="basalt-song-artist">Artist<\/span><span class="basalt-song-album">Album<\/span><\/a><\/span>/,
+  )
   assert.match(html, /<span class="basalt-song-caption">mine<\/span>$/)
 })
 
