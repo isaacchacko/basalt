@@ -9,6 +9,7 @@ import path from "node:path"
 import { execFileSync } from "node:child_process"
 import { commitsFor, historyOn, versionAt } from "./history.ts"
 import { forgetGitDates } from "./gitdates.ts"
+import { forgetDepth } from "./deepen.ts"
 import type { Site } from "./site.ts"
 
 const command = process.env.BASALT_COMMAND
@@ -72,6 +73,7 @@ function repo() {
   g(["commit", "-qam", "love"], 5)
   const shas = Object.fromEntries(g(["log", "--format=%s %H"]).split("\n").map((l) => l.split(" ")))
   forgetGitDates()
+  forgetDepth()
   return { dir, shas, site: siteWith(true, dir), abs: path.join(dir, "notes", "garden.md") }
 }
 
@@ -94,7 +96,10 @@ describe("a note's commits and versions", () => {
     const { dir } = repo()
     const shallow = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "basalt-shallow-")))
     execFileSync("git", ["clone", "-q", "--depth", "2", `file://${dir}`, shallow], { stdio: "ignore" })
+    // nowhere to fetch the rest from (a build deepens a shallow clone from its remote, deepen.ts)
+    execFileSync("git", ["remote", "remove", "origin"], { cwd: shallow, stdio: "ignore" })
     forgetGitDates()
+    forgetDepth()
     const got = commitsFor(siteWith(true, shallow), path.join(shallow, "notes", "garden.md"), "garden")
     assert.strictEqual(got.complete, false)
     assert.deepStrictEqual(
