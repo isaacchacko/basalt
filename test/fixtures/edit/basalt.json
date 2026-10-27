@@ -1,0 +1,5 @@
+{
+  "title": "Kinds",
+  "baseUrl": "kinds.example.com",
+  "content": [{ "from": "notes", "to": "" }]
+}
