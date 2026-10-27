@@ -130,6 +130,18 @@ The site has to be built from a git checkout of that repo. Whatever deploys the 
 
 The words are in `strings`: `edit`, `editing`, `editSaving`, `editPublishing`, `editDeploying`, `editLive`, `editFailed`, `editSlowDeploy`, `editConnect`, `editTokenHelp`, `editToken`, `editMakeToken`, `editCancel`, `editConnectButton`, `editTokenWrong`, `editCommit`.
 
+## History
+
+A note's page shows its history: every commit that touched its file, on a timeline, and the note as it was at each, with what that commit changed marked in the page itself.
+
+- **On and off.** The clock beside the pencil in the navbar's tray. The left sidebar gives its place to the timeline: a dot and a date for each commit that touched the note (a rename followed back to the file it was), newest first, the commit's message on hover. Below desktop width, where the sidebar is the bar across the top, the timeline is that bar, its dates in a row that scrolls sideways. It's on for the page you turned it on for; "Every page" keeps it on from page to page. The browser remembers which.
+- **A version.** A click on a date shows the note as it was at that commit, rendered as its page renders it, with what the commit added highlighted and what it took away struck through, word by word in a block that changed, whole for a block added or removed. Its changes are against the commit before it that touched the note. "Plain" shows the version without them. ↑ and ↓ (or j and k; ← and → on a phone) step from commit to commit, Esc comes back to now, and `?at=<commit>` in the url opens that version. Margin notes follow the version shown. Editing is of the note as it is: ⌘E or the pencil comes back to now first.
+- **Where.** While serving, every note has its history, unless `basalt.json` says `"history": false`. A built site has it with `"history": true`. A note's frontmatter `history: true` or `false` decides for that note either way.
+
+**While serving**, the dev server reads it from git when it's asked (`GET /__basalt/history?slug=<slug>`, its commits; `&at=<sha>`, a version), so a commit you've just made shows the next time the timeline opens. **A built site** writes each note's history out (`/static/history/<slug>.json`, and a file per version, read when its date is clicked), its newest 100 commits. Hosts clone a repository shallow (Vercel the last 10 commits), so a build fetches the rest first, from the clone's own remote or, on Vercel, from the repository it built, which works for a public one. A private repository's history starts where the clone does, which the timeline says at its end; a full clone has it all (`VERCEL_DEEP_CLONE=true` on Vercel, `fetch-depth: 0` in a GitHub Action).
+
+The words are in `strings`: `history`, `historyTitle`, `historyNow`, `historyClose`, `historyPlain`, `historyEverywhere`, `historyPartial`, `historyNone`.
+
 ## For agents: the edit loop
 
 - **Save, then wait.** `basalt wait <dir>` blocks until the build that took in your newest save to the site is live in every open page, prints its status, and exits 0 when it's ready, 1 when the site has an error, 2 on a timeout (`--timeout <s>`, default 30). `--file <path>` waits for the build that has that file's save in it, `--since <ms>` for one with a save made at or after that time, `--after <buildId>` for any build after that one. No race: a save that's live before `wait` starts is found, not missed.
@@ -160,5 +172,6 @@ The words are in `strings`: `edit`, `editing`, `editSaving`, `editPublishing`, `
 - `src/client/`: the browser side (margin, previews, viewer, pdf, islands, search, nav).
 - `src/integrations/agent.ts`: the agent API and hot swap.
 - `src/markdown/lines.ts`, `src/lib/linemap.ts`: the lines each block is written on. `src/client/editor.ts` edits a note in place, as one CodeMirror document; `src/client/backend.ts` is where it saves and renders: the dev server (`src/integrations/edit.ts`), or GitHub for a built site (`src/client/github.ts`). `src/client/content.ts` starts a page's parts (islands, tabs, diagrams, players) in the page or in a block drawn anew.
+- `src/lib/history.ts`: a note's history (its commits from `src/lib/gitdates.ts`'s one git log, a version rendered by `src/markdown/rendernote.ts` and its changes marked); `src/lib/deepen.ts` fetches a build's shallow clone whole; `src/integrations/history.ts` and `src/pages/static/history/` answer for it while serving and built; `src/client/history.ts` is the timeline.
 - `src/integrations/password.ts`, `src/lib/gate.ts`: a site behind a password (Vercel's Build Output API, and the middleware in it).
 - `bin/basalt.mjs`: the CLI.
