@@ -240,6 +240,47 @@ $narrow: "(max-width: 1055.98px)";
   }
 }
 
+// a version's changes (lib/history.ts): what its commit added highlighted, and
+// what it took away struck through; in a block (or the note in the margin)
+// that it added or took away whole, the whole of it
+@mixin marks {
+  ins {
+    text-decoration: none;
+    background: color-mix(in srgb, var(--basalt-added) 22%, transparent);
+    border-radius: 2px;
+  }
+
+  del {
+    color: var(--basalt-removed);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    background: color-mix(in srgb, var(--basalt-removed) 10%, transparent);
+    border-radius: 2px;
+  }
+
+  // what a word lost, then what it gained: apart
+  del + ins {
+    margin-left: 0.15em;
+  }
+
+  .history-added,
+  &.history-added {
+    background: color-mix(in srgb, var(--basalt-added) 12%, transparent);
+    box-shadow:
+      -0.6rem 0 0 color-mix(in srgb, var(--basalt-added) 12%, transparent),
+      0.6rem 0 0 color-mix(in srgb, var(--basalt-added) 12%, transparent);
+    border-radius: 2px;
+  }
+
+  .history-removed,
+  &.history-removed {
+    color: var(--basalt-removed);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    opacity: 0.85;
+  }
+}
+
 // ---------- a version, over the note as it is ----------
 
 article[data-history-at] > :not(.history-version) {
@@ -267,40 +308,20 @@ article[data-history-at] > :not(.history-version) {
     background-color: transparent;
   }
 
-  // what a word lost, then what it gained: apart
-  del + ins {
-    margin-left: 0.15em;
-  }
-
-  ins {
-    text-decoration: none;
-    background: color-mix(in srgb, var(--basalt-added) 22%, transparent);
-    border-radius: 2px;
-  }
-
-  del {
-    color: var(--basalt-removed);
-    text-decoration: line-through;
-    text-decoration-thickness: 1px;
-    background: color-mix(in srgb, var(--basalt-removed) 10%, transparent);
-    border-radius: 2px;
-  }
-
-  .history-added {
-    background: color-mix(in srgb, var(--basalt-added) 12%, transparent);
-    box-shadow: -0.6rem 0 0 color-mix(in srgb, var(--basalt-added) 12%, transparent), 0.6rem 0 0 color-mix(in srgb, var(--basalt-added) 12%, transparent);
-    border-radius: 2px;
-  }
-
-  .history-removed {
-    color: var(--basalt-removed);
-    text-decoration: line-through;
-    text-decoration-thickness: 1px;
-    opacity: 0.85;
-  }
+  @include marks;
 
   li.history-added,
   li.history-removed {
+    box-shadow: none;
+  }
+}
+
+// its notes in the margin (margin.ts copies them): the same marks, and a note
+// its commit added or took away marked whole, as its block is
+.margin-layer .history-note {
+  @include marks;
+
+  &.history-added {
     box-shadow: none;
   }
 }

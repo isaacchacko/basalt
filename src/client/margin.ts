@@ -220,6 +220,13 @@ function copyOf(note: HTMLElement): HTMLElement {
   copy.classList.remove("open")
   copy.removeAttribute("id")
   copy.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"))
+  // a note of a past version (history.ts): its changes marked as the text's are, and
+  // the note itself added or taken away with its block
+  if (note.closest(".history-version")) {
+    copy.classList.add("history-note")
+    const block = note.closest(".history-added, .history-removed")
+    if (block) copy.classList.add(block.classList.contains("history-added") ? "history-added" : "history-removed")
+  }
   // not aria-hidden: beside the text the copy is the only one there is (the
   // note in the text is display: none), and inline the margin's layer is
   return copy
