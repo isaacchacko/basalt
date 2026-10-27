@@ -698,8 +698,9 @@ async function learn() {
   const r = region
   if (r) {
     const map = lineMap(lines(live), lines(now.text))
-    r.from = map.first(r.from - 1) + 1
-    r.to = r.to < r.from - 1 ? r.from - 1 : map.last(r.to - 1) + 1
+    const from = map.first(r.from - 1) + 1
+    r.to = r.to < r.from ? from - 1 : map.last(r.to - 1) + 1
+    r.from = from
   }
   saved = now
   setLive(now.text)
