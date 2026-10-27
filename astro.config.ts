@@ -13,6 +13,7 @@ import { registry } from "./src/lib/registry"
 import { vitePlugins } from "./src/lib/vite"
 import { agentApi } from "./src/integrations/agent"
 import { passwordGate } from "./src/integrations/password"
+import { editInPlace } from "./src/integrations/edit"
 
 const site = loadSite(siteDir())
 // Basalt itself, wherever it's run from: a site's root is its own .basalt
@@ -62,7 +63,8 @@ export default defineConfig({
   // JSX is only in .tsx and .jsx (islands): left to its default, the preset runs
   // Babel over every .ts and .js outside node_modules, Basalt's own client code
   // included, which is ~0.6 s of every build
-  integrations: [preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
+  // editInPlace first: it says which command is running, which the rest reads (lib/edit.ts)
+  integrations: [editInPlace(), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
   markdown: {
     syntaxHighlight,
     // unified's PluggableList and Astro's plugin types describe the same thing
@@ -95,6 +97,18 @@ export default defineConfig({
       },
     },
     // found up front, so a lazy import of one doesn't fail after Vite re-optimises
-    optimizeDeps: { include: ["pdfjs-dist", "preact", "@isaacchacko/graph"] },
+    // and Astro's router, which the hot swap imports: found late, it re-optimises
+    // and reloads the page a moment after a fresh server's first page opens
+    optimizeDeps: {
+      include: [
+        "pdfjs-dist",
+        "preact",
+        "@isaacchacko/graph",
+        "astro/virtual-modules/transitions-router.js",
+        "astro/virtual-modules/transitions-events.js",
+        "astro/virtual-modules/transitions-swap-functions.js",
+        "astro/virtual-modules/transitions-types.js",
+      ],
+    },
   },
 })

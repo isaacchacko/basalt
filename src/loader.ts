@@ -18,6 +18,7 @@ import { parseFrontmatter } from "@astrojs/markdown-remark"
 import { refreshRegistry, registry } from "./lib/registry"
 import { linkOne, linkPublic, sourceDirs, type SiteFile } from "./lib/site"
 import { datesOf } from "./lib/gitdates"
+import { editable } from "./lib/edit"
 import { textTransforms } from "./markdown"
 import { findIslands } from "./markdown/islands"
 import { resolveFile } from "./markdown/embeds"
@@ -132,7 +133,8 @@ export function basaltLoader(): Loader {
       const rel = (f: SiteFile) => path.relative(reg.site.dir, f.abs)
       const islandsDir = path.join(reg.site.dir, "islands")
 
-      const code = codeDigest(reg.site.dir)
+      // a page that edits in place has its blocks' lines on it (markdown/lines.ts)
+      const code = codeDigest(reg.site.dir) + (editable(reg.site) ? ",editable" : "")
       /** the site files a note's islands read (<island data="cool.json">) */
       const islandData = (raw: string): SiteFile[] => {
         const rels = registry().files.map((f) => f.rel)

@@ -21,7 +21,7 @@ const git = (cwd: string, args: string[]) =>
   execFileSync("git", ["-c", "core.quotePath=false", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 1 << 28 })
 
 /** the top of the repository a folder is in, or null */
-function topOf(dir: string): string | null {
+export function topOf(dir: string): string | null {
   try {
     return fs.realpathSync(git(dir, ["rev-parse", "--show-toplevel"]).trim())
   } catch {

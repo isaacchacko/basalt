@@ -1,0 +1,38 @@
+# Every push and pull request: the unit tests, and a build of the showcase and
+# the test site, so a change that breaks a build fails here.
+
+name: Test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # git dates and edit targets read the history
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: The showcase builds
+        run: node bin/basalt.mjs build examples/showcase
+      - name: The test site builds
+        run: node bin/basalt.mjs build test/fixtures/site
+      - name: A block of every kind builds
+        run: node bin/basalt.mjs build test/fixtures/edit

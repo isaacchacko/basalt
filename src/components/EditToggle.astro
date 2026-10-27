@@ -1,0 +1,30 @@
+---
+// The edit toggle: a pencil, beside the source toggle, that turns on editing
+// the page in place (⌘E does too, and ?edit in the url). Only on a site whose
+// pages edit: while serving, or built with "edit" (lib/edit.ts). Its script is
+// src/client/edit.ts, which loads the editor (client/editor.ts) only once
+// it's wanted; the words the editor says come with the button.
+import { registry } from "../lib/registry"
+import { editTarget } from "../lib/edit"
+import { strings, type StringKey } from "../lib/strings"
+import { words } from "../layouts/words"
+import "../styles/edit.scss"
+const t = await words()
+const target = editTarget(registry().site)
+const said = Object.fromEntries((Object.keys(strings) as StringKey[]).filter((k) => k.startsWith("edit")).map((k) => [k, t(k)]))
+---
+
+{
+  target && (
+    <button class="edit-toggle" type="button" aria-label={t("edit")} aria-pressed="false" data-edit-mode={target.kind} data-edit-words={JSON.stringify(said)}>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 20h9"></path>
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+      </svg>
+    </button>
+  )
+}
+
+<script>
+  import "../client/edit"
+</script>

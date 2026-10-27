@@ -123,7 +123,8 @@ function loadTweets(root: Element) {
     script.onerror = () => resolve()
     document.head.appendChild(script)
   })
-  widgets.then(() => (window as unknown as { twttr?: Twttr }).twttr?.widgets?.load(root))
+  // not on a page swapped out meanwhile (a save): the script fails on one
+  widgets.then(() => root.isConnected && (window as unknown as { twttr?: Twttr }).twttr?.widgets?.load(root))
 }
 
 const PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 5.6v12.8a1 1 0 0 0 1.5.86l10.2-6.4a1 1 0 0 0 0-1.72L9.5 4.74A1 1 0 0 0 8 5.6z"/></svg>'

@@ -9,7 +9,7 @@
 
 import fs from "node:fs"
 import type { Element, ElementContent, Root } from "hast"
-import { visit } from "unist-util-visit"
+import { SKIP, visit } from "unist-util-visit"
 import { parseFrontmatter } from "@astrojs/markdown-remark"
 import { simplifySlug, slugTag, type FullSlug } from "../lib/path"
 import { hrefOf } from "../lib/links.ts"
@@ -74,9 +74,16 @@ const formatDate = (d: Date, locale: string) =>
 
 export function renderNoteLists(root: Root, locale = "en-US", all: () => Listed[] = listed) {
   let notes: Listed[] | undefined
-  visit(root, "element", (node) => {
+  visit(root, "element", (node, _index, parent) => {
     if (node.tagName !== "note-list") return
     const p = node.properties
+    // a list on a line of its own is in a paragraph, which a list can't be in:
+    // it takes the paragraph's place (and its lines, lines.ts)
+    const alone =
+      parent?.type === "element" &&
+      parent.tagName === "p" &&
+      parent.children.every((c) => c === node || (c.type === "text" && !c.value.trim()))
+    if (alone && parent.properties.dataSrc !== undefined) p.dataSrc = parent.properties.dataSrc
     notes ??= all()
     const time = (f: Listed) => f.date?.getTime() ?? 0
     const chosen = notesFor(p, notes).sort((a, b) => time(b) - time(a))
@@ -104,8 +111,15 @@ export function renderNoteLists(root: Root, locale = "en-US", all: () => Listed[
       )
     }
     node.tagName = "div"
-    node.properties = { className: ["note-list-block"] }
+    // and the lines it's written on, for editing in place (lines.ts)
+    node.properties = { className: ["note-list-block"], ...(p.dataSrc !== undefined && { dataSrc: p.dataSrc }) }
     node.children = children
+    if (alone) {
+      parent.tagName = "div"
+      parent.properties = { className: ["note-list-block"], ...(p.dataSrc !== undefined && { dataSrc: p.dataSrc }) }
+      parent.children = children
+      return SKIP
+    }
   })
 }
 
