@@ -177,54 +177,52 @@ $narrow: "(max-width: 1055.98px)";
   }
 
   // below desktop width the sidebar is the bar across the top: the timeline
-  // takes that, its dates in a row that scrolls sideways
+  // takes that, its title and buttons above its dates, which scroll sideways
   @media all and ($narrow) {
-    flex-direction: row;
+    flex-flow: row wrap;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem 0.75rem;
     position: sticky;
     bottom: auto;
     width: auto;
     margin: 0 -1rem;
-    padding: 0.75rem 1rem;
-    overflow-x: auto;
-    overflow-y: hidden;
+    padding: 0.6rem 1rem 0.5rem;
+    overflow: hidden;
     border-right: none;
     border-bottom: 1px solid var(--lightgray);
 
-    .history-head,
-    .history-options {
-      flex: none;
-      margin: 0;
-      gap: 0.5rem;
-    }
-
+    // the title, the buttons, and the close at the far end, in one row
     .history-head {
-      order: 9;
+      display: contents;
     }
 
-    .history-title {
-      display: none;
+    .history-options {
+      order: 1;
+      margin: 0;
+    }
+
+    .history-close {
+      order: 2;
+      margin-left: auto;
     }
 
     .history-entries {
       display: flex;
-      flex: none;
-      gap: 0.25rem 1rem;
+      flex: 0 0 100%;
+      order: 10;
+      gap: 0 1rem;
+      overflow-x: auto;
+      scrollbar-width: none;
 
       &::before {
-        top: 50%;
-        bottom: auto;
-        left: 0.3rem;
-        right: 0.3rem;
-        border-left: none;
-        border-top: 1px solid var(--lightgray);
+        display: none;
       }
     }
 
     .history-partial,
     .history-empty {
-      flex: none;
+      flex: 0 0 100%;
+      order: 11;
       margin: 0;
     }
   }
