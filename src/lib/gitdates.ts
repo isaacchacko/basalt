@@ -5,12 +5,14 @@
 // a host that builds from a fresh clone (Vercel) are all the clone's moment.
 //
 // A file with changes not yet committed was last changed when it was saved.
-// In a shallow clone, files untouched since its oldest commit get that
-// commit's date: the best there is.
+// A build's shallow clone is fetched whole first, where it can be
+// (deepen.ts); where it can't, files untouched since its oldest commit get
+// that commit's date: the best there is.
 
 import fs from "node:fs"
 import path from "node:path"
 import { execFileSync } from "node:child_process"
+import { deepen } from "./deepen.ts"
 
 export interface FileDates {
   created: Date
@@ -92,6 +94,7 @@ export function gitDates(dirs: string[]): Map<string, FileDates> {
   for (const [top, specs] of byTop) {
     let log: string
     let dirty: string
+    deepen(top)
     try {
       // the whole history, so a note moved in from elsewhere in the repository
       // keeps its day; in a big one, only the site's folders
