@@ -176,9 +176,23 @@ export function levelWith(item: HTMLElement, line: Line, column: DOMRect): numbe
 
 export const isBeside = () => document.documentElement.dataset.margin === "beside"
 
+/**
+ * The element before a note, as the page has it: in a note being edited
+ * (editor.ts), a block is drawn in a box of its own, so the one before the
+ * first in a box is the last of the box drawn before it.
+ */
+function before(note: HTMLElement): Element | null {
+  if (note.previousElementSibling || !note.parentElement?.classList.contains("edit-drawn")) return note.previousElementSibling
+  for (let at = note.parentElement.previousElementSibling; at; at = at.previousElementSibling) {
+    if (at.classList.contains("edit-gap")) continue
+    return at.classList.contains("edit-drawn") ? at.lastElementChild : at
+  }
+  return null
+}
+
 /** The line a margin item belongs to. */
 function anchorOf(note: HTMLElement): Line {
-  const prev = note.previousElementSibling
+  const prev = before(note)
   // a sidenote: the line its number is on, measured from the text before the number
   if (note.classList.contains("sidenote") && prev?.matches("sup")) return lineBefore(prev)
   // a block aside: the first line of the block before it
