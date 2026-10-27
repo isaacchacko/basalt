@@ -138,7 +138,8 @@ function timelineOf(slug: string): HTMLElement {
     const entry = (e.target as Element).closest<HTMLAnchorElement>(".history-entry")
     if (!entry) return
     e.preventDefault()
-    entry.focus()
+    // the keys step from here (no ring for a click)
+    entry.focus({ preventScroll: true, focusVisible: false } as FocusOptions)
     void show(entry.dataset.sha ?? null)
   })
   return nav

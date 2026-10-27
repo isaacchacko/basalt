@@ -127,6 +127,7 @@ $narrow: "(max-width: 1055.98px)";
     position: relative;
     padding: 0.3rem 0 0.3rem 1.2rem;
     color: var(--gray);
+    font-weight: 400;
     text-decoration: none;
     white-space: nowrap;
     border-radius: 4px;
@@ -235,12 +236,30 @@ article[data-history-at] > :not(.history-version) {
   display: none !important;
 }
 
+// a block of the article's, as the page has them (basalt.scss, base.scss): its
+// margins go out through this as they would through the article, and it
+// doesn't arrive again (motion.scss)
 .history-version {
-  display: flow-root;
+  display: block;
+  animation: none !important;
 
-  // the note's own margins between its blocks: the version's first and last are the article's
-  > :first-child {
-    margin-top: 0;
+  > * {
+    box-sizing: border-box;
+    max-width: var(--measure, 34rem);
+  }
+
+  > .katex-display {
+    display: block;
+  }
+
+  > :is(h1, h2, h3, h4, h5, h6) > a[data-anchor] {
+    color: var(--dark);
+    background-color: transparent;
+  }
+
+  // what a word lost, then what it gained: apart
+  del + ins {
+    margin-left: 0.15em;
   }
 
   ins {
