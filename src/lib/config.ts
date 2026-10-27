@@ -32,8 +32,7 @@
 
 import fs from "node:fs"
 import path from "node:path"
-import { pathToFileURL } from "node:url"
-import { hookResolution, nativeImport } from "../markdown/siteconfig"
+import { importSiteConfig } from "../markdown/siteconfig"
 import { siteDir } from "./site"
 import { strings, type Strings } from "./strings"
 import type { Analytics } from "./analytics"
@@ -191,8 +190,7 @@ async function siteConfig(dir: string): Promise<BasaltConfig> {
     .find((f) => fs.existsSync(f))
   if (!file) return {}
   try {
-    hookResolution()
-    const mod = await nativeImport(pathToFileURL(file).href + `?t=${fs.statSync(file).mtimeMs}`)
+    const mod = await importSiteConfig(file)
     const own = (mod.default ?? {}) as BasaltConfig & { theme?: unknown; strings?: unknown }
     const lay = (mod.layout ?? own.layout ?? {}) as Record<string, unknown>
     const theme = mod.theme ?? own.theme
