@@ -23,6 +23,8 @@ import type { VFile } from "vfile"
 import { slugTag, type FullSlug } from "../lib/path"
 import { crawlLinks } from "../lib/links.ts"
 import { noteOf, reg, slugOf } from "./context.ts"
+import { datesOf } from "../lib/gitdates.ts"
+import { sourceDirs } from "../lib/site.ts"
 
 function coalesce(data: Record<string, unknown>, keys: string[]): unknown {
   for (const key of keys) if (data[key] !== undefined && data[key] !== null) return data[key]
@@ -62,10 +64,11 @@ export function remarkNote() {
     const cssclasses = coerceToArray(coalesce(data, ["cssclasses", "cssclass"]))
     if (cssclasses) data.cssclasses = cssclasses
 
-    // frontmatter's date, else when the file was made
+    // frontmatter's date, else when the file was made: its first commit, else
+    // the file system's (a fresh clone's is the clone's)
     const given = isoDate(coalesce(data, ["date", "created", "published", "publishDate"]))
     data.date =
-      given ?? (file.path && fs.existsSync(file.path) ? fs.statSync(file.path).birthtime.toISOString() : undefined)
+      given ?? (file.path && fs.existsSync(file.path) ? datesOf(file.path, sourceDirs(reg().site)).created.toISOString() : undefined)
     // whether the note says when it's from (a site can show dates only then)
     data.dated = given !== undefined
 
