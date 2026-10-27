@@ -665,10 +665,24 @@ document.addEventListener("basalt:swap-document", (e) => {
   if (region) place(doc, region, sha)
 })
 
+// Astro puts the focus back in the editor once it's moved, but at the start
+// of it (a contenteditable's caret goes there), and CodeMirror would take
+// that for where you are: the caret goes back where it was, in the page
+// itself, before the next key lands
+let caret: EditorSelection | undefined
+document.addEventListener("astro:before-swap", () => {
+  caret = region?.view.hasFocus ? region.view.state.selection : undefined
+})
+
 document.addEventListener("astro:after-swap", () => {
-  // before the next key lands
-  if (region?.host.isConnected) region.view.focus()
   picked = null
+  const r = region
+  if (!r?.host.isConnected || !caret) return
+  r.view.focus()
+  const { anchor, head } = caret.main
+  const a = r.view.domAtPos(anchor)
+  const h = r.view.domAtPos(head)
+  getSelection()?.setBaseAndExtent(a.node, a.offset, h.node, h.offset)
 })
 
 /** someone else's save came in: the note as it is now, taken in when nothing of ours is unsaved */
