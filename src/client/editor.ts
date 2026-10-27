@@ -32,14 +32,14 @@
 // from; as you type, they're read through a line diff onto the note as it is
 // now (lib/linemap.ts), and so is the open block onto a page swapped in.
 
-import { EditorSelection, EditorState, type Extension } from "@codemirror/state"
+import { EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state"
 import { Decoration, EditorView, ViewPlugin, keymap, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view"
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
 import { markdown, markdownKeymap, markdownLanguage } from "@codemirror/lang-markdown"
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language"
-import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext } from "@codemirror/autocomplete"
+import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, completionStatus, type CompletionContext } from "@codemirror/autocomplete"
 import { tags } from "@lezer/highlight"
-import { lineMap, type LineMap } from "../lib/linemap"
+import { lineMap, merge, type LineMap } from "../lib/linemap"
 import { fetchPage, swapIn } from "./swap"
 import { GitHubError, deployed, gitHub, type Version } from "./github"
 
@@ -399,7 +399,8 @@ function save(): Promise<void> {
 /** `live` moved onto `now`: the open block as you have it, everything else as `now` has it */
 function rebase(base: string, now: Version) {
   const r = region
-  if (!r) return void setLive(now.text)
+  // the blocks changed since `base`, closed by now (a commit's on leaving one), as changed
+  if (!r) return void setLive(merge(lines(base), lines(live), lines(now.text)).join("\n"))
   const mine = r.view.state.doc.toString()
   const toBase = lineMap(lines(live), lines(base))
   const toNow = lineMap(lines(base), lines(now.text))
@@ -578,6 +579,9 @@ function extensions(header: boolean): Extension[] {
     quietMarks,
     codeLines,
     closeBrackets(),
+    // ahead of the completions' own escape, which takes one typed a moment
+    // after a key (a completion pending) for closing a list
+    Prec.highest(keymap.of([{ key: "Escape", run: (view) => completionStatus(view.state) !== "active" && (void close(), true) }])),
     autocompletion({ override: [wikilinks], icons: false }),
     header ? placeholder("---\ntitle: …\n---") : [],
     keymap.of([
@@ -585,7 +589,6 @@ function extensions(header: boolean): Extension[] {
       { key: "ArrowDown", run: edge(1, "line") },
       { key: "ArrowLeft", run: edge(-1, "char") },
       { key: "ArrowRight", run: edge(1, "char") },
-      { key: "Escape", run: () => (void close(), true) },
       ...closeBracketsKeymap,
       ...completionKeymap,
       ...markdownKeymap,
