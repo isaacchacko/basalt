@@ -41,12 +41,7 @@ import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, t
 import { tags } from "@lezer/highlight"
 import { lineMap, type LineMap } from "../lib/linemap"
 import { fetchPage, swapIn } from "./swap"
-
-/** a version of the note's file, by its sha (git's) */
-interface Version {
-  text: string
-  sha: string
-}
+import { GitHubError, deployed, gitHub, type Version } from "./github"
 
 interface Backend {
   load(): Promise<Version>
@@ -134,9 +129,11 @@ function start(): Promise<boolean> {
     texts.clear()
     if (mode === "dev") backend = devBackend(slug)
     else {
-      const token = await github.token(a.dataset.editRepo!)
+      const repo = a.dataset.editRepo!
+      const token = await tokenFor(repo)
       if (!token) return false
-      backend = githubBackend(a.dataset.editRepo!, a.dataset.editBranch!, a.dataset.editPath!, token)
+      gh = gitHub(repo, token)
+      backend = githubBackend(repo, a.dataset.editBranch!, a.dataset.editPath!)
     }
     try {
       saved = await backend.load()
@@ -149,7 +146,7 @@ function start(): Promise<boolean> {
     const pageSha = a.dataset.editSha!
     if (mode === "github" && pageSha !== saved.sha) {
       // the page is older than the note (a deploy is on its way): its blocks' lines are the old text's
-      const old = await github.blob(pageSha).catch(() => undefined)
+      const old = await gh!.blob(pageSha).catch(() => undefined)
       if (old !== undefined) texts.set(pageSha, old)
     }
     return true
@@ -716,18 +713,12 @@ async function waitForDeploy() {
   if (watching) return
   watching = true
   try {
+    // till the last commit's deploy is in: one made while swapping one in is waited for too
     while (deploying) {
-      await new Promise((r) => setTimeout(r, 4000))
-      if (!deploying) break
-      status()
-      if (Date.now() - deploying.since > 20 * 60_000) {
-        deploying = null
-        status(say("editSlowDeploy"))
-        break
-      }
-      const doc = await fetchPage()
-      if (!doc || article(doc)?.dataset.editSha !== deploying.sha) continue
+      const doc = await deployed(fetchPage, (doc) => article(doc)?.dataset.editSha, () => deploying, { tick: () => status() })
+      if (!doc) break
       deploying = null
+      if (doc === "slow") return void status(say("editSlowDeploy"))
       await swapIn(doc)
       status(say("editLive"))
     }
@@ -783,73 +774,34 @@ function devBackend(slug: string): Backend {
   }
 }
 
-const base64 = {
-  encode(s: string) {
-    const bytes = new TextEncoder().encode(s)
-    let bin = ""
-    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-    return btoa(bin)
-  },
-  decode: (s: string) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), (c) => c.charCodeAt(0))),
+let gh: ReturnType<typeof gitHub> | undefined
+const tokenKey = (repo: string) => `basalt-github-token:${repo}`
+
+/** the token for the repo: kept in this browser, else asked for */
+async function tokenFor(repo: string): Promise<string | undefined> {
+  let token: string | null = null
+  try {
+    token = localStorage.getItem(tokenKey(repo))
+  } catch {}
+  return (token ?? (await connect(repo))) || undefined
 }
 
-const github = {
-  api: "https://api.github.com",
-  key: (repo: string) => `basalt-github-token:${repo}`,
-  current: { repo: "", token: "" },
-  headers: (token: string) => ({ accept: "application/vnd.github+json", authorization: `Bearer ${token}`, "x-github-api-version": "2022-11-28" }),
-  /** the token for the repo: kept in this browser, else asked for */
-  async token(repo: string): Promise<string | undefined> {
-    let token: string | null = null
-    try {
-      token = localStorage.getItem(github.key(repo))
-    } catch {}
-    token ??= await connect(repo)
-    if (token) github.current = { repo, token }
-    return token ?? undefined
-  },
-  async blob(sha: string): Promise<string> {
-    const { repo, token } = github.current
-    const res = await fetch(`${github.api}/repos/${repo}/git/blobs/${sha}`, { headers: github.headers(token) })
-    if (!res.ok) throw new Error(String(res.status))
-    return base64.decode((await res.json()).content)
-  },
-  forget(repo: string) {
-    try {
-      localStorage.removeItem(github.key(repo))
-    } catch {}
-    root.removeAttribute("data-edit-connected")
-  },
+function forget(repo: string) {
+  try {
+    localStorage.removeItem(tokenKey(repo))
+  } catch {}
+  root.removeAttribute("data-edit-connected")
 }
 
-function githubBackend(repo: string, branch: string, path: string, token: string): Backend {
-  const url = `${github.api}/repos/${repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}`
-  const fail = async (res: Response) => {
-    if (res.status === 401) github.forget(repo)
-    return new Error(`GitHub ${res.status}${res.status === 401 ? "" : `: ${(await res.json().catch(() => ({}))).message ?? ""}`}`)
+function githubBackend(repo: string, branch: string, path: string): Backend {
+  const forgetting = (err: unknown) => {
+    if (err instanceof GitHubError && err.status === 401) forget(repo)
+    throw err
   }
-  const backend: Backend = {
-    async load() {
-      const res = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers: github.headers(token), cache: "no-store" })
-      if (!res.ok) throw await fail(res)
-      const body = await res.json()
-      return { text: base64.decode(body.content), sha: body.sha }
-    },
-    async save(text, base) {
-      const res = await fetch(url, {
-        method: "PUT",
-        headers: { ...github.headers(token), "content-type": "application/json" },
-        body: JSON.stringify({ message: say("editCommit", { path }), content: base64.encode(text), sha: base, branch }),
-      })
-      if (res.status === 409 || res.status === 422) {
-        const now = await backend.load()
-        if (now.sha !== base) return { conflict: now }
-      }
-      if (!res.ok) throw await fail(res)
-      return { sha: (await res.json()).content.sha }
-    },
+  return {
+    load: () => gh!.read(path, branch).catch(forgetting),
+    save: (text, base) => gh!.write(path, branch, text, base, say("editCommit", { path })).catch(forgetting),
   }
-  return backend
 }
 
 /** Asks for a token for the repo, once, in a dialog, and checks it can write there. */
@@ -884,15 +836,13 @@ function connect(repo: string): Promise<string | null> {
     dialog.querySelector("form")!.addEventListener("submit", async (e) => {
       e.preventDefault()
       const token = input.value.trim()
-      const res = await fetch(`${github.api}/repos/${repo}`, { headers: github.headers(token) }).catch(() => undefined)
-      const body = res?.ok ? await res.json() : undefined
-      if (!body?.permissions?.push) {
+      if (!(await gitHub(repo, token).canPush())) {
         error.hidden = false
         error.textContent = say("editTokenWrong", { repo })
         return
       }
       try {
-        localStorage.setItem(github.key(repo), token)
+        localStorage.setItem(tokenKey(repo), token)
       } catch {}
       root.setAttribute("data-edit-connected", "")
       done(token)
