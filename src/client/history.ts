@@ -1,6 +1,6 @@
 // A note's history (lib/history.ts), on its page. The clock in the navbar's
-// tray (components/HistoryToggle.astro) turns it on: the left sidebar gives its
-// place to a timeline of the commits that touched the note, newest first, and
+// tray (components/HistoryToggle.astro) turns it on: the navbar's explorer gives
+// its place to a timeline of the commits that touched the note, newest first, and
 // a click on one shows the note as it was then, its changes marked (added
 // highlighted, removed struck through; "Plain" shows it without them). ↑/↓
 // (j/k) step from commit to commit, Esc comes back to now, and ?at=<sha> in
@@ -212,7 +212,12 @@ async function turn(want: boolean) {
   const k = kept()
   if (!k.pages.includes(slug)) keep({ pages: [...k.pages, slug] })
   const timeline = timelineOf(slug)
-  document.querySelector("#quartz-body")?.prepend(timeline)
+  // in the navbar, where its explorer is (history.scss hides that)
+  const nav = document.querySelector(".sidebar.left")
+  const explorer = nav?.querySelector(":scope > .explorer")
+  if (explorer) explorer.after(timeline)
+  else if (nav) nav.insertBefore(timeline, nav.querySelector(":scope > .nav-tray"))
+  else document.querySelector("#quartz-body")?.prepend(timeline)
   on = { art, slug, timeline, commits: [], at: null, drawn: Promise.resolve() }
   root.setAttribute("data-history", "")
   root.toggleAttribute("data-history-plain", k.plain)
@@ -274,6 +279,8 @@ addEventListener("click", (e) => (e.target as Element).closest?.(".edit-toggle")
 
 document.addEventListener("astro:before-swap", () => {
   on?.started?.abort()
+  // the navbar it's in is kept across pages; the timeline is this page's
+  on?.timeline.remove()
   on = undefined
   root.removeAttribute("data-history")
   root.removeAttribute("data-history-plain")

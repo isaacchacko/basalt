@@ -223,6 +223,7 @@ $semiBoldWeight: 600;
 
 .darkmode,
 .source-toggle,
+.history-toggle,
 .edit-toggle,
 .nav-search {
   display: grid;
@@ -252,7 +253,13 @@ $semiBoldWeight: 600;
   }
 }
 
+// (the history toggle shows only on a note that has a history)
+.history-toggle[hidden] {
+  display: none;
+}
+
 .source-toggle,
+.history-toggle,
 .edit-toggle {
   &[aria-pressed="true"] {
     color: var(--tertiary);

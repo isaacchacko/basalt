@@ -1,12 +1,15 @@
-// A note's history (client/history.ts): the timeline in the left sidebar's
-// place, and a version's changes marked in the article, in a diff's colours
+// A note's history (client/history.ts): the timeline in the navbar, in its
+// explorer's place, and a version's changes marked in the article, in a diff's colours
 // (diff.scss: added green, removed red).
 
 $narrow: "(max-width: 1055.98px)";
+$desktop: "(min-width: 1056px)";
 
-// ---------- the timeline, in the sidebar's place ----------
+// ---------- the timeline, in the explorer's place ----------
 
-:root[data-history]:not([data-editing]) #quartz-body > .left.sidebar {
+// the navbar (nav.scss) holds it where its explorer was: the same column,
+// width and scroll; the explorer comes back when it's off (or while editing)
+:root[data-history]:not([data-editing]) .sidebar.left > .explorer {
   display: none;
 }
 
@@ -18,23 +21,46 @@ $narrow: "(max-width: 1055.98px)";
   display: flex;
 }
 
+// on a wide screen the navbar stays open while it's on, as if hovered
+// (nav.scss: $open), so the dates are there as the note is read
+@media all and ($desktop) {
+  :root[data-history]:not([data-editing]) .page > #quartz-body {
+    --nav-width: 300px;
+  }
+
+  :root[data-history]:not([data-editing]) .page > #quartz-body > .sidebar.left {
+    &:not([data-nav="bar"]) {
+      border-right-color: var(--lightgray);
+    }
+
+    & > :not(.nav-rail) {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+
+    &:not([data-nav="bar"]) .nav-rail {
+      opacity: 0;
+    }
+  }
+}
+
+// below it, the bar across the top makes a second row for it
+@media all and ($narrow) {
+  :root[data-history]:not([data-editing]) .page > #quartz-body > .sidebar.left {
+    flex-wrap: wrap;
+  }
+}
+
 .history-timeline {
   flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 20;
-  width: calc(var(--gutter-left) - 1.5rem);
-  box-sizing: border-box;
-  padding: 1.5rem 0.75rem 1rem 1.25rem;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   font-family: var(--bodyFont);
   font-size: 0.85rem;
   color: var(--gray);
-  background: var(--light);
-  border-right: 1px solid var(--lightgray);
 
   .history-head {
     display: flex;
@@ -183,22 +209,22 @@ $narrow: "(max-width: 1055.98px)";
     font-style: italic;
   }
 
-  // below desktop width the sidebar is the bar across the top: the timeline
-  // takes that, its title and buttons above its dates, which scroll sideways
+  // below desktop width the navbar is the bar across the top: the timeline
+  // takes the menu's place in it, under the site's title and the tray, its
+  // buttons above its dates, which scroll sideways
   @media all and ($narrow) {
+    flex: 0 0 100%;
     flex-flow: row wrap;
     align-items: center;
     gap: 0.5rem 0.75rem;
-    position: sticky;
-    bottom: auto;
-    width: auto;
-    margin: 0 -1rem;
-    padding: 0.6rem 1rem 0.5rem;
+    order: 10;
     overflow: hidden;
-    border-right: none;
-    border-bottom: 1px solid var(--lightgray);
 
-    // the title, the buttons, and the close at the far end, in one row
+    .history-title {
+      display: none;
+    }
+
+    // the buttons, and the close at the far end, in one row (the bar has the site's title)
     .history-head {
       display: contents;
     }
