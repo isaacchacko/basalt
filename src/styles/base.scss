@@ -436,7 +436,10 @@ footer {
 input[type="checkbox"] {
   transform: translateY(2px);
   color: var(--secondary);
-  border: 1px solid var(--lightgray);
+  // an unchecked box is only its edge, so the edge needs 3:1 against the page
+  // (WCAG's non-text contrast): the muted text colour, taken toward the body
+  // text's, which every theme keeps dark against its background
+  border: 1px solid color-mix(in srgb, var(--gray) 70%, var(--darkgray));
   border-radius: 3px;
   background-color: var(--light);
   position: relative;
