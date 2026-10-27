@@ -268,39 +268,122 @@ function items(old: Element, now: Element): Element {
 
 const blank = (s: string) => !s.trim()
 
-/** `now` with its text's changes from `old`'s marked in place, in its own elements */
-function inline(old: Element, now: Element): Element {
+/** a sidenote or a margin note in a paragraph (markdown/margin.ts): the margin shows it, beside its line */
+const isNote = (e: Element) => [e.properties?.className].flat().some((k) => k === "sidenote" || k === "marginnote")
+
+/** a block's text, its texts, and the notes in it with where they are in its text (theirs isn't in it) */
+function walk(block: Element) {
   const texts: Text[] = []
-  const collect = (e: Element) => e.children.forEach((c) => (c.type === "text" ? texts.push(c) : c.type === "element" && collect(c)))
-  collect(now)
+  const notes: { el: Element; at: number }[] = []
+  let text = ""
+  const go = (e: Element) => {
+    for (const c of e.children) {
+      if (c.type === "text") {
+        texts.push(c)
+        text += c.value
+      } else if (c.type === "element") {
+        if (isNote(c)) notes.push({ el: c, at: text.length })
+        else go(c)
+      }
+    }
+  }
+  go(block)
+  return { texts, notes, text }
+}
+
+type Gone = { at: number; value?: string; el?: Element }
+
+/**
+ * `now` with its text's changes from `old`'s marked in place, in its own
+ * elements. Its notes are paired with `old`'s apart from its text: one in
+ * both marked inside, one gone put back struck where it was (the margin
+ * shows it, and its text doesn't run into the paragraph's), one new marked whole.
+ */
+function inline(old: Element, now: Element): Element {
+  const was = walk(old)
+  const is = walk(now)
   // where each text is in the whole, and the changes, by where they are in the new text
   const starts = new Map<Text, number>()
   let total = 0
-  for (const t of texts) {
+  for (const t of is.texts) {
     starts.set(t, total)
     total += t.value.length
   }
+  const parts = diffWords(was.text, is.text)
   const added: [number, number][] = []
-  const gone: { at: number; value: string }[] = []
+  const gone: Gone[] = []
   let at = 0
-  for (const part of diffWords(toString(old), toString(now))) {
+  for (const part of parts) {
     if (part.added) added.push([at, (at += part.value.length)])
     else if (part.removed) {
       if (!blank(part.value)) gone.push({ at, value: part.value })
     } else at += part.value.length
   }
-  // a removal goes in the first text with words in it that's at or after it (not between a list's items)
-  const worded = texts.filter((t) => !blank(t.value))
-  const home = new Map<Text, { at: number; value: string }[]>()
-  const left: { at: number; value: string }[] = []
+  /** where a place in the old text is in the new */
+  const moved = (p: number) => {
+    let o = 0
+    let n = 0
+    for (const part of parts) {
+      const len = part.value.length
+      if (part.added) n += len
+      else if (part.removed) {
+        if (p <= o + len) return n
+        o += len
+      } else {
+        if (p <= o + len) return n + (p - o)
+        o += len
+        n += len
+      }
+    }
+    return n
+  }
+  // the notes, by their footnote (else their text)
+  const key = (n: { el: Element }) => String(n.el.properties?.dataSidenote ?? toString(n.el))
+  const instead = new Map<Element, Element>()
+  let x = 0
+  let y = 0
+  const pairs = diffArrays(was.notes.map(key), is.notes.map(key))
+  for (let p = 0; p < pairs.length; p++) {
+    const part = pairs[p]
+    const n = part.count ?? part.value.length
+    if (part.removed && pairs[p + 1]?.added) {
+      // changed in place: pair by pair, the rest whole
+      const m = pairs[p + 1].count ?? pairs[p + 1].value.length
+      for (let k = 0; k < Math.max(n, m); k++) {
+        if (k < n && k < m) instead.set(is.notes[y + k].el, inline(was.notes[x + k].el, is.notes[y + k].el))
+        else if (k < n) gone.push({ at: moved(was.notes[x + k].at), el: removed(was.notes[x + k].el) })
+        else instead.set(is.notes[y + k].el, classed(is.notes[y + k].el, "history-added"))
+      }
+      x += n
+      y += m
+      p++
+    } else if (part.removed) {
+      for (let k = 0; k < n; k++) gone.push({ at: moved(was.notes[x + k].at), el: removed(was.notes[x + k].el) })
+      x += n
+    } else if (part.added) {
+      for (let k = 0; k < n; k++) instead.set(is.notes[y + k].el, classed(is.notes[y + k].el, "history-added"))
+      y += n
+    } else {
+      for (let k = 0; k < n; k++) instead.set(is.notes[y + k].el, inline(was.notes[x + k].el, is.notes[y + k].el))
+      x += n
+      y += n
+    }
+  }
+  // a removal goes in the first text with words in it that's at or after it (not between a list's items);
+  // words struck before a note struck at the same place (its number, then it)
+  gone.sort((a, b) => a.at - b.at || Number(!!a.el) - Number(!!b.el))
+  const worded = is.texts.filter((t) => !blank(t.value))
+  const home = new Map<Text, Gone[]>()
+  const left: Gone[] = []
   for (const g of gone) {
     const t = worded.find((t) => starts.get(t)! + t.value.length > g.at)
     if (t) home.set(t, [...(home.get(t) ?? []), g])
     else left.push(g)
   }
   // the words struck, the spaces round them kept, so they stand apart from the words beside them
-  const del = (value: string): ElementContent[] => {
-    const [, lead, words, trail] = /^(\s*)([\s\S]*?)(\s*)$/.exec(value)!
+  const del = (g: Gone): ElementContent[] => {
+    if (g.el) return [g.el]
+    const [, lead, words, trail] = /^(\s*)([\s\S]*?)(\s*)$/.exec(g.value!)!
     const struck: Element = { type: "element", tagName: "del", properties: {}, children: [{ type: "text", value: words }] }
     return [...(lead ? [{ type: "text" as const, value: " " }] : []), struck, ...(trail ? [{ type: "text" as const, value: " " }] : [])]
   }
@@ -319,7 +402,7 @@ function inline(old: Element, now: Element): Element {
     const out: ElementContent[] = []
     for (let k = 0; k < points.length - 1; k++) {
       const [x, y] = [points[k], points[k + 1]]
-      for (const g of home.get(t) ?? []) if (Math.max(g.at, s) === x) out.push(...del(g.value))
+      for (const g of home.get(t) ?? []) if (Math.max(g.at, s) === x) out.push(...del(g))
       const value = t.value.slice(x - s, y - s)
       if (!added.some(([p, q]) => x >= p && y <= q) || blank(value)) out.push({ type: "text", value })
       else {
@@ -334,9 +417,9 @@ function inline(old: Element, now: Element): Element {
   }
   const rewrite = (e: Element): Element => ({
     ...e,
-    children: e.children.flatMap((c) => (c.type === "text" ? marks(c) : c.type === "element" ? [rewrite(c)] : [c])),
+    children: e.children.flatMap((c) => (c.type === "text" ? marks(c) : c.type === "element" ? [isNote(c) ? (instead.get(c) ?? c) : rewrite(c)] : [c])),
   })
   const out = rewrite(now)
-  if (left.length) out.children.push(...left.flatMap((g) => del(g.value)))
+  if (left.length) out.children.push(...left.flatMap(del))
   return out
 }

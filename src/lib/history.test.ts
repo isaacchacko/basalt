@@ -62,6 +62,23 @@ describe("a commit's changes, marked", () => {
     assert.match(out, /<strong>the <del>old<\/del><ins>new<\/ins><\/strong>/)
   })
 
+  test("a footnote taken out of a paragraph that stays: its number struck, its sidenote put back struck, apart from the text", () => {
+    const note = (text: string) => `<sup><a data-sidenote="fn-sun">1</a></sup><span class="sidenote" data-sidenote="fn-sun" data-src="9-9"><span class="sidenote-number">1</span>${text}</span>`
+    const was = "Tomatoes love sun.[^sun] They grow.\n"
+    const now = "Tomatoes love sun. They grow.\n"
+    const out = marked(was, page(["1-1", `<p>Tomatoes love sun.${note("Six hours a day.")} They grow.</p>`]), now, page(["1-1", "<p>Tomatoes love sun. They grow.</p>"]))
+    assert.deepStrictEqual(del(out), ["1"])
+    assert.match(out, /<span class="sidenote history-removed"[^>]*><span class="sidenote-number">1<\/span>Six hours a day\.<\/span> They grow\./)
+    assert.deepStrictEqual(ins(out), [])
+  })
+
+  test("a footnote put in, and one changed: the new one marked whole, the changed one word by word inside it", () => {
+    const note = (id: string, text: string) => `<sup><a>1</a></sup><span class="sidenote" data-sidenote="${id}">${text}</span>`
+    const out = marked("a\n", page(["1-1", `<p>One.${note("fn-a", "Old words.")} Two.</p>`]), "b\n", page(["1-1", `<p>One.${note("fn-a", "New words.")} Two.${note("fn-b", "Fresh.")}</p>`]))
+    assert.match(out, /<span class="sidenote" data-sidenote="fn-a"><del>Old<\/del> ?<ins>New<\/ins> words\.<\/span>/)
+    assert.match(out, /<span class="sidenote history-added" data-sidenote="fn-b">Fresh\.<\/span>/)
+  })
+
   test("the first commit: everything added", () => {
     const out = marked("", "", "Hello.\n\n- a\n", page(["1-1", "<p>Hello.</p>"], ["3-3", "<ul>\n<li>a</li>\n</ul>"]))
     assert.match(out, /<p data-src="1-1" class="history-added">Hello\.<\/p>/)
