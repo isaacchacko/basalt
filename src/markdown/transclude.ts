@@ -192,10 +192,13 @@ export function rehypeTables() {
       if (node.tagName !== "table" || !parent || index === undefined) return
       const parentClasses = parent.type === "element" ? ((parent.properties.className ?? []) as string[]) : []
       if (parentClasses.includes("table-container")) return SKIP
+      // the lines it's written on go to what it's in, for editing in place (lines.ts)
+      const { dataSrc, ...own } = node.properties
+      node.properties = own
       parent.children[index] = {
         type: "element",
         tagName: "div",
-        properties: { className: ["table-container"] },
+        properties: { className: ["table-container"], ...(dataSrc !== undefined && { dataSrc }) },
         children: [node],
       }
       return SKIP

@@ -295,12 +295,14 @@ async function close() {
   region = null
   const text = r.view.state.doc.toString()
   const changed = text !== r.opened
+  // the page under the block is already the note as it is (a save came back while it was open)
+  const behind = changed && !(saved && live === saved.text && article()?.dataset.editSha === saved.sha)
   document.querySelectorAll("[data-edit-hidden]").forEach((el) => {
     el.removeAttribute("data-edit-hidden")
     // what it showed before the edit: hidden till the page comes back with it
-    if (changed) el.setAttribute("data-edit-stale", "")
+    if (behind) el.setAttribute("data-edit-stale", "")
   })
-  if (changed && r.to >= r.from && !r.header) {
+  if (behind && r.to >= r.from && !r.header) {
     // meanwhile the block shows its markdown
     const pending = document.createElement(r.host.tagName.toLowerCase())
     pending.className = "edit-pending"
@@ -311,7 +313,7 @@ async function close() {
     pending.textContent = text
     r.host.replaceWith(pending)
   } else {
-    if (changed && r.header) document.querySelectorAll("[data-edit-stale]").forEach((el) => el.removeAttribute("data-edit-stale"))
+    if (behind && r.header) document.querySelectorAll("[data-edit-stale]").forEach((el) => el.removeAttribute("data-edit-stale"))
     r.host.remove()
   }
   r.view.destroy()
@@ -616,7 +618,8 @@ document.addEventListener("pointerover", (e) => {
   if (!root.hasAttribute("data-editing") || (e.target as Element).closest(".edit-pick")) return
   const art = article()
   const el = (e.target as Element).closest<HTMLElement>(SRC)
-  const block = el && art ? (art.contains(el) ? topOf(el, art) : el) : null
+  // a footnote is a block of its own
+  const block = el && art ? (art.contains(el) ? (el.closest<HTMLElement>("section[data-footnotes] li[data-src]") ?? topOf(el, art)) : el) : null
   if (!block || block === picked || block.closest(".edit-host")) return
   picked?.removeAttribute("data-edit-picked")
   picked = block
