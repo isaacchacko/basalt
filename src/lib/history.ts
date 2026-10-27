@@ -369,14 +369,17 @@ function inline(old: Element, now: Element): Element {
       y += n
     }
   }
-  // a removal goes in the first text with words in it that's at or after it (not between a list's items);
+  // a removal goes in the text with words in it that it's in, or at the end of (not into the start of
+  // the next: a footnote's number, a link), else the first after it (not between a list's items);
   // words struck before a note struck at the same place (its number, then it)
   gone.sort((a, b) => a.at - b.at || Number(!!a.el) - Number(!!b.el))
   const worded = is.texts.filter((t) => !blank(t.value))
   const home = new Map<Text, Gone[]>()
   const left: Gone[] = []
   for (const g of gone) {
-    const t = worded.find((t) => starts.get(t)! + t.value.length > g.at)
+    const t =
+      worded.find((t) => starts.get(t)! < g.at && g.at <= starts.get(t)! + t.value.length) ??
+      worded.find((t) => starts.get(t)! + t.value.length > g.at)
     if (t) home.set(t, [...(home.get(t) ?? []), g])
     else left.push(g)
   }
@@ -402,7 +405,7 @@ function inline(old: Element, now: Element): Element {
     const out: ElementContent[] = []
     for (let k = 0; k < points.length - 1; k++) {
       const [x, y] = [points[k], points[k + 1]]
-      for (const g of home.get(t) ?? []) if (Math.max(g.at, s) === x) out.push(...del(g))
+      for (const g of home.get(t) ?? []) if (Math.max(g.at, s) === x && g.at < e) out.push(...del(g))
       const value = t.value.slice(x - s, y - s)
       if (!added.some(([p, q]) => x >= p && y <= q) || blank(value)) out.push({ type: "text", value })
       else {
@@ -413,6 +416,7 @@ function inline(old: Element, now: Element): Element {
         if (trail) out.push({ type: "text", value: trail })
       }
     }
+    for (const g of home.get(t) ?? []) if (g.at >= e) out.push(...del(g))
     return out
   }
   const rewrite = (e: Element): Element => ({
