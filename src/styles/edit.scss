@@ -55,6 +55,12 @@ $mobile: "(max-width: 800px)";
 
   .cm-line {
     padding: 0;
+    // the characters as they're typed: a code font's ligatures would draw => as ⇒
+    // (a drawn block keeps the page's own, edit-drawn)
+    font-variant-ligatures: none;
+    font-feature-settings:
+      "liga" 0,
+      "calt" 0;
   }
 
   .cm-cursor {
@@ -220,10 +226,14 @@ html[data-margin] article .edit-footnote {
     color: var(--darkgray);
   }
 
+  // on a phone, in the bar across the top (sticky), between the site's name
+  // and its buttons: over nothing of the page, wherever it's scrolled to
   @media all and ($mobile) {
+    top: 1.15rem;
     right: 50%;
+    bottom: auto;
     transform: translateX(50%);
-    bottom: 0.75rem;
+    box-shadow: none;
   }
 }
 
