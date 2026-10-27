@@ -91,6 +91,30 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 - **Media opens full screen** in one viewer: images, diagrams and frames, with zoom, pan, swipe, ←/→ and pinch.
 - **PDFs** open in Basalt's own viewer, with a text layer, a page that fits the screen in full screen, and "open in the browser's viewer" at the current page.
 
+## Editing in place
+
+A page edits its own note where it is, as a note does in Obsidian's Live Preview. The page stays the page Basalt drew, and the block you click opens as its markdown, exactly the lines it's written on, in the page's own type. Everything else stays drawn. Close it and it's drawn again, with your change.
+
+- **On and off.** ⌘E (Obsidian's key), or the pencil in the navbar's tray, or `?edit` in the url (for a phone). It stays on from page to page until it's turned off. A page without a note of its own (a tag's, a folder's without an `index.md`) has nothing to edit.
+- **In it.** A click on a block opens it at that word; a click on a link still follows it. ↑ ↓ ← → past a block's edge go on into the block before or after, as the cursor goes from line to line. Escape closes the block. Enter goes on with the list or quote you're in. `[[` completes a link to a note. The title opens the note's frontmatter. "Add a block" below the note starts one at its end. A block that's all controls (an island, a video, a graph) opens from the pencil in its corner. ⌘S saves now.
+- **Every block.** Headings, lists and tasks, callouts (folded ones too), tabs, code, code files, diffs, trees, diagrams, math, tables, pictures and other embeds, embedded notes (an embed opens as its `![[…]]`), islands, note lists, sounds, copy, raw html: each opens as the lines it came from. A footnote opens from its sidenote or from the foot of the page; a margin note, from the margin. `%%comments%%` stay in the file as written. A file with Windows line endings keeps them.
+
+**While serving** (`basalt dev`), a block saves to its file a moment after you stop typing. The save is an ordinary save: the page swaps in with it, and the block you're in stays open across the swap, with the cursor where it was and nothing you typed lost. Closing a block you didn't change leaves its file byte for byte as it was. A file changed elsewhere meanwhile (in your editor, by an agent) isn't overwritten: the block you're in goes into the file as it is now. The dev server only takes writes from the site's own pages (`PUT /__basalt/source`, JSON, with the `x-basalt-edit` header, from its own origin), and only to the site's notes.
+
+**A built site** edits through GitHub, with a top-level `"edit"`:
+
+```json
+{ "edit": true }
+{ "edit": { "repo": "me/garden", "branch": "main" } }
+```
+
+`true` takes the repo and branch the site is built from: `GITHUB_REPOSITORY` and `GITHUB_REF_NAME` in a GitHub Action, `VERCEL_GIT_REPO_OWNER`/`VERCEL_GIT_REPO_SLUG` and `VERCEL_GIT_COMMIT_REF` on Vercel, else git's `origin` and the branch checked out (else `main`). The site has to be built from a git checkout of that repo. Whatever deploys the site from the repo (a GitHub Action, Vercel, Netlify) deploys the edit.
+
+- **Connecting, once.** The first ⌘E (or `?edit`) on a browser asks for a token: a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for that one repository with **Contents: read and write** and nothing else. It's checked against the repo and kept in that browser's local storage, for that repo only; the pencil shows from then on. Readers never see the pencil, and never download the editor. A token that stops working (expired, revoked) is forgotten and asked for again.
+- **Saving.** A block is committed when you leave it (or ⌘S), not as you type, as `Edit <path>`. Until the deploy comes back, the blocks you changed show their markdown and the status in the corner counts the seconds; the page is checked every few seconds and swapped in once it has your commit. A commit made elsewhere meanwhile isn't overwritten: your block goes into the note as it is now.
+
+The words are in `strings`: `edit`, `editing`, `editBlock`, `editAdd`, `editSaving`, `editPublishing`, `editUnpublished`, `editDeploying`, `editLive`, `editFailed`, `editSlowDeploy`, `editConnect`, `editTokenHelp`, `editToken`, `editMakeToken`, `editCancel`, `editConnectButton`, `editTokenWrong`, `editCommit`.
+
 ## For agents: the edit loop
 
 - **Save, then wait.** `basalt wait <dir>` blocks until the build that took in your newest save to the site is live in every open page, prints its status, and exits 0 when it's ready, 1 when the site has an error, 2 on a timeout (`--timeout <s>`, default 30). `--file <path>` waits for the build that has that file's save in it, `--since <ms>` for one with a save made at or after that time, `--after <buildId>` for any build after that one. No race: a save that's live before `wait` starts is found, not missed.
@@ -120,5 +144,6 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 - `src/layouts/`, `src/components/`, `src/pages/`: the page and its routes.
 - `src/client/`: the browser side (margin, previews, viewer, pdf, islands, search, nav).
 - `src/integrations/agent.ts`: the agent API and hot swap.
+- `src/markdown/lines.ts`, `src/lib/linemap.ts`: the lines each block is written on. `src/client/editor.ts` edits them in place; `src/integrations/edit.ts` is the dev server's side, `src/client/github.ts` a built site's.
 - `src/integrations/password.ts`, `src/lib/gate.ts`: a site behind a password (Vercel's Build Output API, and the middleware in it).
 - `bin/basalt.mjs`: the CLI.

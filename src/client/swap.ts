@@ -16,6 +16,13 @@ declare global {
 // of every one (in dev, Vite answers the import again after a content change)
 const router = import("astro:transitions/client")
 
+// a swap that comes while the last one's transition runs skips that one, and
+// the browser rejects its promises: nothing's wrong, the newer page is coming
+addEventListener("unhandledrejection", (e) => {
+  const err = e.reason as Error | undefined
+  if (err instanceof DOMException && /Transition was skipped/.test(err.message)) e.preventDefault()
+})
+
 /** The page at the current url, fetched fresh: its document, or undefined when it doesn't come (an error page). */
 export async function fetchPage(): Promise<Document | undefined> {
   const url = location.pathname + location.search

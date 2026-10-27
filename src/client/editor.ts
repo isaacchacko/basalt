@@ -35,7 +35,7 @@
 import { EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state"
 import { Decoration, EditorView, ViewPlugin, keymap, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view"
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
-import { markdown, markdownKeymap } from "@codemirror/lang-markdown"
+import { markdown, markdownKeymap, markdownLanguage } from "@codemirror/lang-markdown"
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language"
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, completionStatus, type CompletionContext } from "@codemirror/autocomplete"
 import { tags } from "@lezer/highlight"
@@ -234,6 +234,10 @@ async function open(target: HTMLElement, caret: { x: number; y: number } | "star
     to = from - 1
   }
   const text = slice(live, from, to)
+  // the pencil was for opening it
+  picked?.removeAttribute("data-edit-picked")
+  picked = null
+  document.querySelector(".edit-pick")?.remove()
   const host = document.createElement(target.matches("li") ? "li" : "div")
   host.className = header ? "edit-host edit-host-header" : "edit-host"
   host.setAttribute("data-astro-transition-persist", PERSIST)
@@ -497,6 +501,38 @@ const quietMarks = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 )
 
+/** the lines of a code block, a table or raw html, in the code font, as they line up */
+const CODE_LINES = new Set(["FencedCode", "CodeBlock", "Table", "HTMLBlock"])
+const codeLines = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = this.build(view)
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.viewportChanged || syntaxTree(u.startState) !== syntaxTree(u.state)) this.decorations = this.build(u.view)
+    }
+    build(view: EditorView): DecorationSet {
+      const { doc } = view.state
+      const line = Decoration.line({ class: "md-code-line" })
+      const out = []
+      for (const { from, to } of view.visibleRanges) {
+        syntaxTree(view.state).iterate({
+          from,
+          to,
+          enter: (node) => {
+            if (!CODE_LINES.has(node.name)) return
+            for (let n = doc.lineAt(node.from).number; n <= doc.lineAt(node.to).number; n++) out.push(line.range(doc.line(n).from))
+            return false
+          },
+        })
+      }
+      return Decoration.set(out, true)
+    }
+  },
+  { decorations: (v) => v.decorations },
+)
+
 let index: Promise<{ label: string; detail: string; apply: string }[]> | undefined
 /** the site's notes, for [[: a name that's the only one of its kind on its own, else its path */
 const notes = () =>
@@ -537,9 +573,11 @@ function extensions(header: boolean): Extension[] {
   return [
     history(),
     EditorView.lineWrapping,
-    markdown(),
+    // GitHub's flavour: tables, ~~strikethrough~~, - [ ] tasks
+    markdown({ base: markdownLanguage }),
     syntaxHighlighting(style),
     quietMarks,
+    codeLines,
     closeBrackets(),
     // ahead of the completions' own escape, which takes one typed a moment
     // after a key (a completion pending) for closing a list
@@ -643,7 +681,8 @@ document.addEventListener("pointerover", (e) => {
   }
   const box = block.getBoundingClientRect()
   pen.style.top = `${box.top + scrollY}px`
-  pen.style.left = `${box.right + scrollX + 4}px`
+  // beside its top right corner; inside it, where there's no room beside it (a phone)
+  pen.style.left = `${Math.min(box.right + 4, document.documentElement.clientWidth - 28) + scrollX}px`
 })
 
 document.addEventListener("keydown", (e) => {
@@ -701,8 +740,9 @@ async function learn() {
   const r = region
   if (r) {
     const map = lineMap(lines(live), lines(now.text))
-    r.from = map.first(r.from - 1) + 1
-    r.to = r.to < r.from - 1 ? r.from - 1 : map.last(r.to - 1) + 1
+    const from = map.first(r.from - 1) + 1
+    r.to = r.to < r.from ? from - 1 : map.last(r.to - 1) + 1
+    r.from = from
   }
   saved = now
   setLive(now.text)
