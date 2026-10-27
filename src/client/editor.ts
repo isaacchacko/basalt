@@ -32,7 +32,9 @@ declare global {
     basaltEdit?: {
       view: EditorView
       /** its blocks: their lines now (from 1), and whether each is drawn (its box) or open */
-      blocks(): { from: number; to: number; lines: [number, number]; drawn: boolean; dom: HTMLElement | null }[]
+      blocks(): { from: number; to: number; lines: [number, number]; drawn: boolean; dom: HTMLElement | null; layer: HTMLElement | null }[]
+      /** the layer a block with a frame or a player has its nodes in (its box holds a stand-in) */
+      layerOf(box: HTMLElement): HTMLElement | null
       /** once nothing's waiting to be saved or rendered, and the last rendering is drawn */
       idle(): Promise<void>
       /** the sha of the file as it's saved */
@@ -97,8 +99,10 @@ export async function setEditing(on: boolean) {
         view.state.field(blocks).map((b) => {
           const dom = [...view.contentDOM.querySelectorAll<HTMLElement>(":scope > .edit-drawn")].find((box) => view.posAtDOM(box) === b.from) ?? null
           const drawn = view.state.field(drawing).iter(b.from).from === b.from
-          return { ...b, lines: [view.state.doc.lineAt(b.from).number, view.state.doc.lineAt(b.to).number] as [number, number], drawn, dom }
+          const layer = floats.get(view.state.sliceDoc(b.from, b.to))?.layer ?? null
+          return { ...b, lines: [view.state.doc.lineAt(b.from).number, view.state.doc.lineAt(b.to).number] as [number, number], drawn, dom, layer }
         }),
+      layerOf: (box) => [...floats.values()].find((f) => f.stand?.parentElement === box)?.layer ?? null,
       idle: async () => {
         while (timer !== undefined || saving || renders > 0) await new Promise((r) => setTimeout(r, 25))
       },
@@ -327,6 +331,17 @@ function learn(text: string, elements: Element[], live = false): Block[] {
   // the frontmatter: drawn as the page draws it, as the title above (a click on which opens it)
   const fm = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(text)
   if (fm) found.set(fm[0], { lines: [1, fm[0].split("\n").length], nodes: [] })
+  // what renders as nothing (a %%comment%%, a link's definition): drawn as nothing
+  const covered = new Set<number>()
+  for (const { lines: [a, b] } of found.values()) for (let i = a; i <= b; i++) covered.add(i)
+  for (let i = 1; i <= lines.length; i++) {
+    if (covered.has(i) || !lines[i - 1].trim()) continue
+    let j = i
+    while (j < lines.length && !covered.has(j + 1) && lines[j].trim()) j++
+    const key = lines.slice(i - 1, j).join("\n")
+    if (!found.has(key)) found.set(key, { lines: [i, j], nodes: [] })
+    i = j
+  }
   // what's drawn for a text already stays drawn (an island running, a diagram drawn)
   for (const [key, { nodes }] of found) {
     if (live) heightOf.set(key, nodes.reduce((h, n) => h + (pageHeight.get(n as Element) ?? 0), 0))
@@ -541,7 +556,17 @@ const into = (forward: boolean) => (view: EditorView) => {
   })
   if (!hit) return false
   const { from, to } = hit
+  // where across the line the cursor's been going (as CodeMirror keeps it from line to line: from the content's left)
+  const left = () => view.contentDOM.getBoundingClientRect().left
+  const head = view.coordsAtPos(sel.head)
+  const goal = sel.goalColumn ?? (head ? head.left - left() : undefined)
   view.dispatch({ selection: EditorSelection.cursor(forward ? from : to), scrollIntoView: true })
+  // opened, its first line (or last) at that same place across
+  const line = view.state.doc.lineAt(forward ? from : to)
+  const y = view.coordsAtPos(line.from)
+  const at = goal === undefined || !y ? null : view.posAtCoords({ x: left() + goal, y: forward ? y.top + 2 : (view.coordsAtPos(line.to)?.bottom ?? y.bottom) - 2 })
+  if (at !== null && at >= Math.min(from, to) && at <= Math.max(from, to))
+    view.dispatch({ selection: EditorSelection.cursor(at, 0, undefined, goal) })
   return true
 }
 
@@ -594,8 +619,10 @@ function reveal(view: EditorView, box: HTMLElement, key: string, e: MouseEvent) 
   const target = e.target as Element
   if (e.button !== 0 || target.closest("a[href], button, input, select, textarea, summary, label, audio, video, iframe, [role=button], [role=tab], .island")) return
   e.preventDefault()
-  const from = view.posAtDOM(box)
-  view.dispatch({ selection: EditorSelection.cursor(from + offsetIn(box, e, key)) })
+  const at = view.posAtDOM(box) + offsetIn(box, e, key)
+  // shift: the selection goes on to there
+  const { anchor } = view.state.selection.main
+  view.dispatch({ selection: e.shiftKey ? EditorSelection.range(anchor, at) : EditorSelection.cursor(at) })
   view.focus()
 }
 
