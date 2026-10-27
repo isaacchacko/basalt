@@ -421,7 +421,10 @@ function rebase(base: string, now: Version) {
 function neighbour(dir: -1 | 1): HTMLElement | null {
   const r = region
   if (!r) return null
-  const shown = blocks().filter((el) => !el.hasAttribute("data-edit-hidden") && el.checkVisibility())
+  // a margin note is in the margin, not where it's written: it's there all the same
+  const inMargin = (el: HTMLElement) =>
+    [...document.querySelectorAll<HTMLElement>(`.sidebar [data-src="${el.dataset.src}"]`)].some((m) => m.checkVisibility())
+  const shown = blocks().filter((el) => !el.hasAttribute("data-edit-hidden") && (el.checkVisibility() || inMargin(el)))
   const header = document.querySelector<HTMLElement>(".page-header .popover-hint")
   if (r.header) return dir === 1 ? (shown[0] ?? null) : null
   const spans = shown.map((el) => [el, linesOf(el)] as const)
