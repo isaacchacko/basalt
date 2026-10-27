@@ -1,16 +1,12 @@
 import { defineConfig } from "astro/config"
 import preact from "@astrojs/preact"
-import { createMarkdownProcessor, parseFrontmatter, unified } from "@astrojs/markdown-remark"
-import fs from "node:fs"
+import { unified } from "@astrojs/markdown-remark"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadSite, siteDir } from "./src/lib/site"
-import { processorOptions, rehypePlugins, remarkPlugins, renderTarget, syntaxHighlight, transformNote } from "./src/markdown"
-import { unsaved } from "./src/markdown/lines"
+import { processorOptions, remarkPlugins, renderTarget, syntaxHighlight } from "./src/markdown"
+import { rehype, renderNote } from "./src/markdown/rendernote"
 import { useTargets } from "./src/markdown/transclude"
-import { listed, rehypeNoteLists, renderNoteLists } from "./src/markdown/notelist"
-import { useRegistry } from "./src/markdown/context"
-import { registry } from "./src/lib/registry"
 import { vitePlugins } from "./src/lib/vite"
 import { agentApi } from "./src/integrations/agent"
 import { passwordGate } from "./src/integrations/password"
@@ -21,56 +17,7 @@ const site = loadSite(siteDir())
 // folder (so two sites can be served at once), and Basalt's src is shared
 const basalt = path.dirname(fileURLToPath(import.meta.url))
 
-// A note whose frontmatter doesn't parse is an error of its own (the loader
-// reports it, with its line). A note that embeds or lists it still renders:
-// the embed says there's nothing to embed, and the list leaves it out.
 useTargets((slug) => renderTarget(slug).catch(() => undefined))
-const parses = (abs: string) => {
-  try {
-    parseFrontmatter(fs.readFileSync(abs, "utf8"))
-    return true
-  } catch {
-    return false
-  }
-}
-const listedSafely = () => {
-  try {
-    return listed()
-  } catch {
-    const reg = registry()
-    const files = reg.files.filter((f) => !f.isNote || parses(f.abs))
-    useRegistry(() => ({ ...reg, files }))
-    try {
-      return listed()
-    } finally {
-      useRegistry(registry)
-    }
-  }
-}
-const rehype = rehypePlugins.map((p) =>
-  p === rehypeNoteLists ? () => (tree: never) => renderNoteLists(tree, registry().site.config.locale, listedSafely) : p,
-)
-
-// a note's text rendered as its page renders it, saved or not (editing in place asks for it)
-let processor: ReturnType<typeof createMarkdownProcessor> | undefined
-const renderNote = async (abs: string, text: string) => {
-  const file = registry().byAbs.get(abs)
-  if (!file) throw new Error(`${abs} isn't one of the site's notes`)
-  processor ??= createMarkdownProcessor({
-    remarkPlugins: remarkPlugins as never,
-    rehypePlugins: rehype as never,
-    remarkRehype: processorOptions.remarkRehype,
-    smartypants: processorOptions.smartypants,
-    syntaxHighlight,
-  } as never)
-  const { frontmatter, content } = parseFrontmatter(transformNote(text, file))
-  unsaved.set(abs, text)
-  try {
-    return (await (await processor).render(content, { frontmatter, fileURL: new URL("file://" + abs) })).code
-  } finally {
-    unsaved.delete(abs)
-  }
-}
 
 export default defineConfig({
   site: site.config.baseUrl ? `https://${site.config.baseUrl}` : undefined,
