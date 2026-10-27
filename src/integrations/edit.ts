@@ -4,6 +4,8 @@
 //   PUT /__basalt/source               { slug, text, base } writes it, when `base`
 //                                      (the sha it was edited from) is still its sha;
 //                                      else 409 with { text, sha } as it is now
+//   POST /__basalt/render              { slug, text }: the note rendered with that text
+//   GET /__basalt/history              a note's history (integrations/history.ts)
 //
 // A write is a save like any other: the page gets it as a swap (agent.ts).
 // Only while serving, only a note of the site's, and only from a page of the
@@ -19,6 +21,7 @@ import type { AstroIntegration } from "astro"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { loadSite, walkSite } from "../lib/site"
 import { blobSha } from "../lib/edit"
+import { answerHistory } from "./history"
 
 /** a note's text rendered as its page's note would be: its html, blocks marked with data-src (markdown/lines.ts) */
 export type RenderNote = (abs: string, text: string) => Promise<string>
@@ -35,6 +38,7 @@ export function editInPlace(render?: RenderNote): AstroIntegration {
           const url = new URL(req.url ?? "/", "http://basalt")
           if (url.pathname === "/__basalt/source") void answer(req, res, url).catch((err: Error) => reply(res, 500, { error: err.message }))
           else if (url.pathname === "/__basalt/render" && render) void rendered(req, res, render).catch((err: Error) => reply(res, 500, { error: err.message }))
+          else if (url.pathname === "/__basalt/history" && render) void answerHistory(req, res, url, render).catch((err: Error) => reply(res, 500, { error: err.message }))
           else next()
         })
       },

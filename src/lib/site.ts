@@ -27,6 +27,8 @@ export interface SiteConfig {
   content: { from: string; to?: string }[]
   /** pages that edit their notes in place once built, committing to GitHub (edit.ts); a top-level "edit" */
   edit?: true | { repo?: string; branch?: string }
+  /** whether its notes' pages show their history (lib/history.ts): while serving unless false, built only when true */
+  history?: boolean
 }
 
 export interface Site {
@@ -62,6 +64,7 @@ export function loadSite(dir = siteDir()): Site {
     locale: raw.locale ?? "en-US",
     content: Array.isArray(raw.content) ? raw.content : [{ from: "notes" }],
     edit: raw.edit === true || (raw.edit && typeof raw.edit === "object") ? raw.edit : undefined,
+    history: typeof raw.history === "boolean" ? raw.history : undefined,
   }
   return { dir, config, work: path.join(dir, ".basalt", "astro") }
 }

@@ -1,7 +1,9 @@
 // Where each block of a note's page is in its file, for editing the page in
 // place (client/editor.ts): data-src="<first line>-<last line>", counted from
 // 1 in the file as written, on every top-level block, every footnote and every
-// sidenote. Only while serving, or for a site with "edit" (lib/edit.ts).
+// sidenote. Only while serving, or for a site with "edit" (lib/edit.ts), or
+// for a text rendered that isn't the file's (`unsaved`: what's typed, a past
+// version, lib/history.ts).
 //
 // A note is parsed after its textTransforms, which add and take away lines (a
 // callout's title gets one after it, a %%comment%% goes), so the lines it was
@@ -55,13 +57,14 @@ export function remarkSourceBlocks() {
   }
 }
 
-/** a note's text being rendered that isn't its file's yet (integrations/edit.ts renders what's typed) */
+/** a note's text being rendered that isn't its file's (what's typed, integrations/edit.ts; a past version, lib/history.ts) */
 export const unsaved = new Map<string, string>()
 
 export function rehypeSourceLines() {
   return (tree: Root, file: VFile) => {
-    if (!file.path || !editable(reg().site)) return
+    if (!file.path) return
     let raw = unsaved.get(file.path)
+    if (raw === undefined && !editable(reg().site)) return
     try {
       raw ??= fs.readFileSync(file.path, "utf8")
     } catch {
