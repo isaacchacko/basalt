@@ -136,7 +136,8 @@ $narrow: "(max-width: 1055.98px)";
       content: "";
       position: absolute;
       left: 0;
-      top: calc(50% - 0.3rem);
+      // beside the date (its first line)
+      top: calc(0.3rem + 0.5lh - 0.3rem);
       width: 0.6rem;
       height: 0.6rem;
       box-sizing: border-box;
@@ -167,6 +168,12 @@ $narrow: "(max-width: 1055.98px)";
 
   .history-now {
     font-style: italic;
+  }
+
+  .history-time {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.2;
   }
 
   .history-partial,
@@ -204,6 +211,11 @@ $narrow: "(max-width: 1055.98px)";
     .history-close {
       order: 2;
       margin-left: auto;
+    }
+
+    .history-time {
+      display: inline;
+      margin-left: 0.3rem;
     }
 
     .history-entries {

@@ -97,13 +97,13 @@ let on:
   | undefined
 const versions = new Map<string, Promise<Version | undefined>>()
 
+/** a commit's date, and its time when another the same day has one too (under it) */
 function day(iso: string, all: Commit[]) {
   const d = new Date(iso)
   const lang = root.lang || undefined
-  const date = d.toLocaleDateString(lang, { year: "numeric", month: "short", day: "numeric" })
-  // two the same day: their times too
+  const date = element("span", { class: "history-date" }, d.toLocaleDateString(lang, { year: "numeric", month: "short", day: "numeric" }))
   const twin = all.some((c) => c.date !== iso && new Date(c.date).toDateString() === d.toDateString())
-  return twin ? `${date}, ${d.toLocaleTimeString(lang, { hour: "numeric", minute: "2-digit" })}` : date
+  return twin ? [date, element("span", { class: "history-time" }, d.toLocaleTimeString(lang, { hour: "numeric", minute: "2-digit" }))] : [date]
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, string> = {}, ...children: (Node | string)[]) {
@@ -151,7 +151,7 @@ function listed(nav: HTMLElement, list: Commits) {
     const a = element(
       "a",
       { class: "history-entry", href: `?at=${c.sha}`, "data-sha": c.sha, "data-date": c.date, title: `${c.subject}, ${c.author}` },
-      element("time", { datetime: c.date }, day(c.date, list.commits)),
+      element("time", { datetime: c.date }, ...day(c.date, list.commits)),
     )
     ol.append(element("li", {}, a))
   }

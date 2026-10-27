@@ -286,7 +286,7 @@ function inline(old: Element, now: Element): Element {
   for (const part of diffWords(toString(old), toString(now))) {
     if (part.added) added.push([at, (at += part.value.length)])
     else if (part.removed) {
-      if (!blank(part.value)) gone.push({ at, value: part.value.trim() })
+      if (!blank(part.value)) gone.push({ at, value: part.value })
     } else at += part.value.length
   }
   // a removal goes in the first text with words in it that's at or after it (not between a list's items)
@@ -298,7 +298,12 @@ function inline(old: Element, now: Element): Element {
     if (t) home.set(t, [...(home.get(t) ?? []), g])
     else left.push(g)
   }
-  const del = (value: string): Element => ({ type: "element", tagName: "del", properties: {}, children: [{ type: "text", value }] })
+  // the words struck, the spaces round them kept, so they stand apart from the words beside them
+  const del = (value: string): ElementContent[] => {
+    const [, lead, words, trail] = /^(\s*)([\s\S]*?)(\s*)$/.exec(value)!
+    const struck: Element = { type: "element", tagName: "del", properties: {}, children: [{ type: "text", value: words }] }
+    return [...(lead ? [{ type: "text" as const, value: " " }] : []), struck, ...(trail ? [{ type: "text" as const, value: " " }] : [])]
+  }
   const ins = (value: string): Element => ({ type: "element", tagName: "ins", properties: {}, children: [{ type: "text", value }] })
   const marks = (t: Text): ElementContent[] => {
     const s = starts.get(t)!
@@ -314,7 +319,7 @@ function inline(old: Element, now: Element): Element {
     const out: ElementContent[] = []
     for (let k = 0; k < points.length - 1; k++) {
       const [x, y] = [points[k], points[k + 1]]
-      for (const g of home.get(t) ?? []) if (Math.max(g.at, s) === x) out.push(del(g.value))
+      for (const g of home.get(t) ?? []) if (Math.max(g.at, s) === x) out.push(...del(g.value))
       const value = t.value.slice(x - s, y - s)
       if (!added.some(([p, q]) => x >= p && y <= q) || blank(value)) out.push({ type: "text", value })
       else {
@@ -332,6 +337,6 @@ function inline(old: Element, now: Element): Element {
     children: e.children.flatMap((c) => (c.type === "text" ? marks(c) : c.type === "element" ? [rewrite(c)] : [c])),
   })
   const out = rewrite(now)
-  if (left.length) out.children.push(...left.map((g) => del(g.value)))
+  if (left.length) out.children.push(...left.flatMap((g) => del(g.value)))
   return out
 }
