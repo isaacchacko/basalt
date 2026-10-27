@@ -54,6 +54,15 @@ export const strings = {
   editTokenWrong: "That token can't write to {repo}.",
   /** the commit message of an edit */
   editCommit: "Edit {path}",
+  /** a note's history (client/history.ts): its button, and its timeline */
+  history: "Show this page's history",
+  historyTitle: "History",
+  historyNow: "Now",
+  historyClose: "Close the history",
+  historyPlain: "Plain",
+  historyEverywhere: "Every page",
+  historyPartial: "Older history isn't in this build",
+  historyNone: "No commits yet",
   /** the feed's description, when the site gives none */
   feed: "The last {n} notes on {title}",
   /** the login page of a site with a password */
