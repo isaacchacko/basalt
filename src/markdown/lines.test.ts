@@ -36,18 +36,6 @@ const blocks = (tree: Root) => tree.children.filter((c): c is Element => c.type 
 const short = (src: unknown) => (typeof src === "string" ? src.replace(/^(\d+)-\1$/, "$1") : `no data-src`)
 const spans = (tree: Root) => blocks(tree).map((b) => short(b.properties.dataSrc))
 
-// Wrong today, sent to dev; a todo runs, and says when it starts passing.
-const known: Record<string, string> = {
-  "site/diagrams.md": "figures drawn from a code block take the lines from the paragraph before to the end; two $$ blocks share one span",
-  "site/files.md": "a code file's figure takes the lines of the embedded file; a csv table has no data-src; a missing embed takes the heading's line",
-  "site/index.md": "an aside starts a line late and runs into the next block",
-  "site/islands.md": "a ```html live frame starts at the paragraph before it",
-  "site/margin.md": "asides start a line late and run into the next block",
-  "site/tabs.md": "tabs start on the blank line before the first tab",
-  "edit/index.md": "a paragraph before a multi-line comment takes the comment's lines; tables, note-lists have no data-src; diff and tree take a stray line; the aside",
-  "edit/blog/index.md": "the first transclusion is a line late",
-}
-
 const expected: Record<string, string[]> = {
   "site/diagrams.md": "5 7 9 11-18 20 22 24-33 35 37 39-44 46 48 50-52 54-56 58 60-65 67 69 71-73".split(" "),
   "site/files.md": "5 7 9 11 13 15 17 19 21 23 25 27".split(" "),
@@ -70,7 +58,7 @@ const expected: Record<string, string[]> = {
 describe("every top-level block has the lines it's written on", () => {
   for (const [key, want] of Object.entries(expected)) {
     const [site, ...rest] = key.split("/")
-    test(key, { todo: known[key] }, async () => {
+    test(key, async () => {
       assert.deepStrictEqual(spans(await page(sites[site as keyof typeof sites], rest.join("/"))), want)
     })
   }
@@ -125,7 +113,7 @@ describe("tagLines", () => {
     return children.map((c) => short(c.properties.dataSrc))
   }
 
-  test("lines the text pass added or took away map back to the file's", { todo: "a line whose comment went maps to the blank line after it" }, () => {
+  test("lines the text pass added or took away map back to the file's", () => {
     // parsed: the comment went, the callout's title got a line after it
     const raw = "---\nt: 1\n---\n\na %% x %% b\n\n> [!note] T\n> body\n\nend"
     const parsed = "\n\n\n\na  b\n\n> [!note] T\n> \n> body\n\nend"
