@@ -113,7 +113,7 @@ export async function setEditing(on: boolean) {
     if (art.dataset.editSha === saved.sha) view.dispatch({ effects: setBlocks.of(learn(saved.text, [...art.children], true)) })
     else void render()
     // the cursor at the end, so the note opens drawn, all of it
-    view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length) })
+    view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length), annotations: opening.of(true) })
     view.focus()
     // laid out again whenever what's drawn changes size (a font, an image, a diagram)
     let frame = 0
@@ -178,6 +178,13 @@ const pageHeight = new WeakMap<Element, number>()
 /** how far below the page's header its first block's top was: the editor's first block goes there */
 let firstTop: { el: Element; y: number } | undefined
 const headerBottom = () => document.querySelector(".page-header")?.getBoundingClientRect().bottom ?? 0
+/** the space on the page between the note's last block and what's after the note: the editor's end keeps it */
+let tail: number | undefined
+const after = (art: Element) => {
+  for (let el = art.nextElementSibling; el; el = el.nextElementSibling) if (el.checkVisibility() && el.getBoundingClientRect().height) return el
+  // nothing after it in the page's column: the footer
+  return document.querySelector("footer")
+}
 function measure(art: HTMLElement) {
   let bottom: number | undefined
   for (const el of art.children) {
@@ -188,6 +195,8 @@ function measure(art: HTMLElement) {
     pageHeight.set(el, box.height + (bottom === undefined ? 0 : box.top - bottom))
     bottom = box.bottom
   }
+  const next = after(art)
+  tail = next && bottom !== undefined ? next.getBoundingClientRect().top - bottom : undefined
 }
 /** which rendering a text's nodes came from (0: the page's own), for the edit proof */
 const renderedBy = new Map<string, number>()
@@ -227,6 +236,10 @@ function placed(box: HTMLElement, key: string) {
       // margins inside it that the page lets out (through a figure to its code's) stay in the box: so much less to add
       if (shown.length) {
         ;(shown[shown.length - 1] as HTMLElement).style.marginBottom = "0"
+        // margins that go out through its edges on the page (a callout's title's, a figure's code's)
+        // would stay in the box here: the spaces between blocks are set above, instead (spaced)
+        edges(shown[0], "Top")
+        edges(shown[shown.length - 1], "Bottom")
         ends.set(box, stand ? [stand, stand] : [shown[0], shown[shown.length - 1]])
       }
       spaced(note.view)
@@ -241,6 +254,18 @@ function placed(box: HTMLElement, key: string) {
     heightOf.set(key, box.getBoundingClientRect().height)
     marginAgain()
   })
+}
+
+/** An element's first (or last) children's margins at that edge, as far down as they'd go out through it. */
+function edges(el: Element, side: "Top" | "Bottom") {
+  for (let at: Element | null = el; at; ) {
+    const style = getComputedStyle(at)
+    if (parseFloat(style[`padding${side}`]) || parseFloat(style[`border${side}Width`]) || style.display !== "block" || style.overflow !== "visible") return
+    const child: Element | null = side === "Top" ? at.firstElementChild : at.lastElementChild
+    if (!child || !child.checkVisibility()) return
+    ;(child as HTMLElement).style[`margin${side}`] = "0"
+    at = child
+  }
 }
 
 /**
@@ -277,6 +302,12 @@ function spaced(view: EditorView) {
     below = parseFloat(el.dataset.below!)
     bottom = shown[1].getBoundingClientRect().bottom
   }
+  // the end of the note, once it's drawn: as far from what's after it as on the page
+  const next = note && after(note.host.parentElement!)
+  if (tail === undefined || !next || bottom === undefined || view.viewport.to < view.state.doc.length) return
+  const host = view.dom.parentElement!
+  const space = next.getBoundingClientRect().top - bottom
+  if (Math.abs(space - tail) > 0.5) host.style.marginBottom = `${Math.round((parseFloat(host.style.marginBottom || "0") + tail - space) * 10) / 10}px`
 }
 
 /** the margin's notes, laid out again from what's drawn now (margin.ts), once a frame */
@@ -468,13 +499,25 @@ function floated(view: EditorView) {
 }
 
 /** Every block the selection isn't in (or at the edge of), drawn. */
+/**
+ * Whether the cursor's been put anywhere yet (a key, a click): till then the
+ * note is the page, every block of it drawn, though the cursor waits at its end.
+ */
+const touched = StateField.define<boolean>({
+  create: () => false,
+  update: (value, tr) => value || ((!!tr.selection || tr.docChanged) && !tr.annotation(opening) && !tr.annotation(theirs)),
+})
+/** the editor's own first move, to the note's end: not one of yours */
+const opening = Annotation.define<boolean>()
+
 const drawing = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(_value, tr) {
     const { doc, selection } = tr.state
+    const at = tr.state.field(touched)
     const out = []
     for (const b of tr.state.field(blocks)) {
-      if (selection.ranges.some((r) => r.from <= b.to && r.to >= b.from)) continue
+      if (at && selection.ranges.some((r) => r.from <= b.to && r.to >= b.from)) continue
       const key = doc.sliceString(b.from, b.to)
       if (drawn.has(key)) out.push(Decoration.replace({ widget: new Drawn(key), block: true }).range(b.from, b.to))
     }
@@ -520,14 +563,14 @@ const gaps = ViewPlugin.fromClass(
       this.decorations = this.build(view)
     }
     update(u: ViewUpdate) {
-      if (u.docChanged || u.selectionSet || u.viewportChanged || u.transactions.some((tr) => tr.effects.some((e) => e.is(setBlocks))))
+      if (u.docChanged || u.selectionSet || u.viewportChanged || u.startState.field(touched) !== u.state.field(touched) || u.transactions.some((tr) => tr.effects.some((e) => e.is(setBlocks))))
         this.decorations = this.build(u.view)
     }
     build(view: EditorView): DecorationSet {
       const { doc, selection } = view.state
       const starts = new Set<number>()
       view.state.field(drawing).between(0, doc.length, (from) => void starts.add(doc.lineAt(from).number))
-      const here = doc.lineAt(selection.main.head).number
+      const here = view.state.field(touched) ? doc.lineAt(selection.main.head).number : 0
       const gap = Decoration.line({ class: "edit-gap" })
       const out = []
       for (const { from, to } of view.visibleRanges) {
@@ -535,7 +578,8 @@ const gaps = ViewPlugin.fromClass(
           if (n === here || doc.line(n).text.trim()) continue
           let next = n + 1
           while (next <= doc.lines && !doc.line(next).text.trim()) next++
-          if (starts.has(next)) out.push(gap.range(doc.line(n).from))
+          // and the blank lines the note ends with, which the page shows nothing for
+          if (starts.has(next) || next > doc.lines) out.push(gap.range(doc.line(n).from))
         }
       }
       return Decoration.set(out)
@@ -560,13 +604,13 @@ const into = (forward: boolean) => (view: EditorView) => {
   const left = () => view.contentDOM.getBoundingClientRect().left
   const head = view.coordsAtPos(sel.head)
   const goal = sel.goalColumn ?? (head ? head.left - left() : undefined)
-  view.dispatch({ selection: EditorSelection.cursor(forward ? from : to), scrollIntoView: true })
+  view.dispatch({ selection: EditorSelection.cursor(forward ? from : to), scrollIntoView: true, userEvent: "select" })
   // opened, its first line (or last) at that same place across
   const line = view.state.doc.lineAt(forward ? from : to)
   const y = view.coordsAtPos(line.from)
   const at = goal === undefined || !y ? null : view.posAtCoords({ x: left() + goal, y: forward ? y.top + 2 : (view.coordsAtPos(line.to)?.bottom ?? y.bottom) - 2 })
   if (at !== null && at >= Math.min(from, to) && at <= Math.max(from, to))
-    view.dispatch({ selection: EditorSelection.cursor(at, 0, undefined, goal) })
+    view.dispatch({ selection: EditorSelection.cursor(at, 0, undefined, goal), userEvent: "select" })
   return true
 }
 
@@ -580,7 +624,7 @@ document.addEventListener(
     if (!fm) return
     e.preventDefault()
     const title = /^title:.*$/m.exec(fm[0])
-    n.view.dispatch({ selection: EditorSelection.cursor(title ? title.index + title[0].length : fm[0].length - 3), scrollIntoView: true })
+    n.view.dispatch({ selection: EditorSelection.cursor(title ? title.index + title[0].length : fm[0].length - 3), scrollIntoView: true, userEvent: "select.pointer" })
     n.view.focus()
   },
   true,
@@ -608,7 +652,7 @@ document.addEventListener(
     }
     if (at === undefined) return
     e.preventDefault()
-    view.dispatch({ selection: EditorSelection.cursor(at), scrollIntoView: true })
+    view.dispatch({ selection: EditorSelection.cursor(at), scrollIntoView: true, userEvent: "select.pointer" })
     view.focus()
   },
   true,
@@ -622,7 +666,7 @@ function reveal(view: EditorView, box: HTMLElement, key: string, e: MouseEvent) 
   const at = view.posAtDOM(box) + offsetIn(box, e, key)
   // shift: the selection goes on to there
   const { anchor } = view.state.selection.main
-  view.dispatch({ selection: e.shiftKey ? EditorSelection.range(anchor, at) : EditorSelection.cursor(at) })
+  view.dispatch({ selection: e.shiftKey ? EditorSelection.range(anchor, at) : EditorSelection.cursor(at), userEvent: "select.pointer" })
   view.focus()
 }
 
@@ -934,6 +978,7 @@ function extensions(): Extension[] {
     quietMarks,
     keepSpaces,
     codeLines,
+    touched,
     blocks,
     drawing,
     gaps,

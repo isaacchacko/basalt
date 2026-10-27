@@ -116,6 +116,13 @@ $mobile: "(max-width: 800px)";
   z-index: 1;
 }
 
+// a footnote: where the page has its notes in the margin, or under their lines
+// on a phone, the list at the foot isn't shown (margin.scss), and nor is it
+// here; it opens from its sidenote, or as the cursor comes to it
+html[data-margin] article .edit-footnote {
+  display: none;
+}
+
 // a footnote, numbered as at the foot of the page
 .edit-footnote {
   margin: 0.25rem 0;
