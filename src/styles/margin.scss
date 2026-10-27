@@ -123,6 +123,11 @@ html[data-margin="inline"] article {
   z-index: 1;
   pointer-events: none;
 
+  // a note with no line to be beside for now (client/margin.ts): not shown at all
+  .in-margin[hidden] {
+    display: none;
+  }
+
   .in-margin {
     position: absolute;
     left: 0;

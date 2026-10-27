@@ -1,455 +1,855 @@
-// Editing a page in place, the way Obsidian edits a note in Live Preview: the
-// page stays the page, and the block you're in shows its markdown, to edit
-// right there; everything else stays rendered. ⌘E (or the pencil) turns it on
-// and off (edit.ts loads this). In it:
+// Editing a page in place, the way Obsidian's Live Preview edits a note: the
+// whole note is one CodeMirror document, and every block of it the cursor
+// isn't in is drawn the way Basalt draws it. ⌘E (or the pencil) turns it on
+// and off (edit.ts loads this). Everything else is CodeMirror's own: arrows
+// and selection across blocks, undo, the clipboard, IME.
 //
-//   a click       on a block opens it at that word; on a link, follows it
-//   ↑ ↓ ← →       past a block's edge go on into the next one, as the cursor
-//                 goes from line to line in Obsidian
-//   the pencil    in a block's corner opens one that's all controls (an island, a video)
-//   the title     opens the note's frontmatter
-//   below it all  starts a new block at the end
-//   escape        closes the block; ⌘E leaves editing
-//   [[            completes a link to a note
-//   enter         goes on with the list or quote you're in
-//   ⌘S            saves now (publishes, on a built site)
-//
-// Each block of the page says which lines of the note it came from
-// (data-src, markdown/lines.ts), so a block's markdown is exactly those
-// lines, and every other block is drawn the way Basalt draws it.
-//
-// Where it saves (article[data-edit], Page.astro):
-//
-//   dev     while serving, through the dev server (integrations/edit.ts), a
-//           moment after you stop typing; the save swaps in (swap.ts) with the
-//           block you're in kept open across it
-//   github  a built site with "edit": committed to the repo with your token
-//           when you leave a block (or ⌘S); the deploy that the push sets
-//           off comes back into the page once it's live. Till then the blocks
-//           you changed show their markdown.
-//
-// The blocks name their lines in the version of the note the page was made
-// from; as you type, they're read through a line diff onto the note as it is
-// now (lib/linemap.ts), and so is the open block onto a page swapped in.
+// A block is drawn from its rendered html, found by its text: the page's own
+// elements to begin with (each has the lines it came from, data-src,
+// markdown/lines.ts), and, for text that's new, the dev server's rendering of
+// the note as it's typed (POST /__basalt/render). The same text is always the
+// same nodes, moved, not made again, so an island keeps running and a diagram
+// stays drawn. While editing, the page isn't swapped for a save: the editor
+// is the page. Turning editing off swaps the page in once.
 
-import { EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state"
-import { Decoration, EditorView, ViewPlugin, keymap, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view"
+import { Annotation, ChangeSet, EditorSelection, EditorState, StateEffect, StateField, Text, type Extension } from "@codemirror/state"
+import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view"
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
 import { markdown, markdownKeymap, markdownLanguage } from "@codemirror/lang-markdown"
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language"
-import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, completionStatus, type CompletionContext } from "@codemirror/autocomplete"
+import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext } from "@codemirror/autocomplete"
+import { search, searchKeymap } from "@codemirror/search"
 import { tags } from "@lezer/highlight"
-import { lineMap, merge, type LineMap } from "../lib/linemap"
-import { fetchPage, swapIn, swapped } from "./swap"
-import { GitHubError, deployed, gitHub, type Version } from "./github"
+import { lineMap } from "../lib/linemap"
+import { diff } from "./diff"
+import { startContent } from "./content"
+import { keysOf, textOf } from "./blocks"
+import { noteOf } from "./margin"
+import { devBackend, type Backend, type EditorHooks, type Version } from "./backend"
 
-interface Backend {
-  load(): Promise<Version>
-  /** writes `text` over the version `base`: its sha, or the file as it is when it's no longer `base` */
-  save(text: string, base: string): Promise<{ sha: string } | { conflict: Version }>
-}
-
-interface Region {
-  /** its first line in `live`, from 1, and its last; to = from - 1 when it has none (a new block) */
-  from: number
-  to: number
-  header: boolean
-  view: EditorView
-  host: HTMLElement
-  /** a new block at the end: it gets a blank line before it once it has something in it */
-  append: boolean
-  /** its text when it opened */
-  opened: string
+declare global {
+  interface Window {
+    /** the note being edited, for scripts that drive it (the edit proof) */
+    basaltEdit?: {
+      view: EditorView
+      /** its blocks: their lines now (from 1), and whether each is drawn (its box) or open */
+      blocks(): { from: number; to: number; lines: [number, number]; drawn: boolean; dom: HTMLElement | null; layer: HTMLElement | null }[]
+      /** the layer a block with a frame or a player has its nodes in (its box holds a stand-in) */
+      layerOf(box: HTMLElement): HTMLElement | null
+      /** once nothing's waiting to be saved or rendered, and the last rendering is drawn */
+      idle(): Promise<void>
+      /** the sha of the file as it's saved */
+      saved(): string
+    }
+  }
 }
 
 const root = document.documentElement
-const PERSIST = "basalt-editor"
-const SRC = "[data-src]"
-
-let backend: Backend | undefined
-let mode: "dev" | "github" = "dev"
-let slug = ""
 let words: Record<string, string> = {}
-/** the note's file as it's saved, and as it is with the edits in it */
-let saved: Version | undefined
-let live = ""
-let liveVersion = 0
-/** the texts the page's blocks may name their lines in: versions of the note, by sha */
-const texts = new Map<string, string>()
-let region: Region | null = null
-let saving: Promise<void> | null = null
-let saveTimer: ReturnType<typeof setTimeout> | undefined
-/** github: the commit whose deploy hasn't come back yet */
-let deploying: { sha: string; since: number } | null = null
-let starting: Promise<boolean> | null = null
-
-const article = (scope: ParentNode = document) => scope.querySelector<HTMLElement>("article[data-edit-slug]")
 const say = (key: string, vars: Record<string, string> = {}) => (words[key] ?? key).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all)
-const lines = (s: string) => s.split("\n")
-// a file with Windows line endings: its blocks are edited without them, and get them back in it
-const crlf = (text: string) => text.includes("\r\n")
-const slice = (text: string, from: number, to: number) => (to < from ? "" : lines(text).slice(from - 1, to).map((l) => l.replace(/\r$/, "")).join("\n"))
-const fileLines = (block: string, text: string) => (crlf(text) ? lines(block).map((l) => l + "\r") : lines(block))
-const setLive = (text: string) => {
-  if (text === live) return
-  live = text
-  liveVersion++
+const article = () => document.querySelector<HTMLElement>("article[data-edit-slug]")
+
+interface Note {
+  backend: Backend
+  view: EditorView
+  host: HTMLElement
+  /** the file as it's saved */
+  saved: Version
+  /** the edits made since it was saved */
+  mine: ChangeSet
+  /** what's started in blocks drawn anew, till editing ends */
+  started: AbortController
+  /** the file's lines end in \r\n: so they're written */
+  crlf: boolean
+}
+let note: Note | null = null
+
+const hooks: EditorHooks = {
+  learn(text, html) {
+    if (!note) return
+    const elements = typeof html === "string" ? parse(html) : html
+    note.view.dispatch({ effects: setBlocks.of(learn(text, elements)) })
+  },
+  status: (message) => status(message),
 }
 
 // ---------- on and off ----------
 
 export async function setEditing(on: boolean) {
-  if (on) {
-    if (!(await start())) return
-    root.setAttribute("data-editing", "")
-    furnish()
-  } else {
-    await close()
-    await save()
-    root.removeAttribute("data-editing")
-    document.querySelectorAll(".edit-append, .edit-pin, body > .edit-pick").forEach((el) => el.remove())
-  }
-  status()
-}
-
-/** after a page comes in (edit.ts): editing goes on in it, or stops on a page with no note */
-export async function pageLoaded() {
-  if (!root.hasAttribute("data-editing")) return
-  if (!article()) return void setEditing(false)
-  if (!(await start())) return void setEditing(false)
-  furnish()
-  status()
-}
-
-/** the note the page is of, loaded (once per note) */
-function start(): Promise<boolean> {
-  const a = article()
-  if (!a) return Promise.resolve(false)
-  if (starting && a.dataset.editSlug === slug) return starting
-  starting = (async () => {
+  if (on && !note) {
+    const art = article()
+    if (!art) return
     words = JSON.parse(document.querySelector<HTMLElement>("[data-edit-words]")?.dataset.editWords ?? "{}")
-    slug = a.dataset.editSlug!
-    mode = a.dataset.edit === "github" ? "github" : "dev"
-    texts.clear()
-    if (mode === "dev") backend = devBackend(slug)
-    else {
-      const repo = a.dataset.editRepo!
-      const token = await tokenFor(repo)
-      if (!token) return false
-      gh = gitHub(repo, token)
-      backend = githubBackend(repo, a.dataset.editBranch!, a.dataset.editPath!)
-    }
+    const backend =
+      art.dataset.edit === "github" ? await import("./github").then((m) => m.githubBackend(art, hooks)) : devBackend(art.dataset.editSlug!)
+    if (!backend) return
+    let saved: Version
     try {
       saved = await backend.load()
     } catch (err) {
-      status(say("editFailed", { error: (err as Error).message }))
-      return false
+      return status(say("editFailed", { error: (err as Error).message }))
     }
-    setLive(saved.text)
-    texts.set(saved.sha, saved.text)
-    const pageSha = a.dataset.editSha!
-    if (mode === "github" && pageSha !== saved.sha) {
-      // the page is older than the note (a deploy is on its way): its blocks' lines are the old text's
-      const old = await gh!.blob(pageSha).catch(() => undefined)
-      if (old !== undefined) texts.set(pageSha, old)
+    measure(art)
+    const host = document.createElement("div")
+    host.className = "edit-doc"
+    host.setAttribute("data-edit-doc", "")
+    art.append(host)
+    const view = new EditorView({ parent: host, state: EditorState.create({ doc: saved.text, extensions: extensions() }) })
+    note = { backend, view, host, saved, mine: ChangeSet.empty(view.state.doc.length), started: new AbortController(), crlf: saved.text.includes("\r\n") }
+    window.basaltEdit = {
+      view,
+      blocks: () => {
+        const keys = keysIn(view.state)
+        return view.state.field(blocks).map((b, i) => {
+          const dom = [...view.contentDOM.querySelectorAll<HTMLElement>(":scope > .edit-drawn")].find((box) => view.posAtDOM(box) === b.from) ?? null
+          const drawn = view.state.field(drawing).iter(b.from).from === b.from
+          const layer = floats.get(keys[i])?.layer ?? null
+          return { ...b, lines: [view.state.doc.lineAt(b.from).number, view.state.doc.lineAt(b.to).number] as [number, number], drawn, dom, layer }
+        })
+      },
+      layerOf: (box) => [...floats.values()].find((f) => f.stand?.parentElement === box)?.layer ?? null,
+      idle: async () => {
+        while (timer !== undefined || saving || renders > 0) await new Promise((r) => setTimeout(r, 25))
+      },
+      saved: () => (note ?? { saved }).saved.sha,
     }
-    return true
-  })()
-  const mine = starting
-  // a note that didn't load is tried again next time
-  void mine.then((ok) => {
-    if (!ok && starting === mine) starting = null
-  })
-  return mine
-}
-
-// ---------- which lines a block is ----------
-
-let cached: { key: string; map: LineMap } | undefined
-/** a block's lines, [first, last], in `live` */
-function linesOf(el: Element): [number, number] {
-  const [a, b] = (el as HTMLElement).dataset.src!.split("-").map(Number)
-  const version = el.closest<HTMLElement>("[data-src-sha]")?.dataset.srcSha ?? article()?.dataset.editSha ?? ""
-  const from = texts.get(version)
-  if (from === undefined || from === live) return [a, b]
-  const key = `${version}:${liveVersion}`
-  if (cached?.key !== key) cached = { key, map: lineMap(lines(from), lines(live)) }
-  return [cached.map.first(a - 1) + 1, cached.map.last(b - 1) + 1]
-}
-
-/** the blocks of a page that each stand for some lines of the note, in order: its top-level blocks and its footnotes */
-function blocks(scope: ParentNode = document): HTMLElement[] {
-  const art = article(scope)
-  if (!art) return []
-  const top = [...art.children].filter((c): c is HTMLElement => c.matches(SRC) && !c.matches("section[data-footnotes]"))
-  return [...top, ...art.querySelectorAll<HTMLElement>("section[data-footnotes] li[data-src]")]
-}
-
-/** and the sidenotes, and the margin's copies of them and of margin notes */
-const hideable = (scope: ParentNode) => [...blocks(scope), ...scope.querySelectorAll<HTMLElement>(".sidenote[data-src], .sidebar [data-src]")]
-
-const meets = ([a, b]: [number, number], from: number, to: number) => to >= from && a <= to && b >= from
-
-/** The block a click (or tap) was on: what it opens; nothing on a link, a control or an island. */
-function blockAt(target: Element): HTMLElement | null {
-  const art = article()
-  if (!art) return null
-  if (target.closest(".edit-append")) return target.closest<HTMLElement>(".edit-append")
-  if (target.closest("a[href], button, input, select, textarea, summary, label, audio, video, iframe, island, [role=button], [role=tab], [tabindex], .edit-host, dialog"))
-    return null
-  const header = target.closest<HTMLElement>(".page-header .popover-hint")
-  if (header) return header
-  const inMargin = target.closest<HTMLElement>(".sidebar [data-src]")
-  if (inMargin) return inMargin
-  if (!art.contains(target)) return null
-  const el = target.closest<HTMLElement>(SRC)
-  // a note embedded in this one is this one's ![[embed]]
-  const embed = el?.closest<HTMLElement>(".transclude")
-  return embed && art.contains(embed) ? topOf(embed, art) : el
-}
-
-const topOf = (el: HTMLElement, art: HTMLElement) => {
-  let at = el
-  while (at.parentElement && at.parentElement !== art) at = at.parentElement
-  return at.matches(SRC) ? at : null
-}
-
-function frontmatterLines(text: string): [number, number] {
-  const m = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(text)
-  return m ? [1, m[0].split("\n").length] : [1, 0]
-}
-
-// ---------- a block, open ----------
-
-async function open(target: HTMLElement, caret: { x: number; y: number } | "start" | "end" = "end") {
-  if (!(await start())) return
-  const header = target.matches(".page-header .popover-hint")
-  const append = target.matches(".edit-append")
-  await close()
-  const all = lines(live)
-  let [from, to] = header ? frontmatterLines(live) : append ? [0, 0] : linesOf(target)
-  if (append) {
-    // before the empty line a file ending in a newline ends with
-    from = all.at(-1) === "" ? all.length : all.length + 1
-    to = from - 1
+    root.setAttribute("data-editing", "")
+    // the page as it is, block by block, when it's of this text; else rendered afresh
+    if (art.dataset.editSha === saved.sha) view.dispatch({ effects: setBlocks.of(learn(saved.text, [...art.children], true)) })
+    else void render()
+    // the cursor at the end, so the note opens drawn, all of it
+    view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length), annotations: opening.of(true) })
+    view.focus()
+    // laid out again whenever what's drawn changes size (a font, an image, a diagram)
+    let frame = 0
+    const resized = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => note?.view === view && (spaced(view), floated(view)))
+    })
+    resized.observe(view.contentDOM)
+    const header = document.querySelector(".page-header")
+    if (header) resized.observe(header)
+  } else if (!on && note) {
+    const { backend } = note
+    await leave()
+    await backend.close?.()
   }
-  const text = slice(live, from, to)
-  // the pencil was for opening it
-  picked?.removeAttribute("data-edit-picked")
-  picked = null
-  document.querySelector("body > .edit-pick")?.remove()
-  const host = document.createElement(target.matches("li") ? "li" : "div")
-  host.className = header ? "edit-host edit-host-header" : "edit-host"
-  host.setAttribute("data-astro-transition-persist", PERSIST)
-  const view = new EditorView({ parent: host, state: EditorState.create({ doc: text, extensions: extensions(header) }) })
-  region = { from, to, header, view, host, append, opened: text }
-  place(document, region)
-  view.focus()
-  const pos = caret === "start" ? 0 : caret === "end" ? text.length : caretFor(target, caret, text)
-  view.dispatch({ selection: EditorSelection.cursor(pos), scrollIntoView: true })
   status()
+}
+
+async function leave() {
+  if (!note) return
+  const { view, host, started } = note
+  await save()
+  started.abort()
+  floats.clear()
+  note = null
+  window.basaltEdit = undefined
+  root.removeAttribute("data-editing")
+  view.destroy()
+  host.remove()
+}
+
+/** after a page comes in: editing goes on, on the next page */
+export async function pageLoaded() {
+  if (!root.hasAttribute("data-editing") || note) return
+  root.removeAttribute("data-editing")
+  if (article()) await setEditing(true)
+}
+
+// going to another page: what's typed is saved first
+document.addEventListener("astro:before-preparation", (e) => {
+  if (!note || window.basaltHotSwap) return
+  const ev = e as Event & { loader: () => Promise<void> }
+  const load = ev.loader
+  ev.loader = async () => {
+    await leave()
+    root.setAttribute("data-editing", "")
+    await load()
+  }
+})
+
+// ---------- the note's blocks, drawn ----------
+
+/** a block's text → its drawn nodes: the same text, the same nodes */
+const drawn = new Map<string, Node[]>()
+/** a drawn block's first and last elements that show */
+const ends = new WeakMap<HTMLElement, [Element, Element]>()
+/** the page's own space above each of its blocks, measured before editing moves them (spaced) */
+const gapAbove = new WeakMap<Element, number>()
+/** each block's height as it was last drawn (on the page, or in the editor): the editor's guess for one it hasn't drawn yet */
+const heightOf = new Map<string, number>()
+const pageHeight = new WeakMap<Element, number>()
+/** how far below the page's header its first block's top was: the editor's first block goes there */
+let firstTop: { el: Element; y: number } | undefined
+const headerBottom = () => document.querySelector(".page-header")?.getBoundingClientRect().bottom ?? 0
+/** the space on the page between the note's last block and what's after the note: the editor's end keeps it */
+let tail: number | undefined
+const after = (art: Element) => {
+  for (let el = art.nextElementSibling; el; el = el.nextElementSibling) if (el.checkVisibility() && el.getBoundingClientRect().height) return el
+  // nothing after it in the page's column: the footer
+  return document.querySelector("footer")
+}
+function measure(art: HTMLElement) {
+  let bottom: number | undefined
+  for (const el of art.children) {
+    if (!el.checkVisibility() || !el.getBoundingClientRect().height) continue
+    const box = el.getBoundingClientRect()
+    if (bottom === undefined) firstTop = { el, y: box.top - headerBottom() }
+    else gapAbove.set(el, box.top - bottom)
+    pageHeight.set(el, box.height + (bottom === undefined ? 0 : box.top - bottom))
+    bottom = box.bottom
+  }
+  const next = after(art)
+  tail = next && bottom !== undefined ? next.getBoundingClientRect().top - bottom : undefined
+}
+/** which rendering a text's nodes came from (0: the page's own), for the edit proof */
+const renderedBy = new Map<string, number>()
+/** nodes rendered anew that haven't been started as a page's content is (tabs, diagrams, islands, code's controls) */
+const unstarted = new WeakSet<Node>()
+/**
+ * Once a drawn block is in the page: what's drawn anew in it is started
+ * (content.ts) till editing ends, it takes its first element's space above it
+ * (the blank line before it takes none, gaps), and the margin hears of it.
+ */
+function placed(box: HTMLElement, key: string) {
+  const nodes = drawn.get(key) ?? []
+  const fresh = nodes.some((n) => unstarted.has(n))
+  nodes.forEach((n) => unstarted.delete(n))
+  requestAnimationFrame(() => {
+    if (!box.isConnected || !note) return
+    if (!box.classList.contains("edit-spaced")) {
+      // its own space above and below, as the page has it; then the editor's gaps are these (spaced)
+      // (an aside's in the margin, not here, and a paragraph an embed was lifted out of is empty: no room)
+      // nothing that shows: hidden, or a paragraph an embed was lifted out of (a rule's no height, but its margins are its space)
+      const empty = (c: Element) => !c.checkVisibility() || (c.matches("p") && !c.textContent!.trim() && !c.children.length)
+      const stand = box.querySelector<HTMLElement>(":scope > .edit-stand")
+      const inside = stand ? floats.get(key)!.layer : box
+      if (stand) floated(note.view)
+      for (const c of inside.children) if (empty(c)) (c as HTMLElement).style.margin = "0"
+      const shown = [...inside.children].filter((c) => !empty(c))
+      if (!shown.length) box.dataset.empty = ""
+      else {
+        box.dataset.above = getComputedStyle(shown[0]).marginTop
+        box.dataset.below = getComputedStyle(shown[shown.length - 1]).marginBottom
+        // the page's own, measured, where it's the page's own block
+        const gap = gapAbove.get(shown[0])
+        if (gap !== undefined) box.dataset.gap = String(gap)
+        if (firstTop?.el === shown[0]) box.dataset.pageTop = String(firstTop.y)
+      }
+      box.classList.add("edit-spaced")
+      inside.classList.add("edit-spaced")
+      // margins inside it that the page lets out (through a figure to its code's) stay in the box: so much less to add
+      if (shown.length) {
+        ;(shown[shown.length - 1] as HTMLElement).style.marginBottom = "0"
+        // margins that go out through its edges on the page (a callout's title's, a figure's code's)
+        // would stay in the box here: the spaces between blocks are set above, instead (spaced)
+        edges(shown[0], "Top")
+        edges(shown[shown.length - 1], "Bottom")
+        ends.set(box, stand ? [stand, stand] : [shown[0], shown[shown.length - 1]])
+      }
+      spaced(note.view)
+    }
+    if (fresh) {
+      const stand = box.querySelector(":scope > .edit-stand")
+      const inside = stand ? floats.get(key)!.layer : box
+      startContent(note.started.signal, inside)
+      // what the parts made of it (a diagram drawn in place of its code) is what's drawn from now on
+      drawn.set(key, [...inside.childNodes])
+    }
+    heightOf.set(key, box.getBoundingClientRect().height)
+    marginAgain()
+  })
+}
+
+/** An element's first (or last) children's margins at that edge, as far down as they'd go out through it. */
+function edges(el: Element, side: "Top" | "Bottom") {
+  for (let at: Element | null = el; at; ) {
+    const style = getComputedStyle(at)
+    if (parseFloat(style[`padding${side}`]) || parseFloat(style[`border${side}Width`]) || style.display !== "block" || style.overflow !== "visible") return
+    const child: Element | null = side === "Top" ? at.firstElementChild : at.lastElementChild
+    // only a block's margin goes out through its parent's edge (an image's, inline, doesn't)
+    if (!child || !child.checkVisibility() || getComputedStyle(child).display !== "block") return
+    ;(child as HTMLElement).style[`margin${side}`] = "0"
+    at = child
+  }
 }
 
 /**
- * Puts the region's editor where its blocks are, in a page (this one, or one
- * about to be swapped in, `version` its note's sha): its blocks hidden, and
- * the editor (in a page to come, a stand-in that Astro swaps it in for)
- * before the first of them.
+ * The space between drawn blocks, as the page has it: the larger of the
+ * block above's space below it and this one's above (their margins collapse
+ * there); the blank lines between take none (gaps).
  */
-function place(doc: Document, r: Region, version?: string) {
-  const here = doc === document
-  const host = here ? r.host : doc.createElement(r.host.tagName.toLowerCase())
-  if (!here) {
-    host.setAttribute("data-astro-transition-persist", PERSIST)
-    host.className = r.host.className
+function spaced(view: EditorView) {
+  let below = 0
+  const top = view.contentDOM.getBoundingClientRect().top
+  let bottom: number | undefined = top
+  for (const el of view.contentDOM.children as HTMLCollectionOf<HTMLElement>) {
+    if (el.classList.contains("edit-gap")) continue
+    if (!el.classList.contains("edit-spaced")) {
+      below = 0
+      bottom = el.getBoundingClientRect().bottom
+      continue
+    }
+    // nothing in the text (an aside, in the margin): no room, and the block above's space goes on past it
+    const shown = ends.get(el)
+    if (!shown) continue
+    const want =
+      // the page's first block: where it was on the page
+      bottom === top && el.dataset.pageTop !== undefined
+        ? headerBottom() + parseFloat(el.dataset.pageTop) - top
+        : el.dataset.gap !== undefined
+          ? parseFloat(el.dataset.gap)
+          : Math.max(parseFloat(el.dataset.above!), below)
+    // as much as it takes for the space between them to be that (a margin inside one may be in it already)
+    const pad = parseFloat(el.style.paddingTop || "0")
+    const space = bottom === undefined ? 0 : shown[0].getBoundingClientRect().top - bottom
+    const next = `${Math.max(0, Math.round((pad + want - space) * 10) / 10)}px`
+    if (Math.abs(want - space) > 0.5) el.style.paddingTop = next
+    below = parseFloat(el.dataset.below!)
+    bottom = shown[1].getBoundingClientRect().bottom
   }
-  if (r.header) {
-    const head = doc.querySelector<HTMLElement>(".page-header .popover-hint")
-    head?.setAttribute("data-edit-hidden", "")
-    head?.after(host)
-    return
-  }
-  const art = article(doc)
-  if (!art) return
-  // the region's lines in the version the page's blocks name theirs in
-  let [from, to] = [r.from, r.to]
-  const pageText = version ? texts.get(version) : undefined
-  if (!here && pageText !== undefined && pageText !== live) {
-    const map = lineMap(lines(live), lines(pageText))
-    from = map.first(r.from - 1) + 1
-    to = r.to < r.from ? from - 1 : map.last(r.to - 1) + 1
-  }
-  const linesHere = (el: HTMLElement): [number, number] => (here ? linesOf(el) : (el.dataset.src!.split("-").map(Number) as [number, number]))
-  const hit = hideable(doc).filter((el) => !el.hasAttribute("data-edit-stale") && meets(linesHere(el), from, to))
-  for (const el of hit) el.setAttribute("data-edit-hidden", "")
-  const first = hit.find((el) => el.parentElement === art) ?? hit.find((el) => el.matches("li"))
-  if (first) return void first.before(host)
-  // a footnote's own lines, shown as its sidenote: after the paragraph that cites it
-  const note = hit.find((el) => el.matches(".sidenote"))
-  const cited = note && art.querySelector(`[data-footnote-ref][data-sidenote="${CSS.escape(note.dataset.sidenote ?? "")}"]`)
-  const para = cited && [...art.children].find((c) => c.contains(cited))
-  if (para) return void para.after(host)
-  // nothing there yet (a new block): after the block before it
-  const before = blocks(doc)
-    .filter((el) => el.parentElement === art && linesHere(el)[1] < from)
-    .pop()
-  if (before) before.after(host)
-  else art.append(host)
+  // the end of the note, once it's drawn: as far from what's after it as on the page
+  const next = note && after(note.host.parentElement!)
+  if (tail === undefined || !next || bottom === undefined || view.viewport.to < view.state.doc.length) return
+  const host = view.dom.parentElement!
+  const space = next.getBoundingClientRect().top - bottom
+  if (Math.abs(space - tail) > 0.5) host.style.marginBottom = `${Math.round((parseFloat(host.style.marginBottom || "0") + tail - space) * 10) / 10}px`
 }
 
-async function close() {
-  const r = region
-  if (!r) return
-  region = null
-  const text = r.view.state.doc.toString()
-  const changed = text !== r.opened
-  // the page under the block is already the note as it is (a save came back while it was open)
-  const behind = changed && !(saved && live === saved.text && article()?.dataset.editSha === saved.sha)
-  document.querySelectorAll("[data-edit-hidden]").forEach((el) => {
-    el.removeAttribute("data-edit-hidden")
-    // what it showed before the edit: hidden till the page comes back with it
-    if (behind) el.setAttribute("data-edit-stale", "")
+/** the margin's notes, laid out again from what's drawn now (margin.ts), once a frame */
+let margin = 0
+function marginAgain() {
+  cancelAnimationFrame(margin)
+  margin = requestAnimationFrame(() => document.dispatchEvent(new Event("basalt:drawn")))
+}
+
+interface Block {
+  from: number
+  to: number
+}
+
+const parse = (html: string) => {
+  const t = document.createElement("template")
+  t.innerHTML = html
+  return [...t.content.children]
+}
+
+/**
+ * Takes in a rendering of `text` (its top-level elements, each with the
+ * lines it came from): the nodes for each block's text. Its blocks, in the
+ * note as it is now: where `text` isn't the note as it is now, the blocks
+ * whose lines are still there, word for word.
+ */
+function learn(file: string, elements: Element[], live = false): Block[] {
+  // the editor's lines end in \n, whatever the file's do (crlf)
+  const text = lf(file)
+  const lines = text.split("\n")
+  // each block's lines (the elements drawn from the same lines are one block: an embed lifted out of its paragraph)
+  const spans = new Map<string, { lines: [number, number]; nodes: Node[] }>()
+  const add = (el: HTMLElement) => {
+    const [a, b] = el.dataset.src!.split("-").map(Number)
+    if (!(a >= 1 && b >= a && b <= lines.length)) return
+    const at = `${a}-${b}`
+    spans.set(at, { lines: [a, b], nodes: [...(spans.get(at)?.nodes ?? []), el] })
+  }
+  for (const el of elements as HTMLElement[]) {
+    if (!el.dataset?.src) continue
+    // the footnotes, each a block of its own
+    if (el.matches("section[data-footnotes]")) {
+      for (const li of el.querySelectorAll<HTMLElement>("li[data-src]")) {
+        const ol = document.createElement("ol")
+        ol.className = "edit-footnote"
+        ol.start = [...li.parentElement!.children].indexOf(li) + 1
+        ol.dataset.src = li.dataset.src
+        ol.append(live ? li : li.cloneNode(true))
+        add(ol)
+      }
+      continue
+    }
+    add(el)
+  }
+  // the frontmatter: drawn as the page draws it, as the title above (a click on which opens it)
+  const fm = /^---\n[\s\S]*?\n---(?=\n|$)/.exec(text)
+  if (fm) spans.set(`1-${fm[0].split("\n").length}`, { lines: [1, fm[0].split("\n").length], nodes: [] })
+  // what renders as nothing (a %%comment%%, a link's definition): drawn as nothing
+  const covered = new Set<number>()
+  for (const { lines: [a, b] } of spans.values()) for (let i = a; i <= b; i++) covered.add(i)
+  for (let i = 1; i <= lines.length; i++) {
+    if (covered.has(i) || !lines[i - 1].trim()) continue
+    let j = i
+    while (j < lines.length && !covered.has(j + 1) && lines[j].trim()) j++
+    spans.set(`${i}-${j}`, { lines: [i, j], nodes: [] })
+    i = j
+  }
+  // in the note's order, none overlapping another; each found by its text and which of that text it is (blocks.ts)
+  const ordered = [...spans.values()].sort((p, q) => p.lines[0] - q.lines[0]).filter((s, i, all) => i === 0 || s.lines[0] > all[i - 1].lines[1])
+  const texts = ordered.map(({ lines: [a, b] }) => lines.slice(a - 1, b).join("\n"))
+  const keys = keysOf(texts)
+  // what's drawn for a block already stays drawn (an island running, a diagram drawn)
+  ordered.forEach(({ nodes }, i) => {
+    const key = keys[i]
+    if (live) heightOf.set(key, nodes.reduce((h, n) => h + (pageHeight.get(n as Element) ?? 0), 0))
+    if (!live && drawn.has(key)) return
+    drawn.set(key, nodes)
+    renderedBy.set(key, live ? 0 : rendering)
+    if (!live) nodes.forEach((n) => unstarted.add(n))
   })
-  if (behind && r.to >= r.from && !r.header) {
-    // meanwhile the block shows its markdown
-    const pending = document.createElement(r.host.tagName.toLowerCase())
-    pending.className = "edit-pending"
-    pending.dataset.src = `${r.from}-${r.to}`
-    const key = `live:${liveVersion}`
-    texts.set(key, live)
-    pending.dataset.srcSha = key
-    pending.textContent = text
-    r.host.replaceWith(pending)
-  } else {
-    if (behind && r.header) document.querySelectorAll("[data-edit-stale]").forEach((el) => el.removeAttribute("data-edit-stale"))
-    r.host.remove()
-  }
-  r.view.destroy()
-  if (changed) await save()
-  status()
-}
-
-// ---------- typing ----------
-
-function typed(view: EditorView) {
-  const r = region
-  if (!r || r.view !== view) return
-  const all = lines(live)
-  const text = view.state.doc.toString()
-  const doc = text === "" && r.to < r.from ? [] : fileLines(text, live)
-  if (r.append && doc.length) {
-    // a new block at the end: a blank line keeps it apart from the one before it
-    if (all[r.from - 2]?.trim()) {
-      all.splice(r.from - 1, 0, crlf(live) ? "\r" : "")
-      r.from++
-      r.to++
-    }
-    r.append = false
-  }
-  all.splice(r.from - 1, r.to - r.from + 1, ...doc)
-  setLive(all.join("\n"))
-  r.to = r.from + doc.length - 1
-  if (mode === "dev") {
-    clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => void save(), 300)
-  }
-  status()
-}
-
-/** writes `live`, when it isn't what's saved; again, if it changed meanwhile */
-function save(): Promise<void> {
-  clearTimeout(saveTimer)
-  if (!backend || !saved) return Promise.resolve()
-  if (saving) return saving.then(save)
-  if (live === saved.text) return Promise.resolve()
-  const text = live
-  const base = saved
-  let again = false
-  saving = (async () => {
-    status()
-    let res: Awaited<ReturnType<Backend["save"]>>
-    try {
-      res = await backend!.save(text, base.sha)
-    } catch (err) {
-      status(say("editFailed", { error: (err as Error).message }))
-      return
-    }
-    if ("conflict" in res) {
-      // changed elsewhere since (another editor, another commit): the open
-      // block goes in over theirs, everything else is as they have it
-      texts.set(res.conflict.sha, res.conflict.text)
-      rebase(base.text, res.conflict)
-      saved = res.conflict
-      again = true
-      return
-    }
-    saved = { text, sha: res.sha }
-    texts.set(res.sha, text)
-    if (mode === "github") {
-      deploying = { sha: res.sha, since: Date.now() }
-      void waitForDeploy()
-    }
-  })().finally(() => {
-    saving = null
-    status()
+  // where those lines are in the note as it is now
+  const doc = note?.view.state.doc ?? Text.of(lines)
+  const now = doc.toString()
+  const map = now === text ? null : lineMap(lines, now.split("\n"))
+  const blocks: Block[] = []
+  ordered.forEach(({ lines: [a, b] }, i) => {
+    const [x, y] = map ? [map.first(a - 1) + 1, map.last(b - 1) + 1] : [a, b]
+    if (x < 1 || y > doc.lines) return
+    const block = { from: doc.line(x).from, to: doc.line(y).to }
+    if (!map || doc.sliceString(block.from, block.to) === texts[i]) blocks.push(block)
   })
-  return saving.then(() => (again || (mode === "dev" && live !== saved?.text) ? save() : undefined))
+  return blocks.filter((b, i) => i === 0 || b.from > blocks[i - 1].to)
 }
 
-/** `live` moved onto `now`: the open block as you have it, everything else as `now` has it */
-function rebase(base: string, now: Version) {
-  const r = region
-  // the blocks changed since `base`, closed by now (a commit's on leaving one), as changed
-  if (!r) return void setLive(merge(lines(base), lines(live), lines(now.text)).join("\n"))
-  const mine = r.view.state.doc.toString()
-  const toBase = lineMap(lines(live), lines(base))
-  const toNow = lineMap(lines(base), lines(now.text))
-  const baseFrom = toBase.first(r.from - 1)
-  const baseTo = r.to < r.from ? baseFrom - 1 : toBase.last(r.to - 1)
-  const from = toNow.first(baseFrom) + 1
-  const to = baseTo < baseFrom ? from - 1 : toNow.last(baseTo) + 1
-  const all = lines(now.text)
-  const doc = mine === "" ? [] : fileLines(mine, now.text)
-  all.splice(from - 1, to - from + 1, ...doc)
-  setLive(all.join("\n"))
-  r.from = from
-  r.to = from + doc.length - 1
+/** the note's lines with \n, as the editor has them; and back as the file has them (\r\n, if it does) */
+const lf = (text: string) => text.replace(/\r\n/g, "\n")
+const asFile = (n: Note, text: string) => (n.crlf ? text.replace(/\n/g, "\r\n") : text)
+
+/** the key of each of the note's blocks, in order (blocks.ts) */
+const keysIn = (state: EditorState) => keysOf(state.field(blocks).map((b) => state.doc.sliceString(b.from, b.to)))
+
+const setBlocks = StateEffect.define<Block[]>()
+
+/** the note's blocks as last rendered, moved along as it's typed in */
+const blocks = StateField.define<Block[]>({
+  create: () => [],
+  update(value, tr) {
+    for (const e of tr.effects) if (e.is(setBlocks)) return e.value
+    if (!tr.docChanged) return value
+    return value.map((b) => ({ from: tr.changes.mapPos(b.from, -1), to: tr.changes.mapPos(b.to, 1) }))
+  },
+})
+
+class Drawn extends WidgetType {
+  constructor(readonly key: string) {
+    super()
+  }
+  eq(other: Drawn) {
+    return other.key === this.key
+  }
+  get estimatedHeight() {
+    return heightOf.get(this.key) ?? -1
+  }
+  toDOM(view: EditorView) {
+    const box = document.createElement("div")
+    box.className = "edit-drawn"
+    box.dataset.rendered = String(renderedBy.get(this.key) ?? 0)
+    const nodes = drawn.get(this.key) ?? []
+    if (nodes.some((n) => n instanceof Element && (n.matches(LIVE) || n.querySelector(LIVE)))) {
+      // a frame or a player: kept in the page in a layer of its own, over a stand-in of its size
+      const stand = document.createElement("div")
+      stand.className = "edit-stand"
+      box.append(stand)
+      floatFor(view, this.key, nodes).stand = stand
+    } else box.append(...nodes)
+    placed(box, this.key)
+    box.addEventListener("mousedown", (e) => reveal(view, box, this.key, e))
+    return box
+  }
+  destroy(box: HTMLElement) {
+    // drawn again later as it is now (a tab chosen, a diagram drawn)
+    if (box.childNodes.length && !box.querySelector(":scope > .edit-stand")) drawn.set(this.key, [...box.childNodes])
+    marginAgain()
+  }
+  ignoreEvent() {
+    return true
+  }
 }
 
-// ---------- from block to block ----------
+/**
+ * A frame (an embed, a live html island) loads again, and a player stops,
+ * when it leaves the page, as a block does when it's scrolled far out of the
+ * editor's view or opened: a block with one stays in the page, in a layer
+ * over the editor, laid over its stand-in in the text, and hidden when that's
+ * not there.
+ */
+const LIVE = "iframe, video, audio"
+const floats = new Map<string, { layer: HTMLElement; stand?: HTMLElement }>()
 
-function neighbour(dir: -1 | 1): HTMLElement | null {
-  const r = region
-  if (!r) return null
-  // a margin note is in the margin, not where it's written: it's there all the same
-  const inMargin = (el: HTMLElement) =>
-    [...document.querySelectorAll<HTMLElement>(`.sidebar [data-src="${el.dataset.src}"]`)].some((m) => m.checkVisibility())
-  const shown = blocks().filter((el) => !el.hasAttribute("data-edit-hidden") && (el.checkVisibility() || inMargin(el)))
-  const header = document.querySelector<HTMLElement>(".page-header .popover-hint")
-  if (r.header) return dir === 1 ? (shown[0] ?? null) : null
-  const spans = shown.map((el) => [el, linesOf(el)] as const)
-  if (dir === 1) return spans.find(([, [a]]) => a > Math.max(r.to, r.from - 1))?.[0] ?? null
-  return spans.filter(([, [, b]]) => b < r.from).pop()?.[0] ?? header
+function floatFor(view: EditorView, key: string, nodes: Node[]) {
+  let f = floats.get(key)
+  if (!f) {
+    const layer = document.createElement("div") as HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void }
+    layer.className = "edit-drawn edit-float"
+    note!.host.append(layer)
+    // moved, not taken out and put back: the page's own frame doesn't load again (Chrome's moveBefore)
+    for (const n of nodes) {
+      if (layer.moveBefore && n.isConnected) layer.moveBefore(n, null)
+      else layer.append(n)
+    }
+    // a player moved keeps playing, but its own controls don't come back (Chrome) till they're made again
+    for (const m of layer.querySelectorAll<HTMLMediaElement>("video[controls], audio[controls]")) {
+      m.controls = false
+      m.controls = true
+    }
+    layer.addEventListener("mousedown", (e) => {
+      const box = f!.stand?.parentElement
+      if (box?.isConnected) reveal(view, box, key, e)
+    })
+    new ResizeObserver(() => floated(view)).observe(layer)
+    f = { layer }
+    floats.set(key, f)
+  }
+  return f
 }
 
-/** ↑ ↓ ← → at the block's edge go on into the next block */
-const edge = (dir: -1 | 1, by: "line" | "char") => (view: EditorView) => {
+/** Each frame's layer over its stand-in, and the stand-in its height; hidden where there's none. */
+function floated(view: EditorView) {
+  const host = note?.host
+  if (!host) return
+  const origin = host.getBoundingClientRect()
+  for (const { layer, stand } of floats.values()) {
+    const shown = !!stand?.isConnected
+    layer.style.visibility = shown ? "" : "hidden"
+    if (!shown) continue
+    const at = stand!.getBoundingClientRect()
+    layer.style.top = `${at.top - origin.top}px`
+    layer.style.left = `${at.left - origin.left}px`
+    layer.style.width = `${at.width}px`
+    // to the fraction (offsetHeight rounds: half a pixel a frame, and every block under it moved by it)
+    const height = `${layer.getBoundingClientRect().height}px`
+    if (stand!.style.height !== height) {
+      stand!.style.height = height
+      view.requestMeasure()
+    }
+  }
+}
+
+/** Every block the selection isn't in (or at the edge of), drawn. */
+/**
+ * Whether the cursor's been put anywhere yet (a key, a click): till then the
+ * note is the page, every block of it drawn, though the cursor waits at its end.
+ */
+const touched = StateField.define<boolean>({
+  create: () => false,
+  update: (value, tr) => value || ((!!tr.selection || tr.docChanged) && !tr.annotation(opening) && !tr.annotation(theirs)),
+})
+/** the editor's own first move, to the note's end: not one of yours */
+const opening = Annotation.define<boolean>()
+
+const drawing = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(_value, tr) {
+    const { doc, selection } = tr.state
+    const at = tr.state.field(touched)
+    const out = []
+    const keys = keysIn(tr.state)
+    for (const [i, b] of tr.state.field(blocks).entries()) {
+      if (at && selection.ranges.some((r) => r.from <= b.to && r.to >= b.from)) continue
+      const key = keys[i]
+      if (drawn.has(key)) out.push(Decoration.replace({ widget: new Drawn(key), block: true }).range(b.from, b.to))
+    }
+    return Decoration.set(out)
+  },
+  provide: (f) => EditorView.decorations.from(f),
+})
+
+/** each drawn block says which lines of the note it is now (data-lines), for whatever drives the page (the edit proof) */
+const lines = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      this.mark(view)
+    }
+    update(u: ViewUpdate) {
+      this.mark(u.view)
+      requestAnimationFrame(() => {
+        if (note?.view !== u.view) return
+        spaced(u.view)
+        floated(u.view)
+      })
+    }
+    mark(view: EditorView) {
+      const { doc } = view.state
+      for (const box of view.contentDOM.querySelectorAll<HTMLElement>(":scope > .edit-drawn")) {
+        const from = view.posAtDOM(box)
+        const block = view.state.field(blocks).find((b) => b.from === from)
+        if (block) box.dataset.lines = `${doc.lineAt(block.from).number}-${doc.lineAt(block.to).number}`
+      }
+    }
+  },
+)
+
+/**
+ * The page's own space between its blocks: a blank line before a drawn block
+ * takes none (the block keeps its own space above it), unless the cursor's
+ * on it.
+ */
+const gaps = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = this.build(view)
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.selectionSet || u.viewportChanged || u.startState.field(touched) !== u.state.field(touched) || u.transactions.some((tr) => tr.effects.some((e) => e.is(setBlocks))))
+        this.decorations = this.build(u.view)
+    }
+    build(view: EditorView): DecorationSet {
+      const { doc, selection } = view.state
+      const starts = new Set<number>()
+      view.state.field(drawing).between(0, doc.length, (from) => void starts.add(doc.lineAt(from).number))
+      const here = view.state.field(touched) ? doc.lineAt(selection.main.head).number : 0
+      const gap = Decoration.line({ class: "edit-gap" })
+      const out = []
+      for (const { from, to } of view.visibleRanges) {
+        for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
+          if (n === here || doc.line(n).text.trim()) continue
+          let next = n + 1
+          while (next <= doc.lines && !doc.line(next).text.trim()) next++
+          // and the blank lines the note ends with, which the page shows nothing for
+          if (starts.has(next) || next > doc.lines) out.push(gap.range(doc.line(n).from))
+        }
+      }
+      return Decoration.set(out)
+    }
+  },
+  { decorations: (v) => v.decorations },
+)
+
+/** ↑ ↓ into a drawn block, not over it: the cursor goes to its edge, and it opens */
+const into = (forward: boolean) => (view: EditorView) => {
   const sel = view.state.selection.main
   if (!sel.empty) return false
-  if (by === "char") {
-    if (sel.head !== (dir === -1 ? 0 : view.state.doc.length)) return false
-  } else {
-    // on the first (or last) line as it's drawn, wrapped lines and all
-    const moved = view.moveVertically(sel, dir === 1)
-    const here = view.coordsAtPos(sel.head)
-    const there = view.coordsAtPos(moved.head)
-    const sameLine = moved.head === sel.head || !here || !there || (dir === -1 ? there.top >= here.top - 1 : there.bottom <= here.bottom + 1)
-    if (!sameLine) return false
-  }
-  const to = neighbour(dir)
-  if (!to) return false
-  void open(to, dir === -1 ? "end" : "start")
+  const target = view.moveVertically(sel, forward).head
+  let hit: { from: number; to: number } | null = null
+  view.state.field(drawing).between(Math.min(sel.head, target), Math.max(sel.head, target), (from, to) => {
+    if (forward ? from < sel.head : to > sel.head) return
+    if (!hit || (forward ? from < hit.from : to > hit.to)) hit = { from, to }
+  })
+  if (!hit) return false
+  const { from, to } = hit
+  // where across the line the cursor's been going (as CodeMirror keeps it from line to line: from the content's left)
+  const left = () => view.contentDOM.getBoundingClientRect().left
+  const head = view.coordsAtPos(sel.head)
+  const goal = sel.goalColumn ?? (head ? head.left - left() : undefined)
+  view.dispatch({ selection: EditorSelection.cursor(forward ? from : to), scrollIntoView: true, userEvent: "select" })
+  // opened, its first line (or last) at that same place across
+  const line = view.state.doc.lineAt(forward ? from : to)
+  const y = view.coordsAtPos(line.from)
+  const at = goal === undefined || !y ? null : view.posAtCoords({ x: left() + goal, y: forward ? y.top + 2 : (view.coordsAtPos(line.to)?.bottom ?? y.bottom) - 2 })
+  if (at !== null && at >= Math.min(from, to) && at <= Math.max(from, to))
+    view.dispatch({ selection: EditorSelection.cursor(at, 0, undefined, goal), userEvent: "select" })
   return true
+}
+
+// a click on the title: the frontmatter, where the title's set
+document.addEventListener(
+  "mousedown",
+  (e) => {
+    const n = note
+    if (!n || e.button !== 0 || !(e.target as Element).closest?.(".page-header h1.article-title")) return
+    const fm = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(n.view.state.doc.toString())
+    if (!fm) return
+    e.preventDefault()
+    const title = /^title:.*$/m.exec(fm[0])
+    n.view.dispatch({ selection: EditorSelection.cursor(title ? title.index + title[0].length : fm[0].length - 3), scrollIntoView: true, userEvent: "select.pointer" })
+    n.view.focus()
+  },
+  true,
+)
+
+// a click on a note in the margin: its lines (a footnote's definition, an aside)
+document.addEventListener(
+  "mousedown",
+  (e) => {
+    const copy = (e.target as Element).closest?.<HTMLElement>(".margin-layer > *")
+    const n = note
+    if (!copy || !n || e.button !== 0 || (e.target as Element).closest("a[href], button")) return
+    const of = noteOf.get(copy)
+    if (!of) return
+    const { view } = n
+    const { doc } = view.state
+    let at: number | undefined
+    const id = of.dataset.sidenote?.replace(/^user-content-fn-/, "")
+    if (of.classList.contains("sidenote") && id) {
+      for (let i = 1; i <= doc.lines && at === undefined; i++) if (doc.line(i).text.startsWith(`[^${id}]:`)) at = doc.line(i).to
+    } else {
+      const box = of.closest<HTMLElement>(".edit-drawn")
+      const from = box?.isConnected ? view.posAtDOM(box) : undefined
+      at = from === undefined ? undefined : view.state.field(blocks).find((b) => b.from === from)?.to
+    }
+    if (at === undefined) return
+    e.preventDefault()
+    view.dispatch({ selection: EditorSelection.cursor(at), scrollIntoView: true, userEvent: "select.pointer" })
+    view.focus()
+  },
+  true,
+)
+
+/** A click on a drawn block (not on a link or a control in it): the cursor goes where it was, in its markdown. */
+function reveal(view: EditorView, box: HTMLElement, key: string, e: MouseEvent) {
+  const target = e.target as Element
+  if (e.button !== 0 || target.closest("a[href], button, input, select, textarea, summary, label, audio, video, iframe, [role=button], [role=tab], .island")) return
+  e.preventDefault()
+  const at = view.posAtDOM(box) + offsetIn(box, e, textOf(key))
+  // shift: the selection goes on to there
+  const { anchor } = view.state.selection.main
+  view.dispatch({ selection: e.shiftKey ? EditorSelection.range(anchor, at) : EditorSelection.cursor(at), userEvent: "select.pointer" })
+  view.focus()
+}
+
+/** Where in a block's markdown a click on its drawn text was: the drawn text before it, found in order in the markdown. */
+function offsetIn(box: HTMLElement, at: { clientX: number; clientY: number }, source: string): number {
+  const r = document.caretRangeFromPoint?.(at.clientX, at.clientY)
+  if (!r || !box.contains(r.startContainer)) return source.length
+  const range = document.createRange()
+  range.selectNodeContents(box)
+  range.setEnd(r.startContainer, r.startOffset)
+  let i = 0
+  for (const ch of range.toString().replace(/\s+/g, "")) {
+    const j = source.indexOf(ch, i)
+    if (j < 0) break
+    i = j + 1
+  }
+  return i
+}
+
+// ---------- saving, and drawing what's new ----------
+
+/** a change of theirs (a save from elsewhere): not one of the edits being saved */
+const theirs = Annotation.define<boolean>()
+
+/** the block the cursor's in (or at the edge of), if it's in one */
+const blockAt = (state: EditorState) => {
+  const { head } = state.selection.main
+  return state.field(blocks).find((b) => b.from <= head && head <= b.to)
+}
+
+/**
+ * Scrolled to somewhere drawn blocks it hadn't measured were (a search's match
+ * far down the note): CodeMirror guessed their heights, and lands short. Once
+ * they're measured, again, till it's there.
+ */
+const reach = EditorView.updateListener.of((u) => {
+  if (!u.transactions.some((tr) => tr.scrollIntoView || tr.isUserEvent("select.search"))) return
+  const view = u.view
+  const head = view.state.selection.main.head
+  let tries = 0
+  const check = () =>
+    setTimeout(() => {
+      if (view.state.selection.main.head !== head || tries++ > 8) return
+      const at = view.coordsAtPos(head)
+      // on screen, and not under the find bar (it stays at the window's top)
+      const top = Math.max(0, view.dom.querySelector(".cm-panels-top")?.getBoundingClientRect().bottom ?? 0)
+      if (at && at.top >= top && at.bottom <= innerHeight) return
+      view.dispatch({ effects: EditorView.scrollIntoView(head, { y: "center" }) })
+      check()
+    }, 60)
+  check()
+})
+
+let timer: ReturnType<typeof setTimeout> | undefined
+const changed = EditorView.updateListener.of((u) => {
+  const n = note
+  if (!n || n.view !== u.view) return
+  if (u.docChanged && !u.transactions.some((tr) => tr.annotation(theirs))) n.mine = n.mine.compose(u.changes)
+  if (n.backend.saveOn === "idle") {
+    if (!u.docChanged) return
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = undefined
+      void save().then(render)
+    }, 300)
+  } else if (u.selectionSet) {
+    // a block changed and left: saved (a commit, on GitHub)
+    const was = blockAt(u.startState)
+    const is = blockAt(u.state)
+    const left = was && (!is || is.from !== u.changes.mapPos(was.from))
+    if (left && asFile(n, u.state.doc.toString()) !== n.saved.text) void save().then(render)
+  }
+  status()
+})
+
+let saving: Promise<void> | null = null
+async function save(): Promise<void> {
+  clearTimeout(timer)
+  timer = undefined
+  const n = note
+  if (!n) return
+  if (saving) return saving.then(save)
+  const text = asFile(n, n.view.state.doc.toString())
+  if (text === n.saved.text) return
+  const base = n.saved
+  // what's typed from here on is saved next time
+  const sent = n.mine
+  n.mine = ChangeSet.empty(n.view.state.doc.length)
+  let again = false
+  saving = (async () => {
+    try {
+      const res = await n.backend.save(text, base.sha)
+      if ("conflict" in res) {
+        rebase(n, base, sent, res.conflict)
+        again = true
+      } else n.saved = { text, sha: res.sha }
+    } catch (err) {
+      n.mine = sent.compose(n.mine)
+      status(say("editFailed", { error: (err as Error).message }))
+    }
+  })().finally(() => (saving = null))
+  await saving
+  status()
+  if (again) await save()
+}
+
+/**
+ * The note changed elsewhere since `base` (another editor, an agent, another
+ * commit): their changes go into the editor as changes of its own, over ours,
+ * so the cursor and everything typed stay where they are. Where both changed
+ * the same lines, ours come after theirs.
+ */
+function rebase(n: Note, base: Version, sent: ChangeSet, now: Version) {
+  const ours = sent.compose(n.mine)
+  const them = diff(lf(base.text), lf(now.text))
+  n.view.dispatch({ changes: them.map(ours), annotations: theirs.of(true) })
+  n.mine = ours.map(them, true)
+  n.saved = now
+}
+
+let rendering = 0
+/** renderings asked for and not yet in */
+let renders = 0
+async function render() {
+  const n = note
+  if (!n) return
+  const text = asFile(n, n.view.state.doc.toString())
+  const mine = ++rendering
+  renders++
+  const html = await n.backend.render(text).catch(() => null)
+  renders--
+  // a rendering of what's typed by now may be on its way already
+  if (html === null || note !== n || mine !== rendering) return
+  hooks.learn(text, html)
+  marginAgain()
+}
+
+document.addEventListener("keydown", (e) => {
+  if (!note || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return
+  e.preventDefault()
+  void save().then(render)
+})
+
+// ---------- the status, in the corner ----------
+
+function status(message?: string) {
+  let el = document.querySelector<HTMLElement>(".edit-status")
+  if (!note && !message) return void el?.remove()
+  if (!el) {
+    el = document.createElement("div")
+    el.className = "edit-status"
+    el.setAttribute("role", "status")
+    document.body.append(el)
+  }
+  const unsaved = !!note && asFile(note, note.view.state.doc.toString()) !== note.saved.text
+  el.dataset.state = message ? "message" : saving || unsaved ? "saving" : "idle"
+  el.textContent = message ?? (saving || unsaved ? say("editSaving") : say("editing"))
 }
 
 // ---------- the editor ----------
@@ -469,6 +869,8 @@ const style = HighlightStyle.define([
   { tag: tags.list, class: "md-list" },
 ])
 
+const frontmatterEnd = (text: string) => /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(text)?.[0].length ?? 0
+
 /** Live Preview's quiet marks: off the lines the cursor is on, a heading's #, emphasis's * and _, ~~ and inline code's ` don't show. */
 const quietMarks = ViewPlugin.fromClass(
   class {
@@ -482,6 +884,8 @@ const quietMarks = ViewPlugin.fromClass(
     build(view: EditorView): DecorationSet {
       const { doc, selection } = view.state
       const active = new Set(selection.ranges.flatMap((r) => [doc.lineAt(r.from).number, doc.lineAt(r.to).number]))
+      // the frontmatter isn't markdown (its closing --- isn't a heading's underline)
+      const after = frontmatterEnd(doc.toString())
       const hide = Decoration.replace({})
       const out = []
       for (const { from, to } of view.visibleRanges) {
@@ -490,6 +894,7 @@ const quietMarks = ViewPlugin.fromClass(
           to,
           enter: (node) => {
             const name = node.name
+            if (node.from < after) return
             const quiet = name === "EmphasisMark" || name === "StrikethroughMark" || name === "HeaderMark" || (name === "CodeMark" && node.node.parent?.name === "InlineCode")
             if (!quiet || active.has(doc.lineAt(node.from).number)) return
             // a heading's # takes its space with it
@@ -519,6 +924,9 @@ const codeLines = ViewPlugin.fromClass(
       const { doc } = view.state
       const line = Decoration.line({ class: "md-code-line" })
       const out = []
+      // the frontmatter, as code too
+      const after = frontmatterEnd(doc.toString())
+      if (after) for (let n = 1; n <= doc.lineAt(after).number; n++) out.push(line.range(doc.line(n).from))
       for (const { from, to } of view.visibleRanges) {
         syntaxTree(view.state).iterate({
           from,
@@ -588,7 +996,7 @@ async function wikilinks(ctx: CompletionContext) {
   }
 }
 
-function extensions(header: boolean): Extension[] {
+function extensions(): Extension[] {
   return [
     history(),
     EditorView.lineWrapping,
@@ -598,377 +1006,18 @@ function extensions(header: boolean): Extension[] {
     quietMarks,
     keepSpaces,
     codeLines,
+    touched,
+    blocks,
+    drawing,
+    gaps,
+    lines,
+    changed,
+    reach,
+    // ⌘F finds in the whole note, as Obsidian's does (Basalt's own search is ⌘K)
+    search({ top: true }),
     closeBrackets(),
-    // ahead of the completions' own escape, which takes one typed a moment
-    // after a key (a completion pending) for closing a list
-    Prec.highest(keymap.of([{ key: "Escape", run: (view) => completionStatus(view.state) !== "active" && (void close(), true) }])),
     autocompletion({ override: [wikilinks], icons: false }),
-    header ? placeholder("---\ntitle: …\n---") : [],
-    keymap.of([
-      { key: "ArrowUp", run: edge(-1, "line") },
-      { key: "ArrowDown", run: edge(1, "line") },
-      { key: "ArrowLeft", run: edge(-1, "char") },
-      { key: "ArrowRight", run: edge(1, "char") },
-      ...closeBracketsKeymap,
-      ...completionKeymap,
-      ...markdownKeymap,
-      ...historyKeymap,
-      indentWithTab,
-      ...defaultKeymap,
-    ]),
-    EditorView.updateListener.of((u) => {
-      if (u.docChanged) typed(u.view)
-    }),
-    EditorView.contentAttributes.of({ "aria-label": say("editBlock") }),
+    keymap.of([{ key: "ArrowDown", run: into(true) }, { key: "ArrowUp", run: into(false) }, ...searchKeymap, ...closeBracketsKeymap, ...completionKeymap, ...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
+    EditorView.contentAttributes.of({ "aria-label": say("edit") }),
   ]
-}
-
-/** Where in a block's markdown a click on its drawn text was: the drawn text before it, found in order in the markdown. */
-function caretFor(el: HTMLElement, at: { x: number; y: number }, source: string): number {
-  const doc = document as Document & { caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null }
-  let node: Node | undefined
-  let offset = 0
-  const p = doc.caretPositionFromPoint?.(at.x, at.y)
-  if (p) [node, offset] = [p.offsetNode, p.offset]
-  else {
-    const r = document.caretRangeFromPoint?.(at.x, at.y)
-    if (r) [node, offset] = [r.startContainer, r.startOffset]
-  }
-  if (!node || !el.contains(node)) return source.length
-  const range = document.createRange()
-  range.selectNodeContents(el)
-  range.setEnd(node, offset)
-  let i = 0
-  for (const ch of range.toString().replace(/\s+/g, "")) {
-    const j = source.indexOf(ch, i)
-    if (j < 0) break
-    i = j + 1
-  }
-  return i
-}
-
-// ---------- the page, in editing ----------
-
-const PENCIL =
-  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
-const pencil = () => {
-  const pen = document.createElement("button")
-  pen.type = "button"
-  pen.className = "edit-pick"
-  pen.setAttribute("aria-label", say("editBlock"))
-  pen.innerHTML = PENCIL
-  return pen
-}
-
-// what a click is taken by (a frame, a player, an island), so the page never
-// hears of it, nor of the pointer over it (a frame from another site), and a
-// phone has no pointer: its block has a pencil of its own in its corner
-const CONTROLS = "iframe, video, audio, island, .island, canvas, object, embed, [data-embed]"
-
-/** In editing: "add a block" after the note, and a pencil by each block that's all controls. */
-function furnish() {
-  const art = article()
-  if (!art) return
-  if (!art.nextElementSibling?.matches(".edit-append")) {
-    const add = document.createElement("div")
-    add.className = "edit-append"
-    add.textContent = say("editAdd")
-    art.after(add)
-  }
-  for (const el of blocks()) {
-    if (el.previousElementSibling?.matches(".edit-pin") || !(el.matches(CONTROLS) || el.querySelector(CONTROLS))) continue
-    const pin = document.createElement(el.matches("li") ? "li" : "div")
-    pin.className = "edit-pin"
-    pin.append(pencil())
-    el.before(pin)
-  }
-}
-
-document.addEventListener(
-  "click",
-  (e) => {
-    if (!root.hasAttribute("data-editing") || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return
-    const target = e.target as Element
-    const pen = target.closest(".edit-pick")
-    const pinned = pen?.parentElement?.matches(".edit-pin") ? (pen.parentElement.nextElementSibling as HTMLElement | null) : null
-    const block = pen ? (pinned ?? document.querySelector<HTMLElement>("[data-edit-picked]")) : blockAt(target)
-    if (!block) {
-      // a click away from the open block closes it
-      if (region && !target.closest(".edit-host, .cm-tooltip, .edit-status, a[href], button, dialog")) void close()
-      return
-    }
-    e.preventDefault()
-    e.stopPropagation()
-    void open(block, pen ? "end" : { x: e.clientX, y: e.clientY })
-  },
-  true,
-)
-
-// a block of nothing but controls (an island, a video, a graph) opens from the pencil in its corner
-let picked: HTMLElement | null = null
-function hover(target: Element | null) {
-  if (!target || !root.hasAttribute("data-editing") || target.closest(".edit-pick")) return
-  const art = article()
-  const el = target.closest<HTMLElement>(SRC)
-  // a footnote is a block of its own
-  const block = el && art ? (art.contains(el) ? (el.closest<HTMLElement>("section[data-footnotes] li[data-src]") ?? topOf(el, art)) : el) : null
-  if (!block || block === picked || block.closest(".edit-host")) return
-  // it has a pencil of its own
-  if (block.previousElementSibling?.matches(".edit-pin")) return void document.querySelector("body > .edit-pick")?.remove()
-  picked?.removeAttribute("data-edit-picked")
-  picked = block
-  block.setAttribute("data-edit-picked", "")
-  let pen = document.querySelector<HTMLButtonElement>("body > .edit-pick")
-  if (!pen) document.body.append((pen = pencil()))
-  const box = block.getBoundingClientRect()
-  pen.style.top = `${box.top + scrollY}px`
-  // beside its top right corner; inside it, where there's no room beside it (a phone)
-  pen.style.left = `${Math.min(box.right + 4, document.documentElement.clientWidth - 28) + scrollX}px`
-}
-
-// Where the pointer last was: a block scrolled under it (a video, a frame)
-// is hovered all the same, though the page hears nothing from inside a frame
-let pointer: { x: number; y: number } | undefined
-document.addEventListener("pointerover", (e) => {
-  pointer = { x: e.clientX, y: e.clientY }
-  hover(e.target as Element)
-})
-document.addEventListener("pointermove", (e) => void (pointer = { x: e.clientX, y: e.clientY }), { passive: true })
-let looking = false
-addEventListener(
-  "scroll",
-  () => {
-    if (looking || !pointer || !root.hasAttribute("data-editing")) return
-    looking = true
-    requestAnimationFrame(() => {
-      looking = false
-      if (pointer) hover(document.elementFromPoint(pointer.x, pointer.y))
-    })
-  },
-  { passive: true },
-)
-
-document.addEventListener("keydown", (e) => {
-  if (!root.hasAttribute("data-editing") || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return
-  e.preventDefault()
-  void save()
-})
-
-// going to another page: what's typed is saved first
-document.addEventListener("astro:before-preparation", (e) => {
-  if (window.basaltHotSwap || !root.hasAttribute("data-editing")) return
-  const ev = e as Event & { loader: () => Promise<void> }
-  const load = ev.loader
-  ev.loader = async () => {
-    await close()
-    await save()
-    await load()
-  }
-})
-
-// a newer version of this page swapped in (a save, a deploy): the open block stays open in it
-document.addEventListener("basalt:swap-document", (e) => {
-  const sha = article((e as CustomEvent<Document>).detail)?.dataset.editSha
-  if (sha && !texts.has(sha)) void learn()
-})
-
-// The page swapped in gets the open block's editor where its blocks are,
-// placed at the last moment (the block may have closed, or another opened,
-// since the page was fetched). Astro puts the focus back in the editor once
-// it's moved, but at the start of it (a contenteditable's caret goes there),
-// and CodeMirror would take that for where you are: the caret goes back where
-// it was, in the page itself, before the next key lands
-let caret: EditorSelection | undefined
-const PERSISTED = `[data-astro-transition-persist="${PERSIST}"]`
-document.addEventListener("astro:before-swap", (e) => {
-  const doc = e.newDocument
-  const r = swapped.has(doc) ? region : null
-  // not a page's own focus: one of several windows has it (document.hasFocus) or not
-  caret = r && document.activeElement === r.view.contentDOM ? r.view.state.selection : undefined
-  doc.querySelectorAll(PERSISTED).forEach((el) => el.remove())
-  if (r) place(doc, r, article(doc)?.dataset.editSha)
-})
-
-document.addEventListener("astro:after-swap", () => {
-  picked = null
-  const r = region
-  // nothing but the open block's editor is kept from page to page
-  document.querySelectorAll(PERSISTED).forEach((el) => el !== r?.host && el.remove())
-  if (!r?.host.isConnected || !caret) return
-  r.view.focus()
-  const { anchor, head } = caret.main
-  const a = r.view.domAtPos(anchor)
-  const h = r.view.domAtPos(head)
-  getSelection()?.setBaseAndExtent(a.node, a.offset, h.node, h.offset)
-})
-
-/** someone else's save came in: the note as it is now, taken in when nothing of ours is unsaved */
-async function learn() {
-  const now = await backend?.load().catch(() => undefined)
-  if (!now || !saved) return
-  texts.set(now.sha, now.text)
-  if (saving || live !== saved.text || now.sha === saved.sha) return
-  const r = region
-  if (r) {
-    const map = lineMap(lines(live), lines(now.text))
-    const from = map.first(r.from - 1) + 1
-    r.to = r.to < r.from ? from - 1 : map.last(r.to - 1) + 1
-    r.from = from
-  }
-  saved = now
-  setLive(now.text)
-  if (r) {
-    const text = slice(live, r.from, r.to)
-    if (text !== r.view.state.doc.toString()) r.view.dispatch({ changes: { from: 0, to: r.view.state.doc.length, insert: text } })
-  }
-}
-
-window.addEventListener("beforeunload", (e) => {
-  if (saved && (live !== saved.text || saving)) e.preventDefault()
-})
-
-// ---------- github: the deploy, back ----------
-
-let watching = false
-async function waitForDeploy() {
-  if (watching) return
-  watching = true
-  try {
-    // till the last commit's deploy is in: one made while swapping one in is waited for too
-    while (deploying) {
-      const doc = await deployed(fetchPage, (doc) => article(doc)?.dataset.editSha, () => deploying, { tick: () => status() })
-      if (!doc) break
-      deploying = null
-      if (doc === "slow") return void status(say("editSlowDeploy"))
-      await swapIn(doc)
-      status(say("editLive"))
-    }
-  } finally {
-    watching = false
-  }
-}
-
-// ---------- the status, in the corner ----------
-
-function status(message?: string) {
-  let el = document.querySelector<HTMLElement>(".edit-status")
-  if (!root.hasAttribute("data-editing") && !message && !deploying) return void el?.remove()
-  if (!el) {
-    el = document.createElement("div")
-    el.className = "edit-status"
-    el.setAttribute("role", "status")
-    document.body.append(el)
-  }
-  const unsaved = !!saved && live !== saved.text
-  const state = saving ? "saving" : deploying ? "deploying" : unsaved ? "unsaved" : "idle"
-  el.dataset.state = message ? "message" : state
-  el.textContent =
-    message ??
-    {
-      saving: say(mode === "github" ? "editPublishing" : "editSaving"),
-      deploying: say("editDeploying", { s: String(Math.round((Date.now() - (deploying?.since ?? Date.now())) / 1000)) }),
-      unsaved: say(mode === "github" ? "editUnpublished" : "editSaving"),
-      idle: say("editing"),
-    }[state]
-}
-
-// ---------- where a note is saved ----------
-
-function devBackend(slug: string): Backend {
-  const url = `/__basalt/source?slug=${encodeURIComponent(slug)}`
-  return {
-    async load() {
-      const res = await fetch(url, { cache: "no-store" })
-      if (!res.ok) throw new Error(String(res.status))
-      return res.json()
-    },
-    async save(text, base) {
-      const res = await fetch("/__basalt/source", {
-        method: "PUT",
-        headers: { "content-type": "application/json", "x-basalt-edit": "1" },
-        body: JSON.stringify({ slug, text, base }),
-      })
-      if (res.status === 409) return { conflict: await res.json() }
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? String(res.status))
-      return res.json()
-    },
-  }
-}
-
-let gh: ReturnType<typeof gitHub> | undefined
-const tokenKey = (repo: string) => `basalt-github-token:${repo}`
-
-/** the token for the repo: kept in this browser, else asked for */
-async function tokenFor(repo: string): Promise<string | undefined> {
-  let token: string | null = null
-  try {
-    token = localStorage.getItem(tokenKey(repo))
-  } catch {}
-  return (token ?? (await connect(repo))) || undefined
-}
-
-function forget(repo: string) {
-  try {
-    localStorage.removeItem(tokenKey(repo))
-  } catch {}
-  root.removeAttribute("data-edit-connected")
-}
-
-function githubBackend(repo: string, branch: string, path: string): Backend {
-  const forgetting = (err: unknown) => {
-    if (err instanceof GitHubError && err.status === 401) forget(repo)
-    throw err
-  }
-  return {
-    load: () => gh!.read(path, branch).catch(forgetting),
-    save: (text, base) => gh!.write(path, branch, text, base, say("editCommit", { path })).catch(forgetting),
-  }
-}
-
-/** Asks for a token for the repo, once, in a dialog, and checks it can write there. */
-function connect(repo: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    const dialog = document.createElement("dialog")
-    dialog.className = "edit-connect"
-    dialog.innerHTML = `<form method="dialog">
-      <h2></h2><p class="edit-connect-help"></p>
-      <label><span></span><input name="token" type="password" autocomplete="off" spellcheck="false" required></label>
-      <p class="edit-connect-error" hidden></p>
-      <menu><a target="_blank" rel="noopener"></a><button type="button"></button><button type="submit"></button></menu>
-    </form>`
-    dialog.querySelector("h2")!.textContent = say("editConnect")
-    dialog.querySelector(".edit-connect-help")!.textContent = say("editTokenHelp", { repo })
-    dialog.querySelector("label span")!.textContent = say("editToken")
-    const link = dialog.querySelector("a")!
-    link.textContent = say("editMakeToken")
-    link.href = `https://github.com/settings/personal-access-tokens/new?name=${encodeURIComponent(`Basalt ${repo}`)}`
-    const [cancel, ok] = dialog.querySelectorAll("button")
-    cancel.textContent = say("editCancel")
-    ok.textContent = say("editConnectButton")
-    const input = dialog.querySelector("input")!
-    const error = dialog.querySelector<HTMLElement>(".edit-connect-error")!
-    const done = (token: string | null) => {
-      dialog.close()
-      dialog.remove()
-      resolve(token)
-    }
-    cancel.addEventListener("click", () => done(null))
-    dialog.addEventListener("cancel", () => done(null))
-    dialog.querySelector("form")!.addEventListener("submit", async (e) => {
-      e.preventDefault()
-      const token = input.value.trim()
-      if (!(await gitHub(repo, token).canPush())) {
-        error.hidden = false
-        error.textContent = say("editTokenWrong", { repo })
-        return
-      }
-      try {
-        localStorage.setItem(tokenKey(repo), token)
-      } catch {}
-      root.setAttribute("data-edit-connected", "")
-      done(token)
-    })
-    document.body.append(dialog)
-    dialog.showModal()
-  })
 }

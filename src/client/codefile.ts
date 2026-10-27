@@ -34,8 +34,8 @@ function titleBarOrCorner(block: HTMLElement): HTMLElement {
 /** what copy and raw give: a diff's patch (its data-copy), else the code as shown */
 const textOf = (block: HTMLElement, code: HTMLElement) => block.dataset.copy ?? code.innerText.replace(/\n$/, "")
 
-export function startCodeControls(signal: AbortSignal) {
-  for (const block of document.querySelectorAll<HTMLElement>(CODE_BLOCKS)) {
+export function startCodeControls(signal: AbortSignal, root: ParentNode = document) {
+  for (const block of root.querySelectorAll<HTMLElement>(CODE_BLOCKS)) {
     if (block.closest(NOT_THIS_PAGES_CODE) || block.querySelector(".code-actions")) continue
     const code = block.querySelector<HTMLElement>("pre > code")
     if (!code || code.matches(".mermaid")) continue

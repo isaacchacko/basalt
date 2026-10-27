@@ -217,8 +217,8 @@ export function enhanceCopy(root: HTMLElement) {
     })
 }
 
-export function startEmbeds(signal: AbortSignal) {
-  const article = document.querySelector("article") ?? document.body
+export function startEmbeds(signal: AbortSignal, root: ParentNode = document) {
+  const article = root === document ? (document.querySelector("article") ?? document.body) : root
   const onFacade = (e: MouseEvent) => {
     // a new-tab click still goes to the video's own page
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return

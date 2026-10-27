@@ -7,13 +7,14 @@ import "./test-hooks.ts"
 import test, { describe } from "node:test"
 import assert from "node:assert"
 import path from "node:path"
+import fs from "node:fs"
 import type { Element, Root } from "hast"
 
 const { renderFile } = await import("./render.ts")
 const { refreshRegistry } = await import("../lib/registry.ts")
 const { fromHtml } = await import("hast-util-from-html")
 const { visit } = await import("unist-util-visit")
-const { tagLines } = await import("./lines.ts")
+const { tagLines, unsaved } = await import("./lines.ts")
 
 const serving = process.env.BASALT_COMMAND
 const sites = { site: path.resolve("test/fixtures/site"), edit: path.resolve("test/fixtures/edit") }
@@ -134,5 +135,60 @@ describe("tagLines", () => {
     const made: Element = { type: "element", tagName: "div", properties: {}, children: [] }
     const raw = "---\nt: 1\n---\n\nmade\n\nz"
     assert.deepStrictEqual(tag([made, el(7)], raw, raw), ["5", "7"])
+  })
+})
+
+describe("text typed but not saved (editing in place renders it, integrations/edit.ts)", () => {
+  /** the note rendered from `text` instead of its file, the way astro.config's renderNote does */
+  async function renderText(site: string, rel: string, text: string) {
+    process.env.BASALT_SITE = site
+    process.env.BASALT_COMMAND = "dev"
+    try {
+      const reg = refreshRegistry()
+      const abs = path.join(site, "notes", rel)
+      const md = await import("./index.ts")
+      const { createMarkdownProcessor, parseFrontmatter } = await import("@astrojs/markdown-remark")
+      const processor = await createMarkdownProcessor({
+        remarkPlugins: md.remarkPlugins as never,
+        rehypePlugins: md.rehypePlugins as never,
+        remarkRehype: md.processorOptions.remarkRehype,
+        smartypants: md.processorOptions.smartypants,
+        syntaxHighlight: md.syntaxHighlight,
+      })
+      const { frontmatter, content } = parseFrontmatter(md.transformNote(text, reg.byAbs.get(abs)!))
+      unsaved.set(abs, text)
+      try {
+        return fromHtml((await processor.render(content, { frontmatter, fileURL: new URL("file://" + abs) })).code, { fragment: true })
+      } finally {
+        unsaved.delete(abs)
+      }
+    } finally {
+      if (serving === undefined) delete process.env.BASALT_COMMAND
+      else process.env.BASALT_COMMAND = serving
+    }
+  }
+
+  test("lines are counted in the text typed, not the file on disk", async () => {
+    // two paragraphs typed after the frontmatter, a comment and a callout further down
+    const file = fs.readFileSync(path.join(sites.site, "notes", "tabs.md"), "utf8")
+    const typed = file.replace("---\n\n", "---\n\nTyped first.\n\nTyped second, %%hidden%%.\n\n")
+    assert.deepStrictEqual(spans(await renderText(sites.site, "tabs.md", typed)), ["5", "7", "9-22", "24", "26-27"])
+    // and the file itself is as it was
+    assert.strictEqual(fs.readFileSync(path.join(sites.site, "notes", "tabs.md"), "utf8"), file)
+  })
+
+  test("a block deleted in the text: the rest move up", async () => {
+    const file = fs.readFileSync(path.join(sites.edit, "notes", "index.md"), "utf8")
+    const typed = file.replace("## A heading\n\n", "")
+    const got = spans(await renderText(sites.edit, "index.md", typed))
+    // the first paragraph stays at 7; "### A smaller one" moves from 16 up to 14
+    assert.strictEqual(got[0], "7")
+    assert.strictEqual(got[1], "14")
+  })
+
+  test("once rendered, the file's own lines are used again", async () => {
+    const { unsaved: left } = await import("./lines.ts")
+    assert.strictEqual(left.size, 0)
+    assert.deepStrictEqual(spans(await page(sites.site, "tabs.md")), expected["site/tabs.md"])
   })
 })

@@ -511,6 +511,8 @@ function setup() {
   }
 
   async function onKey(e: KeyboardEvent) {
+    // taken already (⌘F in a note being edited finds in the note, editor.ts)
+    if (e.defaultPrevented) return
     const mod = e.ctrlKey || e.metaKey
     const key = e.key.toLowerCase()
     if (mod && key === "f" && !e.shiftKey && !e.altKey) {

@@ -55,12 +55,15 @@ export function remarkSourceBlocks() {
   }
 }
 
+/** a note's text being rendered that isn't its file's yet (integrations/edit.ts renders what's typed) */
+export const unsaved = new Map<string, string>()
+
 export function rehypeSourceLines() {
   return (tree: Root, file: VFile) => {
     if (!file.path || !editable(reg().site)) return
-    let raw: string
+    let raw = unsaved.get(file.path)
     try {
-      raw = fs.readFileSync(file.path, "utf8")
+      raw ??= fs.readFileSync(file.path, "utf8")
     } catch {
       return
     }

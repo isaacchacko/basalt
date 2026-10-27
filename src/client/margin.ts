@@ -34,17 +34,17 @@ const YIELD = 48
  * by Astro's router. The signal aborts when the page goes, so nothing a page
  * set up outlives it.
  */
-export function onPage(start: (signal: AbortSignal) => void) {
+export function onPage(start: (signal: AbortSignal) => void): () => void {
   let ctrl: AbortController | null = null
   let body: HTMLElement | null = null
-  const run = () => {
-    if (body === document.body) return
+  const run = (again = false) => {
+    if (body === document.body && !again) return
     ctrl?.abort()
     ctrl = new AbortController()
     body = document.body
     start(ctrl.signal)
   }
-  document.addEventListener("astro:page-load", run)
+  document.addEventListener("astro:page-load", () => run())
   document.addEventListener("astro:before-swap", (e) => {
     // the page coming in keeps the margin as it is until its own is placed,
     // so its notes never show inline for a moment. A swap of the same page
@@ -63,8 +63,10 @@ export function onPage(start: (signal: AbortSignal) => void) {
     ctrl = null
     body = null
   })
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run, { once: true })
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => run(), { once: true })
   else run()
+  // started again on the same page, when what it starts from has changed
+  return () => run(true)
 }
 
 // ---------- measuring lines ----------
@@ -174,9 +176,23 @@ export function levelWith(item: HTMLElement, line: Line, column: DOMRect): numbe
 
 export const isBeside = () => document.documentElement.dataset.margin === "beside"
 
+/**
+ * The element before a note, as the page has it: in a note being edited
+ * (editor.ts), a block is drawn in a box of its own, so the one before the
+ * first in a box is the last of the box drawn before it.
+ */
+function before(note: HTMLElement): Element | null {
+  if (note.previousElementSibling || !note.parentElement?.classList.contains("edit-drawn")) return note.previousElementSibling
+  for (let at = note.parentElement.previousElementSibling; at; at = at.previousElementSibling) {
+    if (at.classList.contains("edit-gap")) continue
+    return at.classList.contains("edit-drawn") ? at.lastElementChild : at
+  }
+  return null
+}
+
 /** The line a margin item belongs to. */
 function anchorOf(note: HTMLElement): Line {
-  const prev = note.previousElementSibling
+  const prev = before(note)
   // a sidenote: the line its number is on, measured from the text before the number
   if (note.classList.contains("sidenote") && prev?.matches("sup")) return lineBefore(prev)
   // a block aside: the first line of the block before it
@@ -194,8 +210,12 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string) {
   return node
 }
 
+/** a margin copy's note, in the text: what a click on the copy edits (client/editor.ts) */
+export const noteOf = new WeakMap<HTMLElement, HTMLElement>()
+
 function copyOf(note: HTMLElement): HTMLElement {
   const copy = note.cloneNode(true) as HTMLElement
+  noteOf.set(copy, note)
   copy.classList.add("in-margin")
   copy.classList.remove("open")
   copy.removeAttribute("id")
@@ -214,7 +234,7 @@ function pair(id: string | undefined) {
     .forEach((n) => n.classList.add("is-paired"))
 }
 
-onPage((signal) => {
+const startMargin = onPage((signal) => {
   const root = document.documentElement
   const margin = document.querySelector<HTMLElement>(".margin")
   const article =
@@ -257,7 +277,8 @@ onPage((signal) => {
     const column = margin.getBoundingClientRect()
 
     // blocks wide enough to reach into the margin: nothing sits beside them
-    const blocked: [number, number][] = [...article.children]
+    // (a note being edited has its blocks drawn in its editor, editor.ts)
+    const blocked: [number, number][] = [...article.querySelectorAll(":scope > :not(.edit-doc), :scope > .edit-doc .edit-drawn > *")]
       .map((c) => c.getBoundingClientRect())
       .filter((r) => r.height && r.right > column.left + 4)
       .map((r) => [r.top - column.top - BLOCKED_ABOVE, r.bottom - column.top + BLOCKED_BELOW])
@@ -290,13 +311,18 @@ onPage((signal) => {
       notesAt.push([top - GAP, top + height + GAP])
       lowest = Math.max(lowest, top + height)
     }
-    const wants = copies.map(({ note, copy }) => levelWith(copy, anchorOf(note), column))
+    // a note not in the page has no line to be beside: its block is open in the editor (editor.ts), or
+    // not drawn in it yet (still the page's own, hidden, till it's scrolled to)
+    const editing = root.hasAttribute("data-editing")
+    for (const { note, copy } of copies) copy.hidden = !note.isConnected || (editing && !note.closest(".edit-doc"))
+    const wants = copies.map(({ note, copy }) => (copy.hidden ? 0 : levelWith(copy, anchorOf(note), column)))
     const deferred: number[] = []
     copies.forEach(({ note, copy }, i) => {
+      if (copy.hidden) return
       const height = copy.offsetHeight
       const top = clear(Math.max(wants[i], floor), height, blocked)
       if (note.classList.contains("marginfigure")) {
-        const next = copies.findIndex((c, j) => j > i && c.note.classList.contains("sidenote"))
+        const next = copies.findIndex((c, j) => j > i && !c.copy.hidden && c.note.classList.contains("sidenote"))
         if (next >= 0 && top + height + GAP > wants[next] + YIELD) return void deferred.push(i)
       }
       put(copy, wants[i], top)
@@ -309,7 +335,7 @@ onPage((signal) => {
 
     // each resting part takes the first room the notes leave, from the note's
     // first line down: not beside its title
-    const first = article.firstElementChild ?? article
+    const first = article.querySelector(":scope > .edit-doc") ?? article.firstElementChild ?? article
     const start = Math.max(0, Math.round(first.getBoundingClientRect().top - column.top))
     margin.style.setProperty("--resting-start", `${start}px`)
     const avoid = [...blocked, ...taken]
@@ -412,3 +438,6 @@ onPage((signal) => {
     delete root.dataset.margin
   })
 })
+
+// a note being edited has blocks drawn anew (editor.ts): its notes are those now
+document.addEventListener("basalt:drawn", () => startMargin())

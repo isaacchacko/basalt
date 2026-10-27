@@ -803,10 +803,10 @@ function operable(img: HTMLImageElement) {
   if (!img.getAttribute("aria-label")) img.setAttribute("aria-label", `view ${img.alt || "image"} full screen`)
 }
 
-export function startViewer(signal: AbortSignal) {
-  addExpands(document, signal)
+export function startViewer(signal: AbortSignal, root: ParentNode = document) {
+  addExpands(root, signal)
   // mermaid draws after the page arrives: give its figures their expand too
-  document.addEventListener("basalt:diagram", () => addExpands(document, signal), { signal })
-  document.querySelectorAll<HTMLImageElement>("img.zoomable").forEach(operable)
+  document.addEventListener("basalt:diagram", () => addExpands(root, signal), { signal })
+  root.querySelectorAll<HTMLImageElement>("img.zoomable").forEach(operable)
   signal.addEventListener("abort", () => current?.close(true))
 }

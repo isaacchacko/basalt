@@ -38,11 +38,8 @@ export const strings = {
   /** editing a page in place (client/editor.ts): the pencil, and the status in the corner */
   edit: "Edit this page",
   editing: "Editing",
-  editBlock: "Edit this block",
-  editAdd: "Add a block",
   editSaving: "Saving…",
   editPublishing: "Publishing…",
-  editUnpublished: "Not published yet",
   editDeploying: "Deploying… {s}s",
   editLive: "Live",
   editFailed: "Couldn't save: {error}",

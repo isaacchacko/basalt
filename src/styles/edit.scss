@@ -3,6 +3,7 @@
 // own type, quiet; everything else stays the page.
 
 $mobile: "(max-width: 800px)";
+$narrow: "(max-width: 1055.98px)";
 
 // a built site's pencil, once this browser can commit to its repository
 .edit-toggle[data-edit-mode="github"] {
@@ -13,51 +14,30 @@ $mobile: "(max-width: 800px)";
   display: grid;
 }
 
-// the blocks the open one stands in for; and, once changed, what they showed
-// before, till the page comes back with the change
-[data-edit-hidden],
-[data-edit-stale] {
+// ---------- the note, as one document ----------
+
+// the editor is in the note's place, inside its article (so the note's
+// styles hold); the article's own blocks are in the editor, drawn
+:root[data-editing] article[data-edit-slug] > :not(.edit-doc) {
   display: none !important;
 }
 
-// ---------- the page, in editing ----------
-
+// the editor's scrolling (to the caret, to a match) is there at once, not a
+// glide (base.scss) toward where it guessed blocks it hadn't measured were
 :root[data-editing] {
-  // no arrival (motion.scss): a block opened, or shown again once closed, would rise again
-  article > *,
-  .edit-host,
-  .edit-pending {
-    animation: none !important;
-  }
-
-  article[data-edit-slug] > [data-src],
-  article[data-edit-slug] section[data-footnotes] li[data-src],
-  .page-header .popover-hint {
-    border-radius: 4px;
-    transition: box-shadow 0.12s ease;
-    cursor: text;
-
-    &:hover {
-      box-shadow: 0 0 0 4px var(--highlight);
-      background: var(--highlight);
-    }
-  }
-
-  // a link is still a link
-  article[data-edit-slug] a[href] {
-    cursor: pointer;
-  }
+  scroll-behavior: auto;
 }
 
-// ---------- the open block ----------
+// no arrival (motion.scss) for the editor: it would rise into place, and be measured on its way;
+// and the article's width, not a block's measure (basalt.scss): its blocks keep to that themselves
+:root[data-editing] article[data-edit-slug] > .edit-doc {
+  animation: none !important;
+  max-width: none;
+}
 
-.edit-host {
-  display: block;
-  margin: 0.75rem 0;
-  border-radius: 4px;
-  box-shadow: 0 0 0 4px var(--highlight);
-  background: var(--highlight);
-  list-style: none;
+.edit-doc {
+  display: none;
+  position: relative;
 
   .cm-editor {
     background: transparent;
@@ -74,6 +54,7 @@ $mobile: "(max-width: 800px)";
   .cm-scroller {
     font-family: inherit;
     line-height: 1.6;
+    overflow: visible;
   }
 
   .cm-content {
@@ -83,6 +64,12 @@ $mobile: "(max-width: 800px)";
 
   .cm-line {
     padding: 0;
+    // the characters as they're typed: a code font's ligatures would draw => as ⇒
+    // (a drawn block keeps the page's own, edit-drawn)
+    font-variant-ligatures: none;
+    font-feature-settings:
+      "liga" 0,
+      "calt" 0;
   }
 
   .cm-cursor {
@@ -90,37 +77,71 @@ $mobile: "(max-width: 800px)";
   }
 
   .cm-selectionBackground,
-  &.cm-focused .cm-selectionBackground,
   .cm-focused .cm-selectionBackground {
     background: var(--textHighlight) !important;
   }
-
-  .cm-placeholder {
-    color: var(--gray);
-    font-family: var(--codeFont);
-    font-size: 0.85em;
-  }
 }
 
-// the frontmatter: the note's settings, as code
-.edit-host-header {
-  margin: 0 0 1rem;
-
-  .cm-editor {
-    font-family: var(--codeFont);
-    font-size: 0.85rem;
-  }
-}
-
-// a changed block, as its markdown, till the deploy (or the save) comes back
-.edit-pending {
+:root[data-editing] .edit-doc {
   display: block;
-  margin: 0.75rem 0;
-  padding: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  color: var(--gray);
-  list-style: none;
+}
+
+// a block drawn the way the page draws it, on the note's measure
+.edit-drawn {
+  display: flow-root;
+  cursor: text;
+  // the page's own wrapping and leading, not the editor's (which keeps every
+  // space and newline, and sets every line 1.6 high)
+  white-space: normal;
+  line-height: normal;
+
+  > * {
+    box-sizing: border-box;
+    max-width: var(--measure, 34rem);
+  }
+
+  > .katex-display {
+    display: block;
+  }
+
+  // its space above it is its own (taken from its first element, editor.ts); the
+  // blank lines around it take none
+  &.edit-spaced > * {
+    margin-top: 0;
+  }
+
+  &.edit-spaced > :last-child {
+    margin-bottom: 0;
+  }
+
+  a[href] {
+    cursor: pointer;
+  }
+}
+
+// a blank line before a drawn block: the block's own space is the gap
+.edit-doc .cm-line.edit-gap {
+  height: 0;
+  overflow: hidden;
+}
+
+// a block with a frame or a player, over its stand-in (editor.ts)
+.edit-float {
+  position: absolute;
+  z-index: 1;
+}
+
+// a footnote: where the page has its notes in the margin, or under their lines
+// on a phone, the list at the foot isn't shown (margin.scss), and nor is it
+// here; it opens from its sidenote, or as the cursor comes to it
+html[data-margin] article .edit-footnote {
+  display: none;
+}
+
+// a footnote, numbered as at the foot of the page
+.edit-footnote {
+  margin: 0.25rem 0;
+  font-size: 0.9em;
 }
 
 // ---------- markdown, quiet: set like the page sets it ----------
@@ -147,9 +168,15 @@ $mobile: "(max-width: 800px)";
   font-size: 1rem;
 }
 
-.edit-host .cm-line.md-code-line {
+.edit-doc .cm-line.md-code-line {
   font-family: var(--codeFont);
   font-size: 0.85em;
+
+  // the frontmatter's lines, which markdown would take for a heading
+  .md-h {
+    font: inherit;
+    color: inherit;
+  }
 }
 
 .md-em {
@@ -183,109 +210,7 @@ $mobile: "(max-width: 800px)";
   color: var(--gray);
 }
 
-// ---------- the pencil in a block's corner, a new block, the status ----------
-
-.edit-pick {
-  display: none;
-  position: absolute;
-  z-index: 20;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--lightgray);
-  border-radius: 6px;
-  place-items: center;
-  background: var(--light);
-  color: var(--darkgray);
-  cursor: pointer;
-
-  &:hover {
-    color: var(--tertiary);
-  }
-}
-
-:root[data-editing] .edit-pick {
-  display: grid;
-}
-
-// a block that's all controls (a frame, a player, an island): its pencil, always there
-.edit-pin {
-  display: none;
-  position: relative;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  > .edit-pick {
-    top: 4px;
-    right: -32px;
-
-    // no margin beside it: inside, at the left (a frame's own buttons are at the right)
-    @media all and ($mobile) {
-      right: auto;
-      left: 4px;
-    }
-  }
-}
-
-:root[data-editing] .edit-pin {
-  display: block;
-}
-
-// once it's open, or hidden while its change comes back
-.edit-pin:has(+ [data-edit-hidden], + [data-edit-stale], + .edit-host) {
-  display: none;
-}
-
-.edit-append {
-  display: none;
-  margin: 1rem 0;
-  padding: 0.5rem 0;
-  border-top: 1px dashed var(--lightgray);
-  color: var(--gray);
-  font-size: 0.9rem;
-  cursor: text;
-
-  &:hover {
-    color: var(--tertiary);
-    border-top-color: var(--tertiary);
-  }
-}
-
-:root[data-editing] // a block that's all controls (a frame, a player, an island): its pencil, always there
-.edit-pin {
-  display: none;
-  position: relative;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  > .edit-pick {
-    top: 4px;
-    right: -32px;
-
-    // no margin beside it: inside, at the left (a frame's own buttons are at the right)
-    @media all and ($mobile) {
-      right: auto;
-      left: 4px;
-    }
-  }
-}
-
-:root[data-editing] .edit-pin {
-  display: block;
-}
-
-// once it's open, or hidden while its change comes back
-.edit-pin:has(+ [data-edit-hidden], + [data-edit-stale], + .edit-host) {
-  display: none;
-}
-
-.edit-append {
-  display: block;
-}
+// ---------- the status, in the corner ----------
 
 .edit-status {
   position: fixed;
@@ -310,11 +235,135 @@ $mobile: "(max-width: 800px)";
     color: var(--darkgray);
   }
 
+  // on a phone, in the bar across the top (sticky), between the site's name
+  // and its buttons: over nothing of the page, wherever it's scrolled to
   @media all and ($mobile) {
+    top: 1.15rem;
     right: 50%;
+    bottom: auto;
     transform: translateX(50%);
-    bottom: 0.75rem;
+    box-shadow: none;
   }
+}
+
+// ---------- finding in the note (⌘F, CodeMirror's search panel) ----------
+
+// in the page's own type and colours, its controls the dialog's (below);
+// it stays at the window's top as you go from match to match, under the bar
+// across the top where there's one (nav.scss)
+.edit-doc .cm-editor .cm-panels {
+  background: var(--light);
+  color: var(--darkgray);
+  font-family: var(--bodyFont);
+  font-size: 0.85rem;
+  line-height: normal;
+
+  @media all and ($narrow) {
+    top: 3.75rem;
+  }
+}
+
+.edit-doc .cm-editor .cm-panels-top {
+  border-bottom: 1px solid var(--lightgray);
+}
+
+.edit-doc .cm-editor .cm-panel.cm-search {
+  padding: 0.6rem 2rem 0.35rem 0;
+
+  input,
+  button,
+  label {
+    margin: 0 0.4rem 0.4rem 0;
+    vertical-align: middle;
+  }
+
+  .cm-textfield {
+    box-sizing: border-box;
+    width: 8rem;
+    max-width: 100%;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    background: var(--light);
+    color: var(--dark);
+    font-family: inherit;
+    font-size: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: var(--tertiary);
+    }
+
+    &::placeholder {
+      color: var(--gray);
+    }
+  }
+
+  .cm-button {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--darkgray);
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--gray);
+    }
+
+    &:active {
+      background: var(--highlight);
+    }
+  }
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--gray);
+    font-size: inherit;
+    cursor: pointer;
+  }
+
+  // on a phone, what's typed has the row: the buttons and the options under it
+  @media all and ($mobile) {
+    .cm-textfield {
+      width: 100%;
+    }
+  }
+
+  // the page's checkbox (base.scss), but not set out into a list's margin
+  input[type="checkbox"] {
+    margin: 0;
+    transform: none;
+  }
+
+  button[name="close"] {
+    top: 0.55rem;
+    right: 0;
+    padding: 0 0.3rem;
+    color: var(--gray);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--dark);
+    }
+  }
+}
+
+// the matches, in the page's highlight; the one you're at, in the selection's
+.edit-doc .cm-editor .cm-searchMatch {
+  background: var(--highlight);
+  outline: 1px solid color-mix(in srgb, var(--tertiary) 35%, transparent);
+  border-radius: 2px;
+}
+
+.edit-doc .cm-editor .cm-searchMatch-selected {
+  background: var(--textHighlight);
 }
 
 // ---------- connecting to GitHub ----------

@@ -142,9 +142,9 @@ async function draw(figures: HTMLElement[]) {
   document.dispatchEvent(new CustomEvent("basalt:diagram"))
 }
 
-export function startMermaid(signal: AbortSignal) {
+export function startMermaid(signal: AbortSignal, root: ParentNode = document) {
   const figures: HTMLElement[] = []
-  for (const pre of document.querySelectorAll<HTMLElement>(SOURCES)) {
+  for (const pre of root.querySelectorAll<HTMLElement>(SOURCES)) {
     if (pre.closest(".popover, .preview, [data-preview]")) continue
     // rehype-pretty-code wraps a block in a figure of its own: replace that
     const block = pre.closest<HTMLElement>("figure[data-rehype-pretty-code-figure]") ?? pre
