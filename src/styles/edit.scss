@@ -208,6 +208,36 @@ $mobile: "(max-width: 800px)";
   display: grid;
 }
 
+// a block that's all controls (a frame, a player, an island): its pencil, always there
+.edit-pin {
+  display: none;
+  position: relative;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > .edit-pick {
+    top: 4px;
+    right: -32px;
+
+    // no margin beside it: inside, at the left (a frame's own buttons are at the right)
+    @media all and ($mobile) {
+      right: auto;
+      left: 4px;
+    }
+  }
+}
+
+:root[data-editing] .edit-pin {
+  display: block;
+}
+
+// once it's open, or hidden while its change comes back
+.edit-pin:has(+ [data-edit-hidden], + [data-edit-stale], + .edit-host) {
+  display: none;
+}
+
 .edit-append {
   display: none;
   margin: 1rem 0;
@@ -223,7 +253,37 @@ $mobile: "(max-width: 800px)";
   }
 }
 
-:root[data-editing] .edit-append {
+:root[data-editing] // a block that's all controls (a frame, a player, an island): its pencil, always there
+.edit-pin {
+  display: none;
+  position: relative;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > .edit-pick {
+    top: 4px;
+    right: -32px;
+
+    // no margin beside it: inside, at the left (a frame's own buttons are at the right)
+    @media all and ($mobile) {
+      right: auto;
+      left: 4px;
+    }
+  }
+}
+
+:root[data-editing] .edit-pin {
+  display: block;
+}
+
+// once it's open, or hidden while its change comes back
+.edit-pin:has(+ [data-edit-hidden], + [data-edit-stale], + .edit-host) {
+  display: none;
+}
+
+.edit-append {
   display: block;
 }
 

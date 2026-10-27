@@ -102,12 +102,12 @@ export async function setEditing(on: boolean) {
   if (on) {
     if (!(await start())) return
     root.setAttribute("data-editing", "")
-    showAppend()
+    furnish()
   } else {
     await close()
     await save()
     root.removeAttribute("data-editing")
-    document.querySelectorAll(".edit-append, .edit-pick").forEach((el) => el.remove())
+    document.querySelectorAll(".edit-append, .edit-pin, body > .edit-pick").forEach((el) => el.remove())
   }
   status()
 }
@@ -117,7 +117,7 @@ export async function pageLoaded() {
   if (!root.hasAttribute("data-editing")) return
   if (!article()) return void setEditing(false)
   if (!(await start())) return void setEditing(false)
-  showAppend()
+  furnish()
   status()
 }
 
@@ -237,7 +237,7 @@ async function open(target: HTMLElement, caret: { x: number; y: number } | "star
   // the pencil was for opening it
   picked?.removeAttribute("data-edit-picked")
   picked = null
-  document.querySelector(".edit-pick")?.remove()
+  document.querySelector("body > .edit-pick")?.remove()
   const host = document.createElement(target.matches("li") ? "li" : "div")
   host.className = header ? "edit-host edit-host-header" : "edit-host"
   host.setAttribute("data-astro-transition-persist", PERSIST)
@@ -536,6 +536,22 @@ const codeLines = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 )
 
+/**
+ * Beside a mark that's hidden, the browser turns the space before it into a
+ * no-break one as you type, and CodeMirror reads that back: a space it turned
+ * stays a space (one typed as one, ⌥space, stays).
+ */
+const keepSpaces = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent("input")) return tr
+  const fixes: { from: number; to: number; insert: string }[] = []
+  tr.changes.iterChanges((fromA, toA, fromB, _toB, inserted) => {
+    const text = inserted.toString()
+    if (!text.includes("\u00a0") || !tr.startState.sliceDoc(fromA, toA).includes(" ")) return
+    for (let i = text.indexOf("\u00a0"); i >= 0; i = text.indexOf("\u00a0", i + 1)) fixes.push({ from: fromB + i, to: fromB + i + 1, insert: " " })
+  })
+  return fixes.length ? [tr, { changes: fixes, sequential: true }] : tr
+})
+
 let index: Promise<{ label: string; detail: string; apply: string }[]> | undefined
 /** the site's notes, for [[: a name that's the only one of its kind on its own, else its path */
 const notes = () =>
@@ -580,6 +596,7 @@ function extensions(header: boolean): Extension[] {
     markdown({ base: markdownLanguage }),
     syntaxHighlighting(style),
     quietMarks,
+    keepSpaces,
     codeLines,
     closeBrackets(),
     // ahead of the completions' own escape, which takes one typed a moment
@@ -632,13 +649,39 @@ function caretFor(el: HTMLElement, at: { x: number; y: number }, source: string)
 
 // ---------- the page, in editing ----------
 
-function showAppend() {
+const PENCIL =
+  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
+const pencil = () => {
+  const pen = document.createElement("button")
+  pen.type = "button"
+  pen.className = "edit-pick"
+  pen.setAttribute("aria-label", say("editBlock"))
+  pen.innerHTML = PENCIL
+  return pen
+}
+
+// what a click is taken by (a frame, a player, an island), so the page never
+// hears of it, nor of the pointer over it (a frame from another site), and a
+// phone has no pointer: its block has a pencil of its own in its corner
+const CONTROLS = "iframe, video, audio, island, astro-island, canvas, object, embed, [data-embed]"
+
+/** In editing: "add a block" after the note, and a pencil by each block that's all controls. */
+function furnish() {
   const art = article()
-  if (!art || art.nextElementSibling?.matches(".edit-append")) return
-  const add = document.createElement("div")
-  add.className = "edit-append"
-  add.textContent = say("editAdd")
-  art.after(add)
+  if (!art) return
+  if (!art.nextElementSibling?.matches(".edit-append")) {
+    const add = document.createElement("div")
+    add.className = "edit-append"
+    add.textContent = say("editAdd")
+    art.after(add)
+  }
+  for (const el of blocks()) {
+    if (el.previousElementSibling?.matches(".edit-pin") || !(el.matches(CONTROLS) || el.querySelector(CONTROLS))) continue
+    const pin = document.createElement(el.matches("li") ? "li" : "div")
+    pin.className = "edit-pin"
+    pin.append(pencil())
+    el.before(pin)
+  }
 }
 
 document.addEventListener(
@@ -647,7 +690,8 @@ document.addEventListener(
     if (!root.hasAttribute("data-editing") || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return
     const target = e.target as Element
     const pen = target.closest(".edit-pick")
-    const block = pen ? document.querySelector<HTMLElement>("[data-edit-picked]") : blockAt(target)
+    const pinned = pen?.parentElement?.matches(".edit-pin") ? (pen.parentElement.nextElementSibling as HTMLElement | null) : null
+    const block = pen ? (pinned ?? document.querySelector<HTMLElement>("[data-edit-picked]")) : blockAt(target)
     if (!block) {
       // a click away from the open block closes it
       if (region && !target.closest(".edit-host, .cm-tooltip, .edit-status, a[href], button, dialog")) void close()
@@ -662,31 +706,47 @@ document.addEventListener(
 
 // a block of nothing but controls (an island, a video, a graph) opens from the pencil in its corner
 let picked: HTMLElement | null = null
-document.addEventListener("pointerover", (e) => {
-  if (!root.hasAttribute("data-editing") || (e.target as Element).closest(".edit-pick")) return
+function hover(target: Element | null) {
+  if (!target || !root.hasAttribute("data-editing") || target.closest(".edit-pick")) return
   const art = article()
-  const el = (e.target as Element).closest<HTMLElement>(SRC)
+  const el = target.closest<HTMLElement>(SRC)
   // a footnote is a block of its own
   const block = el && art ? (art.contains(el) ? (el.closest<HTMLElement>("section[data-footnotes] li[data-src]") ?? topOf(el, art)) : el) : null
   if (!block || block === picked || block.closest(".edit-host")) return
+  // it has a pencil of its own
+  if (block.previousElementSibling?.matches(".edit-pin")) return void document.querySelector("body > .edit-pick")?.remove()
   picked?.removeAttribute("data-edit-picked")
   picked = block
   block.setAttribute("data-edit-picked", "")
-  let pen = document.querySelector<HTMLButtonElement>(".edit-pick")
-  if (!pen) {
-    pen = document.createElement("button")
-    pen.type = "button"
-    pen.className = "edit-pick"
-    pen.setAttribute("aria-label", say("editBlock"))
-    pen.innerHTML =
-      '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
-    document.body.append(pen)
-  }
+  let pen = document.querySelector<HTMLButtonElement>("body > .edit-pick")
+  if (!pen) document.body.append((pen = pencil()))
   const box = block.getBoundingClientRect()
   pen.style.top = `${box.top + scrollY}px`
   // beside its top right corner; inside it, where there's no room beside it (a phone)
   pen.style.left = `${Math.min(box.right + 4, document.documentElement.clientWidth - 28) + scrollX}px`
+}
+
+// Where the pointer last was: a block scrolled under it (a video, a frame)
+// is hovered all the same, though the page hears nothing from inside a frame
+let pointer: { x: number; y: number } | undefined
+document.addEventListener("pointerover", (e) => {
+  pointer = { x: e.clientX, y: e.clientY }
+  hover(e.target as Element)
 })
+document.addEventListener("pointermove", (e) => void (pointer = { x: e.clientX, y: e.clientY }), { passive: true })
+let looking = false
+addEventListener(
+  "scroll",
+  () => {
+    if (looking || !pointer || !root.hasAttribute("data-editing")) return
+    looking = true
+    requestAnimationFrame(() => {
+      looking = false
+      if (pointer) hover(document.elementFromPoint(pointer.x, pointer.y))
+    })
+  },
+  { passive: true },
+)
 
 document.addEventListener("keydown", (e) => {
   if (!root.hasAttribute("data-editing") || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return
