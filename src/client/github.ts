@@ -108,3 +108,12 @@ export async function deployed<P>(
     if (got !== undefined && shaOf(got) === want()?.sha) return got
   }
 }
+
+/**
+ * The editor's backend for a built site (client/backend.ts): connected with a
+ * token, or null when it isn't. Ported onto the one-document editor by the
+ * GitHub mode's own change; till then, editing a built site does nothing.
+ */
+export async function githubBackend(_article: HTMLElement, _hooks: import("./backend").EditorHooks): Promise<import("./backend").Backend | null> {
+  return null
+}

@@ -12,14 +12,31 @@
 // stays drawn. While editing, the page isn't swapped for a save: the editor
 // is the page. Turning editing off swaps the page in once.
 
-import { ChangeSet, EditorSelection, EditorState, StateEffect, StateField, type Extension, type Text } from "@codemirror/state"
+import { Annotation, ChangeSet, EditorSelection, EditorState, StateEffect, StateField, Text, type Extension } from "@codemirror/state"
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view"
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
 import { markdown, markdownKeymap, markdownLanguage } from "@codemirror/lang-markdown"
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language"
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext } from "@codemirror/autocomplete"
 import { tags } from "@lezer/highlight"
-import { fetchPage, swapIn } from "./swap"
+import { lineMap } from "../lib/linemap"
+import { diff } from "./diff"
+import { devBackend, type Backend, type EditorHooks, type Version } from "./backend"
+
+declare global {
+  interface Window {
+    /** the note being edited, for scripts that drive it (the edit proof) */
+    basaltEdit?: {
+      view: EditorView
+      /** its blocks: their lines now (from 1), and whether each is drawn (its box) or open */
+      blocks(): { from: number; to: number; lines: [number, number]; drawn: boolean; dom: HTMLElement | null }[]
+      /** once nothing's waiting to be saved or rendered, and the last rendering is drawn */
+      idle(): Promise<void>
+      /** the sha of the file as it's saved */
+      saved(): string
+    }
+  }
+}
 
 const root = document.documentElement
 let words: Record<string, string> = {}
@@ -27,13 +44,24 @@ const say = (key: string, vars: Record<string, string> = {}) => (words[key] ?? k
 const article = () => document.querySelector<HTMLElement>("article[data-edit-slug]")
 
 interface Note {
-  slug: string
+  backend: Backend
   view: EditorView
   host: HTMLElement
   /** the file as it's saved */
-  saved: { text: string; sha: string }
+  saved: Version
+  /** the edits made since it was saved */
+  mine: ChangeSet
 }
 let note: Note | null = null
+
+const hooks: EditorHooks = {
+  learn(text, html) {
+    if (!note) return
+    const elements = typeof html === "string" ? parse(html) : html
+    note.view.dispatch({ effects: setBlocks.of(learn(text, elements)) })
+  },
+  status: (message) => status(message),
+}
 
 // ---------- on and off ----------
 
@@ -42,27 +70,45 @@ export async function setEditing(on: boolean) {
     const art = article()
     if (!art) return
     words = JSON.parse(document.querySelector<HTMLElement>("[data-edit-words]")?.dataset.editWords ?? "{}")
-    const slug = art.dataset.editSlug!
-    const res = await fetch(`/__basalt/source?slug=${encodeURIComponent(slug)}`, { cache: "no-store" })
-    if (!res.ok) return status(say("editFailed", { error: String(res.status) }))
-    const saved = (await res.json()) as { text: string; sha: string }
+    const backend =
+      art.dataset.edit === "github" ? await import("./github").then((m) => m.githubBackend(art, hooks)) : devBackend(art.dataset.editSlug!)
+    if (!backend) return
+    let saved: Version
+    try {
+      saved = await backend.load()
+    } catch (err) {
+      return status(say("editFailed", { error: (err as Error).message }))
+    }
     const host = document.createElement("div")
     host.className = "edit-doc"
+    host.setAttribute("data-edit-doc", "")
     art.append(host)
     const view = new EditorView({ parent: host, state: EditorState.create({ doc: saved.text, extensions: extensions() }) })
-    note = { slug, view, host, saved }
+    note = { backend, view, host, saved, mine: ChangeSet.empty(saved.text.length) }
+    window.basaltEdit = {
+      view,
+      blocks: () =>
+        view.state.field(blocks).map((b) => {
+          const dom = [...view.contentDOM.querySelectorAll<HTMLElement>(":scope > .edit-drawn")].find((box) => view.posAtDOM(box) === b.from) ?? null
+          const drawn = view.state.field(drawing).iter(b.from).from === b.from
+          return { ...b, lines: [view.state.doc.lineAt(b.from).number, view.state.doc.lineAt(b.to).number] as [number, number], drawn, dom }
+        }),
+      idle: async () => {
+        while (timer !== undefined || saving || renders > 0) await new Promise((r) => setTimeout(r, 25))
+      },
+      saved: () => (note ?? { saved }).saved.sha,
+    }
     root.setAttribute("data-editing", "")
     // the page as it is, block by block, when it's of this text; else rendered afresh
-    if (art.dataset.editSha === saved.sha) view.dispatch({ effects: setBlocks.of(learn(view.state.doc, [...art.children] as HTMLElement[], true)) })
+    if (art.dataset.editSha === saved.sha) view.dispatch({ effects: setBlocks.of(learn(saved.text, [...art.children], true)) })
     else void render()
     // the cursor at the end, so the note opens drawn, all of it
     view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length) })
     view.focus()
   } else if (!on && note) {
+    const { backend } = note
     await leave()
-    // the page, once, as it is now
-    const doc = await fetchPage()
-    if (doc) await swapIn(doc)
+    await backend.close?.()
   }
   status()
 }
@@ -72,6 +118,7 @@ async function leave() {
   const { view, host } = note
   await save()
   note = null
+  window.basaltEdit = undefined
   root.removeAttribute("data-editing")
   view.destroy()
   host.remove()
@@ -100,6 +147,8 @@ document.addEventListener("astro:before-preparation", (e) => {
 
 /** a block's text → its drawn nodes: the same text, the same nodes */
 const drawn = new Map<string, Node[]>()
+/** which rendering a text's nodes came from (0: the page's own), for the edit proof */
+const renderedBy = new Map<string, number>()
 /** nodes rendered anew that haven't been started as a page's content is (tabs, diagrams, islands, code's controls) */
 const unstarted = new WeakSet<Node>()
 let starting = 0
@@ -116,15 +165,26 @@ interface Block {
   to: number
 }
 
-/** Takes in a rendering of `doc`: its top-level elements, each with the lines it came from. Its blocks, in `doc`. */
-function learn(doc: Text, elements: Element[], live = false): Block[] {
-  const found = new Map<string, { block: Block; nodes: Node[] }>()
+const parse = (html: string) => {
+  const t = document.createElement("template")
+  t.innerHTML = html
+  return [...t.content.children]
+}
+
+/**
+ * Takes in a rendering of `text` (its top-level elements, each with the
+ * lines it came from): the nodes for each block's text. Its blocks, in the
+ * note as it is now: where `text` isn't the note as it is now, the blocks
+ * whose lines are still there, word for word.
+ */
+function learn(text: string, elements: Element[], live = false): Block[] {
+  const lines = text.split("\n")
+  const found = new Map<string, { lines: [number, number]; nodes: Node[] }>()
   const add = (el: HTMLElement) => {
     const [a, b] = el.dataset.src!.split("-").map(Number)
-    if (!(a >= 1 && b >= a && b <= doc.lines)) return
-    const block = { from: doc.line(a).from, to: doc.line(b).to }
-    const key = doc.sliceString(block.from, block.to)
-    found.set(key, { block, nodes: [...(found.get(key)?.nodes ?? []), el] })
+    if (!(a >= 1 && b >= a && b <= lines.length)) return
+    const key = lines.slice(a - 1, b).join("\n")
+    found.set(key, { lines: [a, b], nodes: [...(found.get(key)?.nodes ?? []), el] })
   }
   for (const el of elements as HTMLElement[]) {
     if (!el.dataset?.src) continue
@@ -143,21 +203,33 @@ function learn(doc: Text, elements: Element[], live = false): Block[] {
     add(el)
   }
   // the frontmatter, as Obsidian's properties: a quiet line
-  const fm = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(doc.toString())
+  const fm = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(text)
   if (fm) {
     const props = document.createElement("div")
     props.className = "edit-properties"
-    props.textContent = fm[0].split("\n").length - 2 + " properties"
-    found.set(fm[0], { block: { from: 0, to: fm[0].length }, nodes: [props] })
+    props.textContent = `${fm[0].split("\n").length - 2} properties`
+    found.set(fm[0], { lines: [1, fm[0].split("\n").length], nodes: [props] })
   }
   // what's drawn for a text already stays drawn (an island running, a diagram drawn)
   for (const [key, { nodes }] of found) {
     if (!live && drawn.has(key)) continue
     drawn.set(key, nodes)
+    renderedBy.set(key, live ? 0 : rendering)
     if (!live) nodes.forEach((n) => unstarted.add(n))
   }
+  // where those lines are in the note as it is now
+  const doc = note?.view.state.doc ?? Text.of(lines)
+  const now = doc.toString()
+  const map = now === text ? null : lineMap(lines, now.split("\n"))
+  const blocks: Block[] = []
+  for (const [key, { lines: [a, b] }] of found) {
+    const [x, y] = map ? [map.first(a - 1) + 1, map.last(b - 1) + 1] : [a, b]
+    if (x < 1 || y > doc.lines) continue
+    const block = { from: doc.line(x).from, to: doc.line(y).to }
+    if (!map || doc.sliceString(block.from, block.to) === key) blocks.push(block)
+  }
   // one block a span, in order, none overlapping another
-  const blocks = [...found.values()].map((f) => f.block).sort((x, y) => x.from - y.from)
+  blocks.sort((p, q) => p.from - q.from)
   return blocks.filter((b, i) => i === 0 || b.from > blocks[i - 1].to)
 }
 
@@ -183,6 +255,7 @@ class Drawn extends WidgetType {
   toDOM(view: EditorView) {
     const box = document.createElement("div")
     box.className = "edit-drawn"
+    box.dataset.rendered = String(renderedBy.get(this.key) ?? 0)
     const nodes = drawn.get(this.key) ?? []
     box.append(...nodes)
     startDrawn(nodes)
@@ -209,6 +282,26 @@ const drawing = StateField.define<DecorationSet>({
   },
   provide: (f) => EditorView.decorations.from(f),
 })
+
+/** each drawn block says which lines of the note it is now (data-lines), for whatever drives the page (the edit proof) */
+const lines = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      this.mark(view)
+    }
+    update(u: ViewUpdate) {
+      this.mark(u.view)
+    }
+    mark(view: EditorView) {
+      const { doc } = view.state
+      for (const box of view.contentDOM.querySelectorAll<HTMLElement>(":scope > .edit-drawn")) {
+        const from = view.posAtDOM(box)
+        const block = view.state.field(blocks).find((b) => b.from === from)
+        if (block) box.dataset.lines = `${doc.lineAt(block.from).number}-${doc.lineAt(block.to).number}`
+      }
+    }
+  },
+)
 
 /** ↑ ↓ into a drawn block, not over it: the cursor goes to its edge, and it opens */
 const into = (forward: boolean) => (view: EditorView) => {
@@ -254,63 +347,102 @@ function offsetIn(box: HTMLElement, at: { clientX: number; clientY: number }, so
 
 // ---------- saving, and drawing what's new ----------
 
+/** a change of theirs (a save from elsewhere): not one of the edits being saved */
+const theirs = Annotation.define<boolean>()
+
+/** the block the cursor's in (or at the edge of), if it's in one */
+const blockAt = (state: EditorState) => {
+  const { head } = state.selection.main
+  return state.field(blocks).find((b) => b.from <= head && head <= b.to)
+}
+
 let timer: ReturnType<typeof setTimeout> | undefined
 const changed = EditorView.updateListener.of((u) => {
-  if (!u.docChanged) return
-  if (pending) pending.since = pending.since.compose(u.changes)
-  clearTimeout(timer)
-  timer = setTimeout(() => void save().then(render), 300)
+  const n = note
+  if (!n || n.view !== u.view) return
+  if (u.docChanged && !u.transactions.some((tr) => tr.annotation(theirs))) n.mine = n.mine.compose(u.changes)
+  if (n.backend.saveOn === "idle") {
+    if (!u.docChanged) return
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = undefined
+      void save().then(render)
+    }, 300)
+  } else if (u.selectionSet) {
+    // a block changed and left: saved (a commit, on GitHub)
+    const was = blockAt(u.startState)
+    const is = blockAt(u.state)
+    const left = was && (!is || is.from !== u.changes.mapPos(was.from))
+    if (left && u.state.doc.toString() !== n.saved.text) void save().then(render)
+  }
   status()
 })
 
 let saving: Promise<void> | null = null
 async function save(): Promise<void> {
   clearTimeout(timer)
-  if (!note) return
-  if (saving) return saving.then(save)
-  const text = note.view.state.doc.toString()
-  if (text === note.saved.text) return
+  timer = undefined
   const n = note
+  if (!n) return
+  if (saving) return saving.then(save)
+  const text = n.view.state.doc.toString()
+  if (text === n.saved.text) return
+  const base = n.saved
+  // what's typed from here on is saved next time
+  const sent = n.mine
+  n.mine = ChangeSet.empty(text.length)
+  let again = false
   saving = (async () => {
-    const res = await fetch("/__basalt/source", {
-      method: "PUT",
-      headers: { "content-type": "application/json", "x-basalt-edit": "1" },
-      body: JSON.stringify({ slug: n.slug, text, base: n.saved.sha }),
-    }).catch(() => undefined)
-    if (res?.status === 409) n.saved = await res.json() // changed elsewhere: ours goes over it, next save
-    else if (res?.ok) n.saved = { text, sha: (await res.json()).sha }
-    else status(say("editFailed", { error: String(res?.status ?? "offline") }))
+    try {
+      const res = await n.backend.save(text, base.sha)
+      if ("conflict" in res) {
+        rebase(n, base, sent, res.conflict)
+        again = true
+      } else n.saved = { text, sha: res.sha }
+    } catch (err) {
+      n.mine = sent.compose(n.mine)
+      status(say("editFailed", { error: (err as Error).message }))
+    }
   })().finally(() => (saving = null))
   await saving
   status()
+  if (again) await save()
 }
 
-/** a rendering on its way: the edits made since it was asked for */
-let pending: { since: ChangeSet } | null = null
+/**
+ * The note changed elsewhere since `base` (another editor, an agent, another
+ * commit): their changes go into the editor as changes of its own, over ours,
+ * so the cursor and everything typed stay where they are. Where both changed
+ * the same lines, ours come after theirs.
+ */
+function rebase(n: Note, base: Version, sent: ChangeSet, now: Version) {
+  const ours = sent.compose(n.mine)
+  const them = diff(base.text, now.text)
+  n.view.dispatch({ changes: them.map(ours), annotations: theirs.of(true) })
+  n.mine = ours.map(them, true)
+  n.saved = now
+}
+
+let rendering = 0
+/** renderings asked for and not yet in */
+let renders = 0
 async function render() {
-  if (!note) return
   const n = note
-  const doc = n.view.state.doc
-  const mine = (pending = { since: ChangeSet.empty(doc.length) })
-  const res = await fetch("/__basalt/render", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-basalt-edit": "1" },
-    body: JSON.stringify({ slug: n.slug, text: doc.toString() }),
-  }).catch(() => undefined)
-  if (!res?.ok || note !== n || pending !== mine) return
-  pending = null
-  const t = document.createElement("template")
-  t.innerHTML = (await res.json()).html
-  const fresh = learn(doc, [...t.content.children])
-  const moved = fresh.map((b) => ({ from: mine.since.mapPos(b.from, -1), to: mine.since.mapPos(b.to, 1) }))
-  n.view.dispatch({ effects: setBlocks.of(moved) })
-  // what's drawn anew is started the way a page's content is (tabs, diagrams, islands, code's controls)
+  if (!n) return
+  const text = n.view.state.doc.toString()
+  const mine = ++rendering
+  renders++
+  const html = await n.backend.render(text).catch(() => null)
+  renders--
+  // a rendering of what's typed by now may be on its way already
+  if (html === null || note !== n || mine !== rendering) return
+  hooks.learn(text, html)
 }
 
 document.addEventListener("keydown", (e) => {
   if (!note || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return
   e.preventDefault()
-  void save()
+  void save().then(render)
 })
 
 // ---------- the status, in the corner ----------
@@ -477,6 +609,7 @@ function extensions(): Extension[] {
     codeLines,
     blocks,
     drawing,
+    lines,
     changed,
     closeBrackets(),
     autocompletion({ override: [wikilinks], icons: false }),
