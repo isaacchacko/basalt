@@ -35,6 +35,28 @@ export const strings = {
   backlinks: "Linked from",
   theme: "Switch theme",
   source: "Show the markdown",
+  /** editing a page in place (client/editor.ts): the pencil, and the status in the corner */
+  edit: "Edit this page",
+  editing: "Editing",
+  editBlock: "Edit this block",
+  editAdd: "Add a block",
+  editSaving: "Saving…",
+  editPublishing: "Publishing…",
+  editUnpublished: "Not published yet",
+  editDeploying: "Deploying… {s}s",
+  editLive: "Live",
+  editFailed: "Couldn't save: {error}",
+  editSlowDeploy: "Published, but the deploy hasn't come back yet",
+  /** a built site's: connecting to GitHub, once */
+  editConnect: "Connect to GitHub",
+  editTokenHelp: "Edits are committed to {repo} with a fine-grained token that can read and write its contents. It's kept in this browser.",
+  editToken: "Token",
+  editMakeToken: "Make a token",
+  editCancel: "Cancel",
+  editConnectButton: "Connect",
+  editTokenWrong: "That token can't write to {repo}.",
+  /** the commit message of an edit */
+  editCommit: "Edit {path}",
   /** the feed's description, when the site gives none */
   feed: "The last {n} notes on {title}",
   /** the login page of a site with a password */
