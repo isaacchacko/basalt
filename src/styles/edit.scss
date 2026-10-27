@@ -21,9 +21,11 @@ $mobile: "(max-width: 800px)";
   display: none !important;
 }
 
-// no arrival (motion.scss) for the editor: it would rise into place, and be measured on its way
+// no arrival (motion.scss) for the editor: it would rise into place, and be measured on its way;
+// and the article's width, not a block's measure (basalt.scss): its blocks keep to that themselves
 :root[data-editing] article[data-edit-slug] > .edit-doc {
   animation: none !important;
+  max-width: none;
 }
 
 .edit-doc {

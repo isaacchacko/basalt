@@ -311,8 +311,10 @@ const startMargin = onPage((signal) => {
       notesAt.push([top - GAP, top + height + GAP])
       lowest = Math.max(lowest, top + height)
     }
-    // a note not in the page has no line to be beside (its block is open in the editor, or scrolled out of it)
-    for (const { note, copy } of copies) copy.hidden = !note.isConnected
+    // a note not in the page has no line to be beside: its block is open in the editor (editor.ts), or
+    // not drawn in it yet (still the page's own, hidden, till it's scrolled to)
+    const editing = root.hasAttribute("data-editing")
+    for (const { note, copy } of copies) copy.hidden = !note.isConnected || (editing && !note.closest(".edit-doc"))
     const wants = copies.map(({ note, copy }) => (copy.hidden ? 0 : levelWith(copy, anchorOf(note), column)))
     const deferred: number[] = []
     copies.forEach(({ note, copy }, i) => {

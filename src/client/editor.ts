@@ -23,6 +23,7 @@ import { tags } from "@lezer/highlight"
 import { lineMap } from "../lib/linemap"
 import { diff } from "./diff"
 import { startContent } from "./content"
+import { keysOf, textOf } from "./blocks"
 import { noteOf } from "./margin"
 import { devBackend, type Backend, type EditorHooks, type Version } from "./backend"
 
@@ -58,6 +59,8 @@ interface Note {
   mine: ChangeSet
   /** what's started in blocks drawn anew, till editing ends */
   started: AbortController
+  /** the file's lines end in \r\n: so they're written */
+  crlf: boolean
 }
 let note: Note | null = null
 
@@ -92,16 +95,18 @@ export async function setEditing(on: boolean) {
     host.setAttribute("data-edit-doc", "")
     art.append(host)
     const view = new EditorView({ parent: host, state: EditorState.create({ doc: saved.text, extensions: extensions() }) })
-    note = { backend, view, host, saved, mine: ChangeSet.empty(saved.text.length), started: new AbortController() }
+    note = { backend, view, host, saved, mine: ChangeSet.empty(view.state.doc.length), started: new AbortController(), crlf: saved.text.includes("\r\n") }
     window.basaltEdit = {
       view,
-      blocks: () =>
-        view.state.field(blocks).map((b) => {
+      blocks: () => {
+        const keys = keysIn(view.state)
+        return view.state.field(blocks).map((b, i) => {
           const dom = [...view.contentDOM.querySelectorAll<HTMLElement>(":scope > .edit-drawn")].find((box) => view.posAtDOM(box) === b.from) ?? null
           const drawn = view.state.field(drawing).iter(b.from).from === b.from
-          const layer = floats.get(view.state.sliceDoc(b.from, b.to))?.layer ?? null
+          const layer = floats.get(keys[i])?.layer ?? null
           return { ...b, lines: [view.state.doc.lineAt(b.from).number, view.state.doc.lineAt(b.to).number] as [number, number], drawn, dom, layer }
-        }),
+        })
+      },
       layerOf: (box) => [...floats.values()].find((f) => f.stand?.parentElement === box)?.layer ?? null,
       idle: async () => {
         while (timer !== undefined || saving || renders > 0) await new Promise((r) => setTimeout(r, 25))
@@ -216,7 +221,8 @@ function placed(box: HTMLElement, key: string) {
     if (!box.classList.contains("edit-spaced")) {
       // its own space above and below, as the page has it; then the editor's gaps are these (spaced)
       // (an aside's in the margin, not here, and a paragraph an embed was lifted out of is empty: no room)
-      const empty = (c: Element) => !c.checkVisibility() || !c.getBoundingClientRect().height
+      // nothing that shows: hidden, or a paragraph an embed was lifted out of (a rule's no height, but its margins are its space)
+      const empty = (c: Element) => !c.checkVisibility() || (c.matches("p") && !c.textContent!.trim() && !c.children.length)
       const stand = box.querySelector<HTMLElement>(":scope > .edit-stand")
       const inside = stand ? floats.get(key)!.layer : box
       if (stand) floated(note.view)
@@ -262,7 +268,8 @@ function edges(el: Element, side: "Top" | "Bottom") {
     const style = getComputedStyle(at)
     if (parseFloat(style[`padding${side}`]) || parseFloat(style[`border${side}Width`]) || style.display !== "block" || style.overflow !== "visible") return
     const child: Element | null = side === "Top" ? at.firstElementChild : at.lastElementChild
-    if (!child || !child.checkVisibility()) return
+    // only a block's margin goes out through its parent's edge (an image's, inline, doesn't)
+    if (!child || !child.checkVisibility() || getComputedStyle(child).display !== "block") return
     ;(child as HTMLElement).style[`margin${side}`] = "0"
     at = child
   }
@@ -334,14 +341,17 @@ const parse = (html: string) => {
  * note as it is now: where `text` isn't the note as it is now, the blocks
  * whose lines are still there, word for word.
  */
-function learn(text: string, elements: Element[], live = false): Block[] {
+function learn(file: string, elements: Element[], live = false): Block[] {
+  // the editor's lines end in \n, whatever the file's do (crlf)
+  const text = lf(file)
   const lines = text.split("\n")
-  const found = new Map<string, { lines: [number, number]; nodes: Node[] }>()
+  // each block's lines (the elements drawn from the same lines are one block: an embed lifted out of its paragraph)
+  const spans = new Map<string, { lines: [number, number]; nodes: Node[] }>()
   const add = (el: HTMLElement) => {
     const [a, b] = el.dataset.src!.split("-").map(Number)
     if (!(a >= 1 && b >= a && b <= lines.length)) return
-    const key = lines.slice(a - 1, b).join("\n")
-    found.set(key, { lines: [a, b], nodes: [...(found.get(key)?.nodes ?? []), el] })
+    const at = `${a}-${b}`
+    spans.set(at, { lines: [a, b], nodes: [...(spans.get(at)?.nodes ?? []), el] })
   }
   for (const el of elements as HTMLElement[]) {
     if (!el.dataset?.src) continue
@@ -360,42 +370,51 @@ function learn(text: string, elements: Element[], live = false): Block[] {
     add(el)
   }
   // the frontmatter: drawn as the page draws it, as the title above (a click on which opens it)
-  const fm = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(text)
-  if (fm) found.set(fm[0], { lines: [1, fm[0].split("\n").length], nodes: [] })
+  const fm = /^---\n[\s\S]*?\n---(?=\n|$)/.exec(text)
+  if (fm) spans.set(`1-${fm[0].split("\n").length}`, { lines: [1, fm[0].split("\n").length], nodes: [] })
   // what renders as nothing (a %%comment%%, a link's definition): drawn as nothing
   const covered = new Set<number>()
-  for (const { lines: [a, b] } of found.values()) for (let i = a; i <= b; i++) covered.add(i)
+  for (const { lines: [a, b] } of spans.values()) for (let i = a; i <= b; i++) covered.add(i)
   for (let i = 1; i <= lines.length; i++) {
     if (covered.has(i) || !lines[i - 1].trim()) continue
     let j = i
     while (j < lines.length && !covered.has(j + 1) && lines[j].trim()) j++
-    const key = lines.slice(i - 1, j).join("\n")
-    if (!found.has(key)) found.set(key, { lines: [i, j], nodes: [] })
+    spans.set(`${i}-${j}`, { lines: [i, j], nodes: [] })
     i = j
   }
-  // what's drawn for a text already stays drawn (an island running, a diagram drawn)
-  for (const [key, { nodes }] of found) {
+  // in the note's order, none overlapping another; each found by its text and which of that text it is (blocks.ts)
+  const ordered = [...spans.values()].sort((p, q) => p.lines[0] - q.lines[0]).filter((s, i, all) => i === 0 || s.lines[0] > all[i - 1].lines[1])
+  const texts = ordered.map(({ lines: [a, b] }) => lines.slice(a - 1, b).join("\n"))
+  const keys = keysOf(texts)
+  // what's drawn for a block already stays drawn (an island running, a diagram drawn)
+  ordered.forEach(({ nodes }, i) => {
+    const key = keys[i]
     if (live) heightOf.set(key, nodes.reduce((h, n) => h + (pageHeight.get(n as Element) ?? 0), 0))
-    if (!live && drawn.has(key)) continue
+    if (!live && drawn.has(key)) return
     drawn.set(key, nodes)
     renderedBy.set(key, live ? 0 : rendering)
     if (!live) nodes.forEach((n) => unstarted.add(n))
-  }
+  })
   // where those lines are in the note as it is now
   const doc = note?.view.state.doc ?? Text.of(lines)
   const now = doc.toString()
   const map = now === text ? null : lineMap(lines, now.split("\n"))
   const blocks: Block[] = []
-  for (const [key, { lines: [a, b] }] of found) {
+  ordered.forEach(({ lines: [a, b] }, i) => {
     const [x, y] = map ? [map.first(a - 1) + 1, map.last(b - 1) + 1] : [a, b]
-    if (x < 1 || y > doc.lines) continue
+    if (x < 1 || y > doc.lines) return
     const block = { from: doc.line(x).from, to: doc.line(y).to }
-    if (!map || doc.sliceString(block.from, block.to) === key) blocks.push(block)
-  }
-  // one block a span, in order, none overlapping another
-  blocks.sort((p, q) => p.from - q.from)
+    if (!map || doc.sliceString(block.from, block.to) === texts[i]) blocks.push(block)
+  })
   return blocks.filter((b, i) => i === 0 || b.from > blocks[i - 1].to)
 }
+
+/** the note's lines with \n, as the editor has them; and back as the file has them (\r\n, if it does) */
+const lf = (text: string) => text.replace(/\r\n/g, "\n")
+const asFile = (n: Note, text: string) => (n.crlf ? text.replace(/\n/g, "\r\n") : text)
+
+/** the key of each of the note's blocks, in order (blocks.ts) */
+const keysIn = (state: EditorState) => keysOf(state.field(blocks).map((b) => state.doc.sliceString(b.from, b.to)))
 
 const setBlocks = StateEffect.define<Block[]>()
 
@@ -466,6 +485,11 @@ function floatFor(view: EditorView, key: string, nodes: Node[]) {
       if (layer.moveBefore && n.isConnected) layer.moveBefore(n, null)
       else layer.append(n)
     }
+    // a player moved keeps playing, but its own controls don't come back (Chrome) till they're made again
+    for (const m of layer.querySelectorAll<HTMLMediaElement>("video[controls], audio[controls]")) {
+      m.controls = false
+      m.controls = true
+    }
     layer.addEventListener("mousedown", (e) => {
       const box = f!.stand?.parentElement
       if (box?.isConnected) reveal(view, box, key, e)
@@ -516,9 +540,10 @@ const drawing = StateField.define<DecorationSet>({
     const { doc, selection } = tr.state
     const at = tr.state.field(touched)
     const out = []
-    for (const b of tr.state.field(blocks)) {
+    const keys = keysIn(tr.state)
+    for (const [i, b] of tr.state.field(blocks).entries()) {
       if (at && selection.ranges.some((r) => r.from <= b.to && r.to >= b.from)) continue
-      const key = doc.sliceString(b.from, b.to)
+      const key = keys[i]
       if (drawn.has(key)) out.push(Decoration.replace({ widget: new Drawn(key), block: true }).range(b.from, b.to))
     }
     return Decoration.set(out)
@@ -663,7 +688,7 @@ function reveal(view: EditorView, box: HTMLElement, key: string, e: MouseEvent) 
   const target = e.target as Element
   if (e.button !== 0 || target.closest("a[href], button, input, select, textarea, summary, label, audio, video, iframe, [role=button], [role=tab], .island")) return
   e.preventDefault()
-  const at = view.posAtDOM(box) + offsetIn(box, e, key)
+  const at = view.posAtDOM(box) + offsetIn(box, e, textOf(key))
   // shift: the selection goes on to there
   const { anchor } = view.state.selection.main
   view.dispatch({ selection: e.shiftKey ? EditorSelection.range(anchor, at) : EditorSelection.cursor(at), userEvent: "select.pointer" })
@@ -735,7 +760,7 @@ const changed = EditorView.updateListener.of((u) => {
     const was = blockAt(u.startState)
     const is = blockAt(u.state)
     const left = was && (!is || is.from !== u.changes.mapPos(was.from))
-    if (left && u.state.doc.toString() !== n.saved.text) void save().then(render)
+    if (left && asFile(n, u.state.doc.toString()) !== n.saved.text) void save().then(render)
   }
   status()
 })
@@ -747,12 +772,12 @@ async function save(): Promise<void> {
   const n = note
   if (!n) return
   if (saving) return saving.then(save)
-  const text = n.view.state.doc.toString()
+  const text = asFile(n, n.view.state.doc.toString())
   if (text === n.saved.text) return
   const base = n.saved
   // what's typed from here on is saved next time
   const sent = n.mine
-  n.mine = ChangeSet.empty(text.length)
+  n.mine = ChangeSet.empty(n.view.state.doc.length)
   let again = false
   saving = (async () => {
     try {
@@ -779,7 +804,7 @@ async function save(): Promise<void> {
  */
 function rebase(n: Note, base: Version, sent: ChangeSet, now: Version) {
   const ours = sent.compose(n.mine)
-  const them = diff(base.text, now.text)
+  const them = diff(lf(base.text), lf(now.text))
   n.view.dispatch({ changes: them.map(ours), annotations: theirs.of(true) })
   n.mine = ours.map(them, true)
   n.saved = now
@@ -791,7 +816,7 @@ let renders = 0
 async function render() {
   const n = note
   if (!n) return
-  const text = n.view.state.doc.toString()
+  const text = asFile(n, n.view.state.doc.toString())
   const mine = ++rendering
   renders++
   const html = await n.backend.render(text).catch(() => null)
@@ -819,7 +844,7 @@ function status(message?: string) {
     el.setAttribute("role", "status")
     document.body.append(el)
   }
-  const unsaved = !!note && note.view.state.doc.toString() !== note.saved.text
+  const unsaved = !!note && asFile(note, note.view.state.doc.toString()) !== note.saved.text
   el.dataset.state = message ? "message" : saving || unsaved ? "saving" : "idle"
   el.textContent = message ?? (saving || unsaved ? say("editSaving") : say("editing"))
 }
