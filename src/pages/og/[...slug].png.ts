@@ -1,8 +1,8 @@
 // Each note's card for where it's shared, /og/<slug>.png (lib/socialimage.ts).
 import type { APIRoute } from "astro"
-import fs from "node:fs"
 import path from "node:path"
 import { registry } from "../../lib/registry"
+import { iconData } from "../../lib/icon"
 import { layout } from "../../lib/config"
 import { canDrawCards, cardPng } from "../../lib/socialimage"
 import { descriptionOf, hrefOf, notes, titleOf, type Note } from "../../layouts/notes"
@@ -32,10 +32,8 @@ async function draw(note: Note): Promise<Buffer | null> {
   const cfg = await layout()
   const href = hrefOf(note.id)
   // the site's own icon, where it has one (svg, png or jpeg), else Basalt's mark
-  const iconRel = site.config.icon?.replace(/^\/+/, "")
-  const iconFile = iconRel ? registry().files.find((f) => f.rel === iconRel) : undefined
-  const iconType = iconFile && { ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg" }[path.extname(iconFile.abs).toLowerCase()]
-  const icon = iconFile && iconType ? `data:${iconType};base64,${fs.readFileSync(iconFile.abs).toString("base64")}` : undefined
+  const data = iconData(site.config.icon, registry().files)
+  const icon = data && /^data:image\/(svg\+xml|png|jpeg);/.test(data) ? data : undefined
   return cardPng(
     {
       title: titleOf(note),

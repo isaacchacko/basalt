@@ -9,6 +9,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { MARK } from "../lib/icon.ts"
 
 const basalt = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 const password = crypto.randomBytes(18).toString("base64")
@@ -53,7 +54,7 @@ describe("a site behind a password", () => {
   }
 
   before(async () => {
-    const dir = siteWith({ password: true })
+    const dir = siteWith({ password: true, icon: "assets/card.png" })
     const result = build(dir)
     assert.strictEqual(result.status, 0, result.stderr)
     out = path.join(dir, ".vercel", "output")
@@ -87,6 +88,14 @@ describe("a site behind a password", () => {
     }
   })
 
+  test("the login page's tab shows the site's own icon, inline, since the file itself is behind the gate", async () => {
+    cookie = ""
+    const png = fs.readFileSync(path.join(basalt, "test", "fixtures", "site", "notes", "assets", "card.png")).toString("base64")
+    const html = await (await vercel("/")).text()
+    assert.ok(html.includes(`<link rel="icon" href="data:image/png;base64,${png}">`))
+    assert.match(html, /<title>Basalt<\/title>/)
+  })
+
   test("a wrong password is refused; the right one gets in, to all of it", async () => {
     const login = (given: string) =>
       vercel("/__basalt/login", { method: "POST", body: new URLSearchParams({ password: given, next: "/margin" }), redirect: "manual" })
@@ -103,6 +112,13 @@ describe("a site behind a password", () => {
     }
     const index = JSON.parse(await (await vercel("/static/contentIndex.json")).text())
     assert.ok(index.margin, "search's index, once in")
+  })
+
+  test("without an icon of its own, the login page's tab shows Basalt's mark", () => {
+    const dir = siteWith({ password: true })
+    assert.strictEqual(build(dir).status, 0)
+    const gate = fs.readFileSync(path.join(dir, ".vercel", "output", "functions", "_middleware.func", "index.js"), "utf8")
+    assert.ok(gate.includes(JSON.stringify(`<link rel="icon" href="${MARK}">`).slice(1, -1)))
   })
 
   test("a password written into basalt.json is refused", () => {

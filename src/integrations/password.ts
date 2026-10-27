@@ -22,8 +22,8 @@ import { stripTypeScriptTypes } from "node:module"
 import { fileURLToPath } from "node:url"
 import type { AstroIntegration } from "astro"
 import { layout, paletteCss, type LayoutConfig } from "../lib/config"
-import { loadSite } from "../lib/site"
-import { markSvg } from "../lib/mark"
+import { loadSite, walkSite } from "../lib/site"
+import { iconData, MARK } from "../lib/icon"
 import { say } from "../lib/strings"
 
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -38,10 +38,9 @@ function basaltPalette(): string {
   return [/^:root \{[^}]*\}/m, /^:root\[saved-theme="dark"\] \{[^}]*\}/m].map((re) => re.exec(scss)?.[0] ?? "").join("\n")
 }
 
-/** The login page, with {{message}} and {{next}} for the gate to fill. */
-export function loginPage(cfg: LayoutConfig, site: { title: string; locale?: string }): string {
+/** The login page, with {{message}} and {{next}} for the gate to fill; its tab's icon inline, as nothing behind the gate can be fetched. */
+export function loginPage(cfg: LayoutConfig, site: { title: string; locale?: string }, icon = MARK): string {
   const fonts = (cfg.theme.fonts?.load ?? []).map((href) => `<link rel="stylesheet" href="${esc(href)}">`).join("")
-  const icon = "data:image/svg+xml," + encodeURIComponent(markSvg())
   const css = `${basaltPalette()}
 ${paletteCss(cfg)}
 body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--light); color: var(--darkgray); font-family: var(--bodyFont); }
@@ -91,7 +90,7 @@ export default (request) => gate(request, { password: process.env.BASALT_PASSWOR
 }
 
 /** The built site, as Vercel's Build Output API with the gate in front: <site>/.vercel/output. */
-export function writeVercelOutput(siteDir: string, dist: string, cfg: LayoutConfig, site: { title: string; locale?: string }): string {
+export function writeVercelOutput(siteDir: string, dist: string, cfg: LayoutConfig, site: { title: string; locale?: string }, icon?: string): string {
   for (const f of UNBUILT) fs.rmSync(path.join(dist, f), { recursive: true, force: true })
   const out = path.join(siteDir, ".vercel", "output")
   fs.rmSync(out, { recursive: true, force: true })
@@ -99,7 +98,7 @@ export function writeVercelOutput(siteDir: string, dist: string, cfg: LayoutConf
   const fn = path.join(out, "functions", "_middleware.func")
   fs.mkdirSync(fn, { recursive: true })
   fs.writeFileSync(path.join(fn, ".vc-config.json"), JSON.stringify({ runtime: "edge", entrypoint: "index.js" }, null, 2))
-  fs.writeFileSync(path.join(fn, "index.js"), middleware(loginPage(cfg, site), say(cfg.strings, "wrongPassword")))
+  fs.writeFileSync(path.join(fn, "index.js"), middleware(loginPage(cfg, site, icon), say(cfg.strings, "wrongPassword")))
   const routes = [
     { src: "/(.*)", middlewarePath: "_middleware", continue: true },
     { handle: "filesystem" },
@@ -131,7 +130,8 @@ export function passwordGate(): AstroIntegration {
         const cfg = await layout()
         if (cfg.password !== true) return
         const site = loadSite()
-        const out = writeVercelOutput(site.dir, fileURLToPath(dir), cfg, site.config)
+        const icon = iconData(site.config.icon, walkSite(site))
+        const out = writeVercelOutput(site.dir, fileURLToPath(dir), cfg, site.config, icon)
         console.log(`basalt: the site behind its password, for Vercel: ${out}`)
       },
     },
