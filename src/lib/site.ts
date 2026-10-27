@@ -25,6 +25,8 @@ export interface SiteConfig {
   icon?: string
   locale: string
   content: { from: string; to?: string }[]
+  /** pages that edit their notes in place once built, committing to GitHub (edit.ts); a top-level "edit" */
+  edit?: true | { repo?: string; branch?: string }
 }
 
 export interface Site {
@@ -59,6 +61,7 @@ export function loadSite(dir = siteDir()): Site {
     icon: typeof raw.icon === "string" && raw.icon.trim() ? raw.icon.trim() : undefined,
     locale: raw.locale ?? "en-US",
     content: Array.isArray(raw.content) ? raw.content : [{ from: "notes" }],
+    edit: raw.edit === true || (raw.edit && typeof raw.edit === "object") ? raw.edit : undefined,
   }
   return { dir, config, work: path.join(dir, ".basalt", "astro") }
 }

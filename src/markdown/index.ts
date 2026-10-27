@@ -56,6 +56,7 @@ import { rehypeTabs } from "./tabs.ts"
 import { rehypeSealTranscludes, rehypeTables, rehypeTransclude, useTargets, type Target } from "./transclude.ts"
 import { rehypeNoteLists } from "./notelist.ts"
 import { loadSiteMarkdown, type TextTransform } from "./siteconfig.ts"
+import { rehypeSourceLines } from "./lines.ts"
 
 export type { TextTransform }
 
@@ -145,7 +146,9 @@ const basaltRehype: PluggableList = [
 const renderTime: PluggableList = [rehypeTransclude, rehypeNoteLists, rehypeTables, rehypeSealTranscludes]
 
 export const remarkPlugins: PluggableList = [...basaltRemark, ...site.remarkPlugins]
-export const rehypePlugins: PluggableList = [...basaltRehype, ...site.rehypePlugins, ...renderTime]
+// the lines each block came from, last of the note's own (lines.ts): not on
+// a note embedded in another (treeProcessor)
+export const rehypePlugins: PluggableList = [...basaltRehype, ...site.rehypePlugins, rehypeSourceLines, ...renderTime]
 
 /** the rest of unified()'s options (gfm, smartypants, remarkRehype) */
 export const processorOptions = {
