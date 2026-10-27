@@ -86,6 +86,10 @@ let starting: Promise<boolean> | null = null
 const article = (scope: ParentNode = document) => scope.querySelector<HTMLElement>("article[data-edit-slug]")
 const say = (key: string, vars: Record<string, string> = {}) => (words[key] ?? key).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all)
 const lines = (s: string) => s.split("\n")
+// a file with Windows line endings: its blocks are edited without them, and get them back in it
+const crlf = (text: string) => text.includes("\r\n")
+const slice = (text: string, from: number, to: number) => (to < from ? "" : lines(text).slice(from - 1, to).map((l) => l.replace(/\r$/, "")).join("\n"))
+const fileLines = (block: string, text: string) => (crlf(text) ? lines(block).map((l) => l + "\r") : lines(block))
 const setLive = (text: string) => {
   if (text === live) return
   live = text
@@ -229,7 +233,7 @@ async function open(target: HTMLElement, caret: { x: number; y: number } | "star
     from = all.at(-1) === "" ? all.length : all.length + 1
     to = from - 1
   }
-  const text = to < from ? "" : all.slice(from - 1, to).join("\n")
+  const text = slice(live, from, to)
   const host = document.createElement(target.matches("li") ? "li" : "div")
   host.className = header ? "edit-host edit-host-header" : "edit-host"
   host.setAttribute("data-astro-transition-persist", PERSIST)
@@ -328,11 +332,11 @@ function typed(view: EditorView) {
   if (!r || r.view !== view) return
   const all = lines(live)
   const text = view.state.doc.toString()
-  const doc = text === "" && r.to < r.from ? [] : lines(text)
+  const doc = text === "" && r.to < r.from ? [] : fileLines(text, live)
   if (r.append && doc.length) {
     // a new block at the end: a blank line keeps it apart from the one before it
     if (all[r.from - 2]?.trim()) {
-      all.splice(r.from - 1, 0, "")
+      all.splice(r.from - 1, 0, crlf(live) ? "\r" : "")
       r.from++
       r.to++
     }
@@ -400,7 +404,7 @@ function rebase(base: string, now: Version) {
   const from = toNow.first(baseFrom) + 1
   const to = baseTo < baseFrom ? from - 1 : toNow.last(baseTo) + 1
   const all = lines(now.text)
-  const doc = mine === "" ? [] : lines(mine)
+  const doc = mine === "" ? [] : fileLines(mine, now.text)
   all.splice(from - 1, to - from + 1, ...doc)
   setLive(all.join("\n"))
   r.from = from
@@ -700,7 +704,7 @@ async function learn() {
   saved = now
   setLive(now.text)
   if (r) {
-    const text = r.to < r.from ? "" : lines(live).slice(r.from - 1, r.to).join("\n")
+    const text = slice(live, r.from, r.to)
     if (text !== r.view.state.doc.toString()) r.view.dispatch({ changes: { from: 0, to: r.view.state.doc.length, insert: text } })
   }
 }

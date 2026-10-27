@@ -152,6 +152,12 @@ export function startMermaid(signal: AbortSignal) {
     figure.className = "diagram diagram-mermaid"
     figure.dataset.source = sourceOf(pre)
     figure.dataset.drawing = ""
+    // the lines it's written on, for editing in place (client/editor.ts)
+    for (const key of ["src", "srcSha"]) {
+      if (block.dataset[key] === undefined) continue
+      figure.dataset[key] = block.dataset[key]
+      delete block.dataset[key]
+    }
     const drawing = document.createElement("div")
     drawing.className = "mermaid-drawing"
     figure.append(drawing)
