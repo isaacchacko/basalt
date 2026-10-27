@@ -8,7 +8,9 @@
 // A commit's changes are against the commit before it that touched the note
 // (its base). Its blocks are paired with the base's by the lines they came
 // from (data-src, markdown/lines.ts) and a line diff of the two texts; inside
-// a pair, the words are diffed (jsdiff), and a list's items first.
+// a pair, the words are diffed (jsdiff), and a list's items first. A footnote
+// is known by its name, not its number: one put in before others renumbers
+// them, and that alone marks nothing.
 
 import path from "node:path"
 import { execFileSync } from "node:child_process"
@@ -96,16 +98,35 @@ function renderedAt(top: string, abs: string, c: Commit, render: (abs: string, t
 
 // ---------- the marks ----------
 
-type Block = { el: Element; from: number; to: number }
+/** a block, and the stretches of lines (0-based, inclusive) it came from */
+type Block = { el: Element; lines: [number, number][]; from: number; to: number }
 
 const lf = (s: string) => s.replace(/\r\n?/g, "\n")
 
-/** the top-level blocks of a rendering, with the lines (0-based, inclusive) of the text they came from */
+const linesOf = (e: Element): [number, number] | undefined => {
+  const m = /^(\d+)-(\d+)$/.exec(String(e.properties?.dataSrc ?? ""))
+  return m ? [Number(m[1]) - 1, Number(m[2]) - 1] : undefined
+}
+
+const isFootnotes = (e: Element) => e.tagName === "section" && (e.properties?.dataFootnotes !== undefined || [e.properties?.className].flat().includes("footnotes"))
+
+/** the footnotes' list: its items are the definitions */
+const footnoteList = (e: Element) => e.children.find((c): c is Element => c.type === "element" && (c.tagName === "ol" || c.tagName === "ul"))
+
+/**
+ * The top-level blocks of a rendering, with the lines of the text they came
+ * from. The footnotes came from each definition's own line, wherever it's
+ * written, not all the lines from the first to the last (the paragraphs
+ * between are theirs).
+ */
 function blocksOf(root: Root): Block[] {
   return root.children.flatMap((n) => {
     if (n.type !== "element") return []
-    const m = /^(\d+)-(\d+)$/.exec(String(n.properties?.dataSrc ?? ""))
-    return m ? [{ el: n, from: Number(m[1]) - 1, to: Number(m[2]) - 1 }] : []
+    const own = linesOf(n)
+    if (!own) return []
+    const items = isFootnotes(n) ? (footnoteList(n)?.children ?? []).flatMap((c) => (c.type === "element" && linesOf(c) ? [linesOf(c)!] : [])) : []
+    const lines = items.length ? items : [own]
+    return [{ el: n, lines, from: Math.min(...lines.map((l) => l[0])), to: Math.max(...lines.map((l) => l[1])) }]
   })
 }
 
@@ -141,7 +162,7 @@ export function marked(was: string, wasHtml: string, text: string, html: string)
   const blockAt = (blocks: Block[], n: number) => {
     const at = new Int32Array(n).fill(-1)
     blocks.forEach((k, i) => {
-      for (let l = k.from; l <= k.to && l < n; l++) at[l] = i
+      for (const [from, to] of k.lines) for (let l = from; l <= to && l < n; l++) at[l] = i
     })
     return at
   }
@@ -193,16 +214,45 @@ export function marked(was: string, wasHtml: string, text: string, html: string)
     if (!g.b.length) g.a.forEach((x) => put(x, placeOf(x)))
     else if (!g.a.length) g.b.forEach((y) => shown.set(b[y].el, [classed(b[y].el, "history-added")]))
     else {
-      const pairs = Math.min(g.a.length, g.b.length)
-      g.a.slice(pairs).forEach((x) => put(x, b[g.b[g.b.length - 1]].el))
-      g.b.slice(pairs).forEach((y) => shown.set(b[y].el, [classed(b[y].el, "history-added")]))
-      for (let k = 0; k < pairs; k++) {
-        const old = a[g.a[k]].el
-        const now = b[g.b[k]].el
+      // paired in order, kind with kind (a paragraph with a paragraph, the footnotes with the footnotes); the rest whole
+      const kind = (e: Element) => (isFootnotes(e) ? "footnotes" : e.tagName)
+      const ga = g.a.map((x) => kind(a[x].el))
+      const gb = g.b.map((y) => kind(b[y].el))
+      let x = 0
+      let y = 0
+      const pair = (i: number, j: number) => {
+        const old = a[i].el
+        const now = b[j].el
         if (old.tagName !== now.tagName || opaque(old) || opaque(now)) {
-          put(g.a[k], now)
+          put(i, now)
           shown.set(now, [classed(now, "history-added")])
         } else shown.set(now, [words(old, now)])
+      }
+      const parts = diffArrays(ga, gb)
+      for (let p = 0; p < parts.length; p++) {
+        const part = parts[p]
+        const n = part.count ?? part.value.length
+        if (part.removed && parts[p + 1]?.added) {
+          const m = parts[p + 1].count ?? parts[p + 1].value.length
+          for (let k = 0; k < Math.max(n, m); k++) {
+            if (k < n && k < m) pair(g.a[x + k], g.b[y + k])
+            else if (k < n) put(g.a[x + k], b[g.b[Math.min(y + m, g.b.length) - 1]].el)
+            else shown.set(b[g.b[y + k]].el, [classed(b[g.b[y + k]].el, "history-added")])
+          }
+          x += n
+          y += m
+          p++
+        } else if (part.removed) {
+          for (let k = 0; k < n; k++) put(g.a[x + k], g.b[y] !== undefined ? b[g.b[y]].el : b[g.b[g.b.length - 1]].el)
+          x += n
+        } else if (part.added) {
+          for (let k = 0; k < n; k++) shown.set(b[g.b[y + k]].el, [classed(b[g.b[y + k]].el, "history-added")])
+          y += n
+        } else {
+          for (let k = 0; k < n; k++) pair(g.a[x + k], g.b[y + k])
+          x += n
+          y += n
+        }
       }
     }
   }
@@ -218,9 +268,14 @@ export function marked(was: string, wasHtml: string, text: string, html: string)
   return toHtml({ type: "root", children })
 }
 
-/** `now`, with the words it has that `old` hadn't in <ins>, and those it lost in <del>; a list item by item */
+/** `now`, with the words it has that `old` hadn't in <ins>, and those it lost in <del>; a list item by item, the footnotes too */
 function words(old: Element, now: Element): Element {
   if ((now.tagName === "ul" || now.tagName === "ol") && old.tagName === now.tagName) return items(old, now)
+  if (isFootnotes(old) && isFootnotes(now)) {
+    const was = footnoteList(old)
+    const is = footnoteList(now)
+    if (was && is && was.tagName === is.tagName) return { ...now, children: now.children.map((c) => (c === is ? items(was, is) : c)) }
+  }
   return inline(old, now)
 }
 
@@ -229,7 +284,9 @@ function items(old: Element, now: Element): Element {
   const li = (e: Element) => e.children.filter((c): c is Element => c.type === "element" && c.tagName === "li")
   const was = li(old)
   const is = li(now)
-  const parts = diffArrays(was.map((e) => toString(e).trim()), is.map((e) => toString(e).trim()))
+  // an item by its text; a footnote's definition by its name, its words compared once it's paired
+  const key = (e: Element) => (e.properties?.id ? `#${e.properties.id}` : toString(e).trim())
+  const parts = diffArrays(was.map(key), is.map(key))
   const out: Element[] = []
   let x = 0
   let y = 0
@@ -255,7 +312,7 @@ function items(old: Element, now: Element): Element {
       for (let k = 0; k < n; k++) out.push(classed(is[y + k], "history-added"))
       y += n
     } else {
-      for (let k = 0; k < n; k++) out.push(is[y + k])
+      for (let k = 0; k < n; k++) out.push(toString(was[x + k]) === toString(is[y + k]) ? is[y + k] : inline(was[x + k], is[y + k]))
       x += n
       y += n
     }
@@ -271,10 +328,22 @@ const blank = (s: string) => !s.trim()
 /** a sidenote or a margin note in a paragraph (markdown/margin.ts): the margin shows it, beside its line */
 const isNote = (e: Element) => [e.properties?.className].flat().some((k) => k === "sidenote" || k === "marginnote")
 
-/** a block's text, its texts, and the notes in it with where they are in its text (theirs isn't in it) */
+/** a footnote's reference, by the footnote's name: its number is only where it falls among the others */
+const refName = (e: Element): string | undefined => {
+  if (e.tagName !== "sup") return undefined
+  const a = e.children.find((c): c is Element => c.type === "element" && c.tagName === "a")
+  const name = a?.properties?.dataSidenote ?? (a?.properties?.dataFootnoteRef !== undefined ? a?.properties?.href : undefined)
+  return name === undefined ? undefined : String(name)
+}
+
+/** a note's number (markdown/margin.ts): its footnote's, which another put in before it changes */
+const isNumber = (e: Element) => [e.properties?.className].flat().includes("sidenote-number")
+
+/** a block's text, its texts, and the notes and footnote references in it with where they are in its text (theirs isn't in it) */
 function walk(block: Element) {
   const texts: Text[] = []
   const notes: { el: Element; at: number }[] = []
+  const refs: { el: Element; at: number; name: string }[] = []
   let text = ""
   const go = (e: Element) => {
     for (const c of e.children) {
@@ -282,13 +351,15 @@ function walk(block: Element) {
         texts.push(c)
         text += c.value
       } else if (c.type === "element") {
+        const name = refName(c)
         if (isNote(c)) notes.push({ el: c, at: text.length })
-        else go(c)
+        else if (name !== undefined) refs.push({ el: c, at: text.length, name })
+        else if (!isNumber(c)) go(c)
       }
     }
   }
   go(block)
-  return { texts, notes, text }
+  return { texts, notes, refs, text }
 }
 
 type Gone = { at: number; value?: string; el?: Element }
@@ -369,6 +440,13 @@ function inline(old: Element, now: Element): Element {
       y += n
     }
   }
+  // a footnote's reference: one in both as it is (renumbered or not), one new marked, one gone struck where it was
+  const ins = (value: string): Element => ({ type: "element", tagName: "ins", properties: {}, children: [{ type: "text", value }] })
+  const had = new Set(was.refs.map((r) => r.name))
+  const has = new Set(is.refs.map((r) => r.name))
+  for (const r of was.refs) if (!has.has(r.name)) gone.push({ at: moved(r.at), value: toString(r.el) })
+  const markRef = (e: Element): Element => ({ ...e, children: e.children.map((c) => (c.type === "text" ? ins(c.value) : c.type === "element" ? markRef(c) : c)) })
+  for (const r of is.refs) if (!had.has(r.name)) instead.set(r.el, markRef(r.el))
   // a removal goes in the text with words in it that it's in, or at the end of (not into the start of
   // the next: a footnote's number, a link), else the first after it (not between a list's items);
   // words struck before a note struck at the same place (its number, then it)
@@ -390,7 +468,6 @@ function inline(old: Element, now: Element): Element {
     const struck: Element = { type: "element", tagName: "del", properties: {}, children: [{ type: "text", value: words }] }
     return [...(lead ? [{ type: "text" as const, value: " " }] : []), struck, ...(trail ? [{ type: "text" as const, value: " " }] : [])]
   }
-  const ins = (value: string): Element => ({ type: "element", tagName: "ins", properties: {}, children: [{ type: "text", value }] })
   const marks = (t: Text): ElementContent[] => {
     const s = starts.get(t)!
     const e = s + t.value.length
@@ -421,7 +498,7 @@ function inline(old: Element, now: Element): Element {
   }
   const rewrite = (e: Element): Element => ({
     ...e,
-    children: e.children.flatMap((c) => (c.type === "text" ? marks(c) : c.type === "element" ? [isNote(c) ? (instead.get(c) ?? c) : rewrite(c)] : [c])),
+    children: e.children.flatMap((c) => (c.type === "text" ? marks(c) : c.type === "element" ? [instead.get(c) ?? (isNote(c) || isNumber(c) || refName(c) !== undefined ? c : rewrite(c))] : [c])),
   })
   const out = rewrite(now)
   if (left.length) out.children.push(...left.flatMap(del))
