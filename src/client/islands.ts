@@ -205,8 +205,8 @@ window.addEventListener("message", (e) => {
   }
 })
 
-function liveHtml(signal: AbortSignal) {
-  const frames = document.querySelectorAll<HTMLIFrameElement>("iframe.island-html")
+function liveHtml(signal: AbortSignal, root: ParentNode) {
+  const frames = root.querySelectorAll<HTMLIFrameElement>("iframe.island-html")
   if (!frames.length) return
   frames.forEach((frame) => frame.addEventListener("load", () => sendTheme(frame), { signal }))
   onTheme(() => frames.forEach(sendTheme), signal)
@@ -240,9 +240,9 @@ function followParentTheme(signal: AbortSignal) {
   signal.addEventListener("abort", () => watch.disconnect())
 }
 
-export function startIslands(signal: AbortSignal) {
-  if (document.querySelector("[data-island-frame]")) followParentTheme(signal)
-  for (const el of document.querySelectorAll<HTMLElement>(".island[data-island], [data-island-frame]")) {
+export function startIslands(signal: AbortSignal, root: ParentNode = document) {
+  if (root === document && document.querySelector("[data-island-frame]")) followParentTheme(signal)
+  for (const el of root.querySelectorAll<HTMLElement>(".island[data-island], [data-island-frame]")) {
     const name = el.dataset.island!
     const running = hot.mounted.get(el)
     // the same page again, after a hot swap of something else (or an island
@@ -258,5 +258,5 @@ export function startIslands(signal: AbortSignal) {
     tie(signal, el, mine)
     schedule(el, mine.signal)
   }
-  liveHtml(signal)
+  liveHtml(signal, root)
 }

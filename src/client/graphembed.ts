@@ -71,8 +71,8 @@ async function drawGraph(el: HTMLElement, data: GraphData, signal: AbortSignal) 
   })
 }
 
-export function startGraphs(signal: AbortSignal) {
-  for (const el of document.querySelectorAll<HTMLElement>(".graph-embed[data-graph]")) {
+export function startGraphs(signal: AbortSignal, root: ParentNode = document) {
+  for (const el of root.querySelectorAll<HTMLElement>(".graph-embed[data-graph]")) {
     if (el.closest(".popover, .preview, [data-preview]")) continue
     let data: GraphData
     try {

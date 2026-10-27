@@ -386,8 +386,8 @@ async function mount(viewer: HTMLElement, signal: AbortSignal) {
   )
 }
 
-export function startPdfs(signal: AbortSignal) {
-  const viewers = document.querySelectorAll<HTMLElement>(".pdf-viewer[data-pdf]")
+export function startPdfs(signal: AbortSignal, root: ParentNode = document) {
+  const viewers = root.querySelectorAll<HTMLElement>(".pdf-viewer[data-pdf]")
   if (!viewers.length) return
   const soon = new IntersectionObserver(
     (entries) => {

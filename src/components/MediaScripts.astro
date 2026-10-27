@@ -1,7 +1,6 @@
 ---
 // The client side of embeds: the viewer, the pdf viewer, islands, code files,
-// diagrams. Rendered once per page. Each part starts on astro:page-load and
-// stops when the page goes (its AbortSignal aborts on astro:before-swap).
+// diagrams (client/content.ts starts them). Rendered once per page.
 import "../styles/embeds.scss"
 import "../styles/viewer.scss"
 import "../styles/pdf.scss"
@@ -16,48 +15,5 @@ import "../styles/tabs.scss"
 ---
 
 <script>
-  import { startEmbeds } from "../client/embeds"
-  import { startViewer } from "../client/viewer"
-  import { startCodeControls } from "../client/codefile"
-  import { startCodeReach } from "../client/codereach"
-  import { startTabs } from "../client/tabs"
-  import "../client/copy"
-  import "../client/sound"
-  import { startPdfs } from "../client/pdf"
-  import { startIslands as islandsAtLoad } from "../client/islands"
-  import { startGraphs } from "../client/graphembed"
-  import { startMermaid } from "../client/mermaid"
-
-  let startIslands = islandsAtLoad
-  const parts = [startEmbeds, startCodeControls, startTabs, startCodeReach, startPdfs, startIslands, startGraphs, startMermaid, startViewer]
-  let page: AbortController | null = null
-
-  function start() {
-    page?.abort()
-    page = new AbortController()
-    for (const part of parts) {
-      try {
-        part(page.signal)
-      } catch (err) {
-        console.error("basalt:", part.name, err)
-      }
-    }
-  }
-
-  document.addEventListener("astro:before-swap", () => page?.abort())
-
-  // an island edited in dev: the islands module is swapped (it unmounts its
-  // islands as it goes), and the new one mounts them again, on this same page
-  if (import.meta.hot) {
-    import.meta.hot.accept("../client/islands", (next) => {
-      if (!next || !page) return
-      const at = parts.indexOf(startIslands)
-      parts[at] = startIslands = next.startIslands
-      startIslands(page.signal)
-      document.dispatchEvent(new CustomEvent("basalt:islands-swapped"))
-    })
-  }
-  document.addEventListener("astro:page-load", start)
-  // without the client router there's no astro:page-load: this page is the only one
-  if (!document.querySelector('[name="astro-view-transitions-enabled"]')) start()
+  import "../client/content"
 </script>

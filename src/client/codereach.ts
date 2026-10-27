@@ -42,9 +42,9 @@ export function markMore(block: HTMLElement) {
   block.classList.toggle("has-more", wider && at.room >= 8)
 }
 
-export function startCodeReach(signal: AbortSignal) {
+export function startCodeReach(signal: AbortSignal, root: ParentNode = document) {
   if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return
-  for (const pre of document.querySelectorAll<HTMLElement>("article pre")) {
+  for (const pre of root.querySelectorAll<HTMLElement>("article pre")) {
     if (pre.querySelector(":scope > code.mermaid")) continue
     const block = pre.closest<HTMLElement>("figure[data-rehype-pretty-code-figure]") ?? pre
     markMore(block)

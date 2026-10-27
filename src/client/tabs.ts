@@ -16,8 +16,8 @@ function stepper(cls: string, label: string, glyph: string) {
   return button
 }
 
-export function startTabs(signal: AbortSignal) {
-  for (const group of document.querySelectorAll<HTMLElement>("article .tabs")) {
+export function startTabs(signal: AbortSignal, root: ParentNode = document) {
+  for (const group of root.querySelectorAll<HTMLElement>("article .tabs")) {
     if (group.closest(NOT_THIS_PAGES) || group.hasAttribute("data-tabbing")) continue
     const tabs = [...group.querySelectorAll<HTMLElement>(":scope > .tab")]
     const bar = document.createElement("div")

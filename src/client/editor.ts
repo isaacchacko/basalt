@@ -21,6 +21,7 @@ import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, t
 import { tags } from "@lezer/highlight"
 import { lineMap } from "../lib/linemap"
 import { diff } from "./diff"
+import { startContent } from "./content"
 import { devBackend, type Backend, type EditorHooks, type Version } from "./backend"
 
 declare global {
@@ -51,6 +52,8 @@ interface Note {
   saved: Version
   /** the edits made since it was saved */
   mine: ChangeSet
+  /** what's started in blocks drawn anew, till editing ends */
+  started: AbortController
 }
 let note: Note | null = null
 
@@ -84,7 +87,7 @@ export async function setEditing(on: boolean) {
     host.setAttribute("data-edit-doc", "")
     art.append(host)
     const view = new EditorView({ parent: host, state: EditorState.create({ doc: saved.text, extensions: extensions() }) })
-    note = { backend, view, host, saved, mine: ChangeSet.empty(saved.text.length) }
+    note = { backend, view, host, saved, mine: ChangeSet.empty(saved.text.length), started: new AbortController() }
     window.basaltEdit = {
       view,
       blocks: () =>
@@ -115,8 +118,9 @@ export async function setEditing(on: boolean) {
 
 async function leave() {
   if (!note) return
-  const { view, host } = note
+  const { view, host, started } = note
   await save()
+  started.abort()
   note = null
   window.basaltEdit = undefined
   root.removeAttribute("data-editing")
@@ -151,13 +155,16 @@ const drawn = new Map<string, Node[]>()
 const renderedBy = new Map<string, number>()
 /** nodes rendered anew that haven't been started as a page's content is (tabs, diagrams, islands, code's controls) */
 const unstarted = new WeakSet<Node>()
-let starting = 0
-/** Starts the page's content again once what's just been drawn is in it (Basalt's parts start over the whole page). */
-function startDrawn(nodes: Node[]) {
-  if (!nodes.some((n) => unstarted.has(n))) return
-  nodes.forEach((n) => unstarted.delete(n))
-  cancelAnimationFrame(starting)
-  starting = requestAnimationFrame(() => document.dispatchEvent(new Event("astro:page-load")))
+/** Starts what's drawn anew in a block once it's in the page (content.ts), till editing ends. */
+function startDrawn(box: HTMLElement, key: string) {
+  if (![...box.childNodes].some((n) => unstarted.has(n))) return
+  box.childNodes.forEach((n) => unstarted.delete(n))
+  requestAnimationFrame(() => {
+    if (!box.isConnected || !note) return
+    startContent(note.started.signal, box)
+    // what the parts made of it (a diagram drawn in place of its code) is what's drawn from now on
+    drawn.set(key, [...box.childNodes])
+  })
 }
 
 interface Block {
@@ -256,11 +263,14 @@ class Drawn extends WidgetType {
     const box = document.createElement("div")
     box.className = "edit-drawn"
     box.dataset.rendered = String(renderedBy.get(this.key) ?? 0)
-    const nodes = drawn.get(this.key) ?? []
-    box.append(...nodes)
-    startDrawn(nodes)
+    box.append(...(drawn.get(this.key) ?? []))
+    startDrawn(box, this.key)
     box.addEventListener("mousedown", (e) => reveal(view, box, this.key, e))
     return box
+  }
+  destroy(box: HTMLElement) {
+    // drawn again later as it is now (a tab chosen, a diagram drawn)
+    if (box.childNodes.length) drawn.set(this.key, [...box.childNodes])
   }
   ignoreEvent() {
     return true
