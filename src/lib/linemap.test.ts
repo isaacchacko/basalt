@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
-import { test } from "node:test"
-import { commonLines, lineMap } from "./linemap.ts"
+import { describe, test } from "node:test"
+import { commonLines, lineMap, merge } from "./linemap.ts"
 
 const lines = (s: string) => s.split("\n")
 
@@ -41,4 +41,43 @@ test("every line maps somewhere in a text that's entirely different", () => {
     assert.equal(map.first(i), 0)
     assert.equal(map.last(i), 1)
   }
+})
+
+describe("merge: an edit made on one version, onto one committed meanwhile", () => {
+  const base = "# Plants\n\nBasil.\n\n- tomatoes\n- peppers\n\nFerns."
+  const m = (mine: string, theirs: string) => merge(lines(base), lines(mine), lines(theirs)).join("\n")
+
+  test("edits to different lines are both kept", () => {
+    assert.equal(m(base.replace("Basil.", "Basil, lots."), base.replace("Ferns.", "Ferns, shaded.")), "# Plants\n\nBasil, lots.\n\n- tomatoes\n- peppers\n\nFerns, shaded.")
+  })
+
+  test("the same line changed by both: mine", () => {
+    assert.equal(m(base.replace("Basil.", "Mint."), base.replace("Basil.", "Sage.")), base.replace("Basil.", "Mint."))
+  })
+
+  test("they add lines above the one I edit", () => {
+    const theirs = base.replace("# Plants\n", "# Plants\n\nIntro.\n")
+    assert.equal(m(base.replace("Ferns.", "Moss."), theirs), theirs.replace("Ferns.", "Moss."))
+  })
+
+  test("I add a block at the end, they edit the top", () => {
+    assert.equal(m(base + "\n\nNew.", base.replace("# Plants", "# Garden")), base.replace("# Plants", "# Garden") + "\n\nNew.")
+  })
+
+  test("they delete a block I didn't touch, I edit another", () => {
+    const theirs = base.replace("- tomatoes\n- peppers\n\n", "")
+    assert.equal(m(base.replace("Basil.", "Thyme."), theirs), theirs.replace("Basil.", "Thyme."))
+  })
+
+  test("nothing changed: the base; only they changed it: theirs; only I did: mine", () => {
+    assert.equal(m(base, base), base)
+    const theirs = base.replace("peppers", "chillies")
+    assert.equal(m(base, theirs), theirs)
+    assert.equal(m(theirs, base), theirs)
+  })
+
+  test("empty texts", () => {
+    assert.deepEqual(merge([""], [""], [""]), [""])
+    assert.equal(merge([""], ["a"], [""]).join("\n"), "a")
+  })
 })
