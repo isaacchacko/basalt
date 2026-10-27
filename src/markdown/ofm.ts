@@ -118,6 +118,11 @@ export function ofmText(src: string): string {
       const displayAnchor = anchor ? `#${blockRef}${anchor.trim().replace(/^#+/, "")}` : ""
       const displayAlias = rawAlias ?? rawHeader?.replace("#", "|") ?? ""
       const embedDisplay = value.startsWith("!") ? "!" : ""
+      // [[spotify:<link>|a caption]]: a song's card (spotify.ts)
+      if (rawFp?.startsWith("spotify:")) {
+        const caption = (rawAlias ?? "").replace(/^\\?\|/, "").trim()
+        return `<spotify src="${escapeAttr(rawFp.slice("spotify:".length).trim())}">${caption.replace(/</g, "&lt;")}</spotify>`
+      }
       if (rawFp?.match(externalLinkRegex)) {
         return `${embedDisplay}[${displayAlias.replace(/^\|/, "")}](${rawFp})`
       }

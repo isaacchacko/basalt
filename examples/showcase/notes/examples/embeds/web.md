@@ -15,6 +15,14 @@ A video is just its picture until you press play, so a page with five of them do
 
 Vimeo, Spotify and CodePen links work the same way.
 
+## A song
+
+A song (or an album) can be a card instead of a player: its cover, its name, the artist and the album, with a caption under it. Say what you were listening to as you wrote.
+
+`[[spotify:https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC|playing while I wrote this]]`
+
+[[spotify:https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC|playing while I wrote this]]
+
 ## A post
 
 Until the post's own script loads, or if it never does, this is a quotation with a link.

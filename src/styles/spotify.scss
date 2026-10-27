@@ -1,0 +1,79 @@
+// [[spotify:…]]: a song's card, its cover, name, artist and album, and the
+// caption under it (src/markdown/spotify.ts)
+
+.basalt-song {
+  display: block;
+  margin: 1.2rem 0;
+}
+
+a.basalt-song-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  max-width: 26rem;
+  padding: 0.55rem;
+  border: 1px solid var(--lightgray);
+  border-radius: 8px;
+  background: var(--light);
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--secondary);
+    color: inherit;
+  }
+
+  &.basalt-song-bare {
+    padding: 0.55rem 0.9rem;
+  }
+}
+
+img.basalt-song-cover {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  margin: 0;
+  border-radius: 4px;
+  background: var(--lightgray);
+}
+
+.basalt-song-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+
+  & > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.basalt-song-name {
+  font-family: var(--titleFont);
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.basalt-song-artist {
+  font-size: 0.9rem;
+  color: var(--darkgray);
+}
+
+.basalt-song-album {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--gray);
+}
+
+.basalt-song-caption {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--gray);
+}

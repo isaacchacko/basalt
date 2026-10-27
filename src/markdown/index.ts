@@ -22,6 +22,7 @@
 import { rehypeThemedMedia } from "./themed.ts"
 import { rehypeCopy } from "./copy.ts"
 import { rehypeSound } from "./sound.ts"
+import { rehypeSpotify } from "./spotify.ts"
 import fs from "node:fs"
 import type { PluggableList } from "unified"
 import { unified } from "unified"
@@ -130,6 +131,8 @@ const basaltRehype: PluggableList = [
   ],
   rehypeLinks,
   () => rehypeEmbeds({ web: true, files: true, lightbox: true }),
+  // [[spotify:…]], a song's card: after the links, so its own isn't marked external
+  rehypeSpotify,
   // after a code file's bar is made
   rehypeCodeTitles,
   // `> [!tab]` callouts in a row take turns

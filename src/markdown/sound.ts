@@ -13,7 +13,8 @@
 // · Year"; the cover), fetched at build time with no key, once: it and the
 // cover are kept in the site's cache (cache/spotify.json, cache/covers/), and
 // the cover is served from the site (src/pages/basalt/cover/[file].ts), not
-// Spotify's. Offline, a clip still plays; its card names only the word.
+// Spotify's. Offline, a clip still plays; its card names only the word. An
+// album's page is read the same way, for [[spotify:…]] (spotify.ts).
 // The click and the card are src/client/sound.ts.
 
 import fs from "node:fs"
@@ -40,30 +41,51 @@ export function splitDescription(desc: string): { artist?: string; album?: strin
   return { artist: parts[0] || undefined, album: parts[1] || undefined, year: parts.at(-1)?.match(/^\d{4}$/)?.[0] }
 }
 
-export const trackId = (url: string) => url.match(/open\.spotify\.com\/(?:intl-[\w-]+\/)?track\/([A-Za-z0-9]+)/)?.[1]
+export type SpotifyKind = "track" | "album"
+
+/** A Spotify link's kind and id, when it's a song or an album. */
+export function spotifyItem(url: string): { kind: SpotifyKind; id: string } | undefined {
+  const m = url.match(/open\.spotify\.com\/(?:intl-[\w-]+\/)?(track|album)\/([A-Za-z0-9]+)/)
+  return m ? { kind: m[1] as SpotifyKind, id: m[2] } : undefined
+}
+
+/** A track's or an album's page, as a Track (an album's is its name, artist and year). */
+export function trackOf(kind: SpotifyKind, url: string, html: string): Track | undefined {
+  const title = og(html, "title")
+  if (!title) return undefined
+  const desc = unescape(og(html, "description") ?? "")
+  if (kind === "track") return { title: unescape(title), url, ...splitDescription(desc) }
+  // "Listen to <name> - Album by <artist> | Spotify"; "Artist · album · Year · N songs"
+  const [artist, , year] = desc.split(" · ").map((p) => p.trim())
+  return {
+    title: unescape(title).replace(/^Listen to (.+) - [\w ]+ by .+ \| Spotify$/, "$1"),
+    url,
+    ...(artist ? { artist } : {}),
+    ...(/^\d{4}$/.test(year ?? "") ? { year } : {}),
+  }
+}
 
 const pending = new Map<string, Promise<Track | undefined>>()
 
-/** The song a Spotify track url is, from the cache or its page. */
+/** The song (or album) a Spotify url is, from the cache or its page. */
 export function track(url: string): Promise<Track | undefined> {
-  const id = trackId(url)
-  if (!id) return Promise.resolve(undefined)
-  if (!pending.has(id)) pending.set(id, fetchTrack(id).catch(() => undefined))
-  return pending.get(id)!
+  const item = spotifyItem(url)
+  if (!item) return Promise.resolve(undefined)
+  if (!pending.has(item.id)) pending.set(item.id, fetchTrack(item.kind, item.id).catch(() => undefined))
+  return pending.get(item.id)!
 }
 
-async function fetchTrack(id: string): Promise<Track | undefined> {
+async function fetchTrack(kind: SpotifyKind, id: string): Promise<Track | undefined> {
   const cacheDir = path.join(reg().site.work, "cache")
   const cacheFile = path.join(cacheDir, "spotify.json")
   const cache: Record<string, Track> = fs.existsSync(cacheFile) ? JSON.parse(fs.readFileSync(cacheFile, "utf8")) : {}
   if (cache[id]) return cache[id]
-  const url = `https://open.spotify.com/track/${id}`
+  const url = `https://open.spotify.com/${kind}/${id}`
   const res = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(8000) })
   if (!res.ok) return undefined
   const html = await res.text()
-  const title = og(html, "title")
-  if (!title) return undefined
-  const found: Track = { title: unescape(title), url, ...splitDescription(unescape(og(html, "description") ?? "")) }
+  const found = trackOf(kind, url, html)
+  if (!found) return undefined
   // the cover at 300px (Spotify's og:image is the 640px one): a card shows it small
   const image = og(html, "image")?.replace("ab67616d0000b273", "ab67616d00001e02")
   if (image) {
