@@ -186,7 +186,9 @@ function scaffold() {
 
 /** Astro prints a JSON line about the background server; say it plainly, with Basalt's commands */
 function dev() {
-  const result = run(["dev", ...(flags.port ? ["--port", String(flags.port)] : [])], ["ignore", "pipe", "inherit"])
+  // in the background, always: Astro backgrounds itself only for an agent, and
+  // for a person it would serve in the foreground, its output piped away here
+  const result = run(["dev", "--background", "--json", ...(flags.port ? ["--port", String(flags.port)] : [])], ["ignore", "pipe", "inherit"])
   const said = []
   for (const line of (result.stdout ?? "").split("\n")) {
     if (!line.trim()) continue
