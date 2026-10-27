@@ -737,7 +737,9 @@ const reach = EditorView.updateListener.of((u) => {
     setTimeout(() => {
       if (view.state.selection.main.head !== head || tries++ > 8) return
       const at = view.coordsAtPos(head)
-      if (at && at.top >= 0 && at.bottom <= innerHeight) return
+      // on screen, and not under the find bar (it stays at the window's top)
+      const top = Math.max(0, view.dom.querySelector(".cm-panels-top")?.getBoundingClientRect().bottom ?? 0)
+      if (at && at.top >= top && at.bottom <= innerHeight) return
       view.dispatch({ effects: EditorView.scrollIntoView(head, { y: "center" }) })
       check()
     }, 60)
