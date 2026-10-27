@@ -97,6 +97,18 @@ export default defineConfig({
       },
     },
     // found up front, so a lazy import of one doesn't fail after Vite re-optimises
-    optimizeDeps: { include: ["pdfjs-dist", "preact", "@isaacchacko/graph"] },
+    // and Astro's router, which the hot swap imports: found late, it re-optimises
+    // and reloads the page a moment after a fresh server's first page opens
+    optimizeDeps: {
+      include: [
+        "pdfjs-dist",
+        "preact",
+        "@isaacchacko/graph",
+        "astro/virtual-modules/transitions-router.js",
+        "astro/virtual-modules/transitions-events.js",
+        "astro/virtual-modules/transitions-swap-functions.js",
+        "astro/virtual-modules/transitions-types.js",
+      ],
+    },
   },
 })

@@ -663,7 +663,7 @@ const pencil = () => {
 // what a click is taken by (a frame, a player, an island), so the page never
 // hears of it, nor of the pointer over it (a frame from another site), and a
 // phone has no pointer: its block has a pencil of its own in its corner
-const CONTROLS = "iframe, video, audio, island, astro-island, canvas, object, embed, [data-embed]"
+const CONTROLS = "iframe, video, audio, island, .island, canvas, object, embed, [data-embed]"
 
 /** In editing: "add a block" after the note, and a pencil by each block that's all controls. */
 function furnish() {
