@@ -23,6 +23,13 @@ $mobile: "(max-width: 800px)";
 // ---------- the page, in editing ----------
 
 :root[data-editing] {
+  // no arrival (motion.scss): a block opened, or shown again once closed, would rise again
+  article > *,
+  .edit-host,
+  .edit-pending {
+    animation: none !important;
+  }
+
   article[data-edit-slug] > [data-src],
   article[data-edit-slug] section[data-footnotes] li[data-src],
   .page-header .popover-hint {

@@ -234,6 +234,10 @@ async function open(target: HTMLElement, caret: { x: number; y: number } | "star
     to = from - 1
   }
   const text = slice(live, from, to)
+  // the pencil was for opening it
+  picked?.removeAttribute("data-edit-picked")
+  picked = null
+  document.querySelector(".edit-pick")?.remove()
   const host = document.createElement(target.matches("li") ? "li" : "div")
   host.className = header ? "edit-host edit-host-header" : "edit-host"
   host.setAttribute("data-astro-transition-persist", PERSIST)
@@ -640,7 +644,8 @@ document.addEventListener("pointerover", (e) => {
   }
   const box = block.getBoundingClientRect()
   pen.style.top = `${box.top + scrollY}px`
-  pen.style.left = `${box.right + scrollX + 4}px`
+  // beside its top right corner; inside it, where there's no room beside it (a phone)
+  pen.style.left = `${Math.min(box.right + 4, document.documentElement.clientWidth - 28) + scrollX}px`
 })
 
 document.addEventListener("keydown", (e) => {
