@@ -1,10 +1,7 @@
 // A newer version of the page you're on, swapped in where it is: the way a
 // navigation swaps pages, with the scroll and the #part kept and no arrival.
-// The dev server's saves come in this way (hotswap.ts), and so does a built
-// page once an edit made on it is deployed (editor.ts).
-//
-// Just before, "basalt:swap-document" is sent with the new document, for
-// whatever on this page must carry over into it (an editor open on it).
+// The dev server's saves come in this way (hotswap.ts), and so does the page
+// once editing it is done (editor.ts).
 
 declare global {
   interface Window {
@@ -37,13 +34,8 @@ export async function fetchPage(): Promise<Document | undefined> {
   }
 }
 
-/** the documents swapIn brought in: a newer version of the page, not another page */
-export const swapped = new WeakSet<Document>()
-
 export async function swapIn(doc: Document) {
   if (!doc.querySelector('[name="astro-view-transitions-enabled"]')) return void location.reload()
-  swapped.add(doc)
-  document.dispatchEvent(new CustomEvent("basalt:swap-document", { detail: doc }))
   const url = location.pathname + location.search
   const hash = location.hash
   const { navigate } = await router

@@ -20,7 +20,10 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { loadSite, walkSite } from "../lib/site"
 import { blobSha } from "../lib/edit"
 
-export function editInPlace(): AstroIntegration {
+/** a note's text rendered as its page's note would be: its html, blocks marked with data-src (markdown/lines.ts) */
+export type RenderNote = (abs: string, text: string) => Promise<string>
+
+export function editInPlace(render?: RenderNote): AstroIntegration {
   return {
     name: "basalt-edit",
     hooks: {
@@ -30,8 +33,9 @@ export function editInPlace(): AstroIntegration {
       "astro:server:setup": ({ server }) => {
         server.middlewares.use((req, res, next) => {
           const url = new URL(req.url ?? "/", "http://basalt")
-          if (url.pathname !== "/__basalt/source") return next()
-          void answer(req, res, url).catch((err: Error) => reply(res, 500, { error: err.message }))
+          if (url.pathname === "/__basalt/source") void answer(req, res, url).catch((err: Error) => reply(res, 500, { error: err.message }))
+          else if (url.pathname === "/__basalt/render" && render) void rendered(req, res, render).catch((err: Error) => reply(res, 500, { error: err.message }))
+          else next()
         })
       },
     },
@@ -60,14 +64,9 @@ async function answer(req: IncomingMessage, res: ServerResponse, url: URL) {
     return reply(res, 200, { slug: found.file.slug, file: path.relative(found.site.dir, found.file.abs), text, sha: blobSha(text) })
   }
   if (req.method !== "PUT") return reply(res, 405, { error: "GET or PUT" })
-  const host = req.headers.host
-  const origin = req.headers.origin
-  if (req.headers["x-basalt-edit"] !== "1" || !req.headers["content-type"]?.startsWith("application/json") || (origin && host && new URL(origin).host !== host)) {
-    return reply(res, 403, { error: "only the site's own pages edit it" })
-  }
-  const chunks: Buffer[] = []
-  for await (const chunk of req) chunks.push(chunk as Buffer)
-  const { slug, text, base } = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { slug?: string; text?: unknown; base?: string }
+  const body = await own(req, res)
+  if (!body) return
+  const { slug, text, base } = body as { slug?: string; text?: unknown; base?: string }
   const found = noteFile(slug)
   if (!found) return reply(res, 404, { error: "no such note" })
   if (typeof text !== "string") return reply(res, 400, { error: "text is the note's whole file" })
@@ -75,4 +74,30 @@ async function answer(req: IncomingMessage, res: ServerResponse, url: URL) {
   if (base !== blobSha(now)) return reply(res, 409, { text: now, sha: blobSha(now) })
   if (text !== now) fs.writeFileSync(found.file.abs, text)
   return reply(res, 200, { sha: blobSha(text) })
+}
+
+/** the JSON a page of the site's own sent, else undefined (and the answer sent) */
+async function own(req: IncomingMessage, res: ServerResponse): Promise<Record<string, unknown> | undefined> {
+  const host = req.headers.host
+  const origin = req.headers.origin
+  if (req.headers["x-basalt-edit"] !== "1" || !req.headers["content-type"]?.startsWith("application/json") || (origin && host && new URL(origin).host !== host)) {
+    reply(res, 403, { error: "only the site's own pages edit it" })
+    return undefined
+  }
+  const chunks: Buffer[] = []
+  for await (const chunk of req) chunks.push(chunk as Buffer)
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"))
+}
+
+/** POST /__basalt/render { slug, text }: the note as it would render with that text, saved or not */
+async function rendered(req: IncomingMessage, res: ServerResponse, render: RenderNote) {
+  if (req.method !== "POST") return reply(res, 405, { error: "POST" })
+  const body = await own(req, res)
+  if (!body) return
+  const found = noteFile(body.slug as string)
+  if (!found) return reply(res, 404, { error: "no such note" })
+  if (typeof body.text !== "string") return reply(res, 400, { error: "text is the note's whole file" })
+  const started = performance.now()
+  const html = await render(found.file.abs, body.text)
+  return reply(res, 200, { sha: blobSha(body.text), html, ms: Math.round(performance.now() - started) })
 }

@@ -1,11 +1,12 @@
 import { defineConfig } from "astro/config"
 import preact from "@astrojs/preact"
-import { parseFrontmatter, unified } from "@astrojs/markdown-remark"
+import { createMarkdownProcessor, parseFrontmatter, unified } from "@astrojs/markdown-remark"
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadSite, siteDir } from "./src/lib/site"
-import { processorOptions, rehypePlugins, remarkPlugins, renderTarget, syntaxHighlight } from "./src/markdown"
+import { processorOptions, rehypePlugins, remarkPlugins, renderTarget, syntaxHighlight, transformNote } from "./src/markdown"
+import { unsaved } from "./src/markdown/lines"
 import { useTargets } from "./src/markdown/transclude"
 import { listed, rehypeNoteLists, renderNoteLists } from "./src/markdown/notelist"
 import { useRegistry } from "./src/markdown/context"
@@ -50,6 +51,27 @@ const rehype = rehypePlugins.map((p) =>
   p === rehypeNoteLists ? () => (tree: never) => renderNoteLists(tree, registry().site.config.locale, listedSafely) : p,
 )
 
+// a note's text rendered as its page renders it, saved or not (editing in place asks for it)
+let processor: ReturnType<typeof createMarkdownProcessor> | undefined
+const renderNote = async (abs: string, text: string) => {
+  const file = registry().byAbs.get(abs)
+  if (!file) throw new Error(`${abs} isn't one of the site's notes`)
+  processor ??= createMarkdownProcessor({
+    remarkPlugins: remarkPlugins as never,
+    rehypePlugins: rehype as never,
+    remarkRehype: processorOptions.remarkRehype,
+    smartypants: processorOptions.smartypants,
+    syntaxHighlight,
+  } as never)
+  const { frontmatter, content } = parseFrontmatter(transformNote(text, file))
+  unsaved.set(abs, text)
+  try {
+    return (await (await processor).render(content, { frontmatter, fileURL: new URL("file://" + abs) })).code
+  } finally {
+    unsaved.delete(abs)
+  }
+}
+
 export default defineConfig({
   site: site.config.baseUrl ? `https://${site.config.baseUrl}` : undefined,
   // a site's non-note files (images, pdfs, code) are served from here: see linkPublic
@@ -64,7 +86,7 @@ export default defineConfig({
   // Babel over every .ts and .js outside node_modules, Basalt's own client code
   // included, which is ~0.6 s of every build
   // editInPlace first: it says which command is running, which the rest reads (lib/edit.ts)
-  integrations: [editInPlace(), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
+  integrations: [editInPlace(renderNote), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
   markdown: {
     syntaxHighlight,
     // unified's PluggableList and Astro's plugin types describe the same thing

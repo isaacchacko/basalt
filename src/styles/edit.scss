@@ -13,51 +13,16 @@ $mobile: "(max-width: 800px)";
   display: grid;
 }
 
-// the blocks the open one stands in for; and, once changed, what they showed
-// before, till the page comes back with the change
-[data-edit-hidden],
-[data-edit-stale] {
+// ---------- the note, as one document ----------
+
+// the editor is in the note's place, inside its article (so the note's
+// styles hold); the article's own blocks are in the editor, drawn
+:root[data-editing] article[data-edit-slug] > :not(.edit-doc) {
   display: none !important;
 }
 
-// ---------- the page, in editing ----------
-
-:root[data-editing] {
-  // no arrival (motion.scss): a block opened, or shown again once closed, would rise again
-  article > *,
-  .edit-host,
-  .edit-pending {
-    animation: none !important;
-  }
-
-  article[data-edit-slug] > [data-src],
-  article[data-edit-slug] section[data-footnotes] li[data-src],
-  .page-header .popover-hint {
-    border-radius: 4px;
-    transition: box-shadow 0.12s ease;
-    cursor: text;
-
-    &:hover {
-      box-shadow: 0 0 0 4px var(--highlight);
-      background: var(--highlight);
-    }
-  }
-
-  // a link is still a link
-  article[data-edit-slug] a[href] {
-    cursor: pointer;
-  }
-}
-
-// ---------- the open block ----------
-
-.edit-host {
-  display: block;
-  margin: 0.75rem 0;
-  border-radius: 4px;
-  box-shadow: 0 0 0 4px var(--highlight);
-  background: var(--highlight);
-  list-style: none;
+.edit-doc {
+  display: none;
 
   .cm-editor {
     background: transparent;
@@ -74,6 +39,7 @@ $mobile: "(max-width: 800px)";
   .cm-scroller {
     font-family: inherit;
     line-height: 1.6;
+    overflow: visible;
   }
 
   .cm-content {
@@ -90,37 +56,60 @@ $mobile: "(max-width: 800px)";
   }
 
   .cm-selectionBackground,
-  &.cm-focused .cm-selectionBackground,
   .cm-focused .cm-selectionBackground {
     background: var(--textHighlight) !important;
   }
-
-  .cm-placeholder {
-    color: var(--gray);
-    font-family: var(--codeFont);
-    font-size: 0.85em;
-  }
 }
 
-// the frontmatter: the note's settings, as code
-.edit-host-header {
-  margin: 0 0 1rem;
-
-  .cm-editor {
-    font-family: var(--codeFont);
-    font-size: 0.85rem;
-  }
-}
-
-// a changed block, as its markdown, till the deploy (or the save) comes back
-.edit-pending {
+:root[data-editing] .edit-doc {
   display: block;
-  margin: 0.75rem 0;
-  padding: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+}
+
+// a block drawn the way the page draws it, on the note's measure
+.edit-drawn {
+  display: flow-root;
+  cursor: text;
+  // the page's own wrapping, not the editor's (which keeps every space and newline)
+  white-space: normal;
+
+  > * {
+    box-sizing: border-box;
+    max-width: var(--measure, 34rem);
+  }
+
+  > .katex-display {
+    display: block;
+  }
+
+  // the blank lines between blocks are their space: the page's own margins, less a line
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  > :is(h1, h2, h3, h4):first-child {
+    margin-top: 0.6rem;
+  }
+
+  a[href] {
+    cursor: pointer;
+  }
+}
+
+// a footnote, numbered as at the foot of the page
+.edit-footnote {
+  margin: 0.25rem 0;
+  font-size: 0.9em;
+}
+
+// the frontmatter, quiet, as Obsidian's properties
+.edit-properties {
   color: var(--gray);
-  list-style: none;
+  font-size: 0.8rem;
+  font-family: var(--codeFont);
 }
 
 // ---------- markdown, quiet: set like the page sets it ----------
@@ -147,7 +136,7 @@ $mobile: "(max-width: 800px)";
   font-size: 1rem;
 }
 
-.edit-host .cm-line.md-code-line {
+.edit-doc .cm-line.md-code-line {
   font-family: var(--codeFont);
   font-size: 0.85em;
 }
@@ -183,109 +172,7 @@ $mobile: "(max-width: 800px)";
   color: var(--gray);
 }
 
-// ---------- the pencil in a block's corner, a new block, the status ----------
-
-.edit-pick {
-  display: none;
-  position: absolute;
-  z-index: 20;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--lightgray);
-  border-radius: 6px;
-  place-items: center;
-  background: var(--light);
-  color: var(--darkgray);
-  cursor: pointer;
-
-  &:hover {
-    color: var(--tertiary);
-  }
-}
-
-:root[data-editing] .edit-pick {
-  display: grid;
-}
-
-// a block that's all controls (a frame, a player, an island): its pencil, always there
-.edit-pin {
-  display: none;
-  position: relative;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  > .edit-pick {
-    top: 4px;
-    right: -32px;
-
-    // no margin beside it: inside, at the left (a frame's own buttons are at the right)
-    @media all and ($mobile) {
-      right: auto;
-      left: 4px;
-    }
-  }
-}
-
-:root[data-editing] .edit-pin {
-  display: block;
-}
-
-// once it's open, or hidden while its change comes back
-.edit-pin:has(+ [data-edit-hidden], + [data-edit-stale], + .edit-host) {
-  display: none;
-}
-
-.edit-append {
-  display: none;
-  margin: 1rem 0;
-  padding: 0.5rem 0;
-  border-top: 1px dashed var(--lightgray);
-  color: var(--gray);
-  font-size: 0.9rem;
-  cursor: text;
-
-  &:hover {
-    color: var(--tertiary);
-    border-top-color: var(--tertiary);
-  }
-}
-
-:root[data-editing] // a block that's all controls (a frame, a player, an island): its pencil, always there
-.edit-pin {
-  display: none;
-  position: relative;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  > .edit-pick {
-    top: 4px;
-    right: -32px;
-
-    // no margin beside it: inside, at the left (a frame's own buttons are at the right)
-    @media all and ($mobile) {
-      right: auto;
-      left: 4px;
-    }
-  }
-}
-
-:root[data-editing] .edit-pin {
-  display: block;
-}
-
-// once it's open, or hidden while its change comes back
-.edit-pin:has(+ [data-edit-hidden], + [data-edit-stale], + .edit-host) {
-  display: none;
-}
-
-.edit-append {
-  display: block;
-}
+// ---------- the status, in the corner ----------
 
 .edit-status {
   position: fixed;
