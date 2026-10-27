@@ -35,7 +35,7 @@
 import { EditorSelection, EditorState, type Extension } from "@codemirror/state"
 import { Decoration, EditorView, ViewPlugin, keymap, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view"
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
-import { markdown, markdownKeymap } from "@codemirror/lang-markdown"
+import { markdown, markdownKeymap, markdownLanguage } from "@codemirror/lang-markdown"
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language"
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext } from "@codemirror/autocomplete"
 import { tags } from "@lezer/highlight"
@@ -500,6 +500,38 @@ const quietMarks = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 )
 
+/** the lines of a code block, a table or raw html, in the code font, as they line up */
+const CODE_LINES = new Set(["FencedCode", "CodeBlock", "Table", "HTMLBlock"])
+const codeLines = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = this.build(view)
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.viewportChanged || syntaxTree(u.startState) !== syntaxTree(u.state)) this.decorations = this.build(u.view)
+    }
+    build(view: EditorView): DecorationSet {
+      const { doc } = view.state
+      const line = Decoration.line({ class: "md-code-line" })
+      const out = []
+      for (const { from, to } of view.visibleRanges) {
+        syntaxTree(view.state).iterate({
+          from,
+          to,
+          enter: (node) => {
+            if (!CODE_LINES.has(node.name)) return
+            for (let n = doc.lineAt(node.from).number; n <= doc.lineAt(node.to).number; n++) out.push(line.range(doc.line(n).from))
+            return false
+          },
+        })
+      }
+      return Decoration.set(out, true)
+    }
+  },
+  { decorations: (v) => v.decorations },
+)
+
 let index: Promise<{ label: string; detail: string; apply: string }[]> | undefined
 /** the site's notes, for [[: a name that's the only one of its kind on its own, else its path */
 const notes = () =>
@@ -540,9 +572,11 @@ function extensions(header: boolean): Extension[] {
   return [
     history(),
     EditorView.lineWrapping,
-    markdown(),
+    // GitHub's flavour: tables, ~~strikethrough~~, - [ ] tasks
+    markdown({ base: markdownLanguage }),
     syntaxHighlighting(style),
     quietMarks,
+    codeLines,
     closeBrackets(),
     autocompletion({ override: [wikilinks], icons: false }),
     header ? placeholder("---\ntitle: …\n---") : [],

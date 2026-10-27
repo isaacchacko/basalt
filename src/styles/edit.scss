@@ -147,6 +147,11 @@ $mobile: "(max-width: 800px)";
   font-size: 1rem;
 }
 
+.edit-host .cm-line.md-code-line {
+  font-family: var(--codeFont);
+  font-size: 0.85em;
+}
+
 .md-em {
   font-style: italic;
 }
