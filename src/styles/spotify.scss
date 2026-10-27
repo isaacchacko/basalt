@@ -1,12 +1,13 @@
 // [[spotify:…]]: a song's card, its cover, name, artist and album, and the
-// caption under it (src/markdown/spotify.ts)
+// caption under it (src/markdown/spotify.ts). The cover opens in the viewer;
+// the rest of the card is the link to Spotify.
 
 .basalt-song {
   display: block;
   margin: 1.2rem 0;
 }
 
-a.basalt-song-card {
+.basalt-song-card {
   display: flex;
   align-items: center;
   gap: 0.9rem;
@@ -21,7 +22,8 @@ a.basalt-song-card {
   transition: border-color 0.15s ease;
 
   &:hover,
-  &:focus-visible {
+  &:focus-visible,
+  &:has(> a:hover, > a:focus-visible) {
     border-color: var(--secondary);
     color: inherit;
   }
@@ -33,6 +35,7 @@ a.basalt-song-card {
 
 img.basalt-song-cover {
   flex: none;
+  cursor: zoom-in;
   width: 72px;
   height: 72px;
   margin: 0;
@@ -43,8 +46,20 @@ img.basalt-song-cover {
 .basalt-song-text {
   display: flex;
   flex-direction: column;
+  // the link takes the card's whole width past the cover
+  flex: 1;
+  align-self: stretch;
+  justify-content: center;
   min-width: 0;
   line-height: 1.35;
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    color: inherit;
+  }
 
   & > span {
     overflow: hidden;

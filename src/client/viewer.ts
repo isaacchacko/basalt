@@ -102,7 +102,8 @@ function collect(): Item[] {
     if (!shown(el) || el.closest(ELSEWHERE)) continue
     if (el instanceof HTMLImageElement) {
       // of a light and dark pair only the one showing is collected (the other is display: none)
-      found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.currentSrc || el.src, pair: themedPair(el) })
+      // data-full: a bigger version than the page shows (a song card's cover)
+      found.push({ kind: "image", origin: el, caption: captionOf(el), src: el.dataset.full || el.currentSrc || el.src, pair: themedPair(el) })
     } else if (el.matches(LIVE)) {
       found.push({ kind: "live", origin: el, caption: captionOf(el) })
     } else if (el.matches("figure.embed-frame")) {

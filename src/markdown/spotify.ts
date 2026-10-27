@@ -1,6 +1,8 @@
 // [[spotify:<link>|a caption]], or <spotify src="<link>">a caption</spotify>:
 // a song or an album as a card in the note, its cover, its name, the artist
-// and the album, linking to Spotify, with the caption under it. The link is a
+// and the album, linking to Spotify, with the caption under it. The cover
+// opens full screen in the viewer (client/viewer.ts), at the biggest size
+// Spotify has, so it's beside the link, not in it. The link is a
 // share link (https://open.spotify.com/track/…) or a Spotify URI
 // (spotify:track:…). ofm.ts makes the tag of the wikilink.
 //
@@ -38,10 +40,13 @@ export function spotifyCard(url: string, caption: ElementContent[], song?: Track
     const label = caption.length ? caption : [{ type: "text" as const, value: "Spotify" }]
     return [el("a", { ...link, className: ["basalt-song-card", "basalt-song-bare"] }, [el("span", { className: ["basalt-song-name"] }, label)])]
   }
+  const cover = song.cover
+    ? [el("img", { className: ["basalt-song-cover", "zoomable"], src: song.cover, ...(song.coverFull ? { dataFull: song.coverFull } : {}), alt: song.title, width: 72, height: 72, loading: "lazy" })]
+    : []
   return [
-    el("a", { ...link, className: ["basalt-song-card"] }, [
-      ...(song.cover ? [el("img", { className: ["basalt-song-cover"], src: song.cover, alt: "", width: 72, height: 72, loading: "lazy" })] : []),
-      el("span", { className: ["basalt-song-text"] }, [
+    el("span", { className: ["basalt-song-card"] }, [
+      ...cover,
+      el("a", { ...link, className: ["basalt-song-text"] }, [
         ...line("basalt-song-name", song.title),
         ...line("basalt-song-artist", song.artist),
         ...line("basalt-song-album", song.album),

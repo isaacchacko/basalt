@@ -23,7 +23,8 @@ import type { Element, Root } from "hast"
 import { visit } from "unist-util-visit"
 import { reg } from "./context.ts"
 
-export type Track = { title: string; artist?: string; album?: string; year?: string; cover?: string; url: string }
+/** `cover` is a card's (300px); `coverFull` the biggest Spotify has (the original, else 640px), for the viewer */
+export type Track = { title: string; artist?: string; album?: string; year?: string; cover?: string; coverFull?: string; url: string }
 export type Clip = { src: string; label?: string; track?: Track }
 
 const UA = "Mozilla/5.0 (compatible; Twitterbot/1.0)"
@@ -79,26 +80,43 @@ async function fetchTrack(kind: SpotifyKind, id: string): Promise<Track | undefi
   const cacheDir = path.join(reg().site.work, "cache")
   const cacheFile = path.join(cacheDir, "spotify.json")
   const cache: Record<string, Track> = fs.existsSync(cacheFile) ? JSON.parse(fs.readFileSync(cacheFile, "utf8")) : {}
-  if (cache[id]) return cache[id]
+  // cached before covers came full size: fetched again for it, kept as it was offline
+  if (cache[id] && (!cache[id].cover || cache[id].coverFull)) return cache[id]
   const url = `https://open.spotify.com/${kind}/${id}`
+  const fresh = await fetchPage(kind, id, url, cacheDir).catch(() => undefined)
+  const found = fresh ?? cache[id]
+  if (!found) return undefined
+  // read again: other tracks may have landed while this one was fetched
+  const now = fs.existsSync(cacheFile) ? JSON.parse(fs.readFileSync(cacheFile, "utf8")) : {}
+  fs.writeFileSync(cacheFile, JSON.stringify({ ...now, [id]: found }, null, 2))
+  return found
+}
+
+/** a cover from Spotify's image cdn into the cache: its path on the site, or undefined */
+async function saveCover(image: string, cacheDir: string, file: string): Promise<string | undefined> {
+  const pic = await fetch(image, { signal: AbortSignal.timeout(8000) }).catch(() => undefined)
+  if (!pic?.ok) return undefined
+  fs.mkdirSync(path.join(cacheDir, "covers"), { recursive: true })
+  fs.writeFileSync(path.join(cacheDir, "covers", file), Buffer.from(await pic.arrayBuffer()))
+  return `/basalt/cover/${file}`
+}
+
+async function fetchPage(kind: SpotifyKind, id: string, url: string, cacheDir: string): Promise<Track | undefined> {
   const res = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(8000) })
   if (!res.ok) return undefined
   const html = await res.text()
   const found = trackOf(kind, url, html)
   if (!found) return undefined
-  // the cover at 300px (Spotify's og:image is the 640px one): a card shows it small
-  const image = og(html, "image")?.replace("ab67616d0000b273", "ab67616d00001e02")
+  // Spotify's og:image is the cover at 640px (…b273…); a card shows it at
+  // 300px (…1e02…), and the viewer the original (…82c1…, often 1000-2000px)
+  const image = og(html, "image")
   if (image) {
-    const pic = await fetch(unescape(image), { signal: AbortSignal.timeout(8000) })
-    if (pic.ok) {
-      fs.mkdirSync(path.join(cacheDir, "covers"), { recursive: true })
-      fs.writeFileSync(path.join(cacheDir, "covers", `${id}.jpg`), Buffer.from(await pic.arrayBuffer()))
-      found.cover = `/basalt/cover/${id}.jpg`
-    }
+    const at = (size: string) => unescape(image).replace("ab67616d0000b273", size)
+    const cover = await saveCover(at("ab67616d00001e02"), cacheDir, `${id}.jpg`)
+    if (cover) found.cover = cover
+    const full = (await saveCover(at("ab67616d000082c1"), cacheDir, `${id}-full.jpg`)) ?? (await saveCover(at("ab67616d0000b273"), cacheDir, `${id}-full.jpg`))
+    if (full) found.coverFull = full
   }
-  // read again: other tracks may have landed while this one was fetched
-  const now = fs.existsSync(cacheFile) ? JSON.parse(fs.readFileSync(cacheFile, "utf8")) : {}
-  fs.writeFileSync(cacheFile, JSON.stringify({ ...now, [id]: found }, null, 2))
   return found
 }
 
