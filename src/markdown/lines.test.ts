@@ -53,6 +53,7 @@ const expected: Record<string, string[]> = {
   "edit/blog/second.md": ["1", "3"],
   "edit/blog/index.md": ["5", "7"],
   "edit/blog/crlf.md": ["5", "9-10", "12"],
+  "edit/lists.md": "6-7 9 11-13 15 17-20 22 24-26 28".split(" "),
 }
 
 describe("every top-level block has the lines it's written on", () => {

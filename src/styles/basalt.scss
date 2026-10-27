@@ -144,6 +144,9 @@ article ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li
 .margin-preview-body ul:not(.contains-task-list, .note-list, .shelf, .section-ul, .tags) > li {
   list-style: none;
   position: relative;
+  // the dot is out of the flow, so an item with nothing in it ("- ") would
+  // have no line at all, and what follows would ride up under its dot
+  min-height: 1lh;
 
   &::before {
     content: "";
