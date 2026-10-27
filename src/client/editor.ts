@@ -514,7 +514,8 @@ function floated(view: EditorView) {
     layer.style.top = `${at.top - origin.top}px`
     layer.style.left = `${at.left - origin.left}px`
     layer.style.width = `${at.width}px`
-    const height = `${layer.offsetHeight}px`
+    // to the fraction (offsetHeight rounds: half a pixel a frame, and every block under it moved by it)
+    const height = `${layer.getBoundingClientRect().height}px`
     if (stand!.style.height !== height) {
       stand!.style.height = height
       view.requestMeasure()
