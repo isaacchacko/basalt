@@ -223,6 +223,7 @@ $semiBoldWeight: 600;
 
 .darkmode,
 .source-toggle,
+.edit-toggle,
 .nav-search {
   display: grid;
   place-items: center;
@@ -251,7 +252,8 @@ $semiBoldWeight: 600;
   }
 }
 
-.source-toggle {
+.source-toggle,
+.edit-toggle {
   &[aria-pressed="true"] {
     color: var(--tertiary);
   }
