@@ -88,3 +88,32 @@ export function lineMap(from: string[], to: string[]): LineMap {
     last: (i) => (from.length ? hi[clamp(i)] : 0),
   }
 }
+
+/**
+ * `mine` and `theirs`, both made from `base`, as one: theirs, with the
+ * stretches I changed changed as I have them; where we both changed the same
+ * stretch, mine (a block you edited wins over another edit to it). The lines
+ * all three share keep it in step (diff3's way).
+ */
+export function merge(base: string[], mine: string[], theirs: string[]): string[] {
+  const inMine = new Int32Array(base.length).fill(-1)
+  const inTheirs = new Int32Array(base.length).fill(-1)
+  for (const [b, m] of commonLines(base, mine)) inMine[b] = m
+  for (const [b, t] of commonLines(base, theirs)) inTheirs[b] = t
+  const out: string[] = []
+  let [b0, m0, t0] = [-1, -1, -1]
+  const stretch = (b1: number, m1: number, t1: number) => {
+    const b = base.slice(b0 + 1, b1)
+    const m = mine.slice(m0 + 1, m1)
+    const unchanged = m.length === b.length && m.every((line, i) => line === b[i])
+    out.push(...(unchanged ? theirs.slice(t0 + 1, t1) : m))
+  }
+  for (let b = 0; b < base.length; b++) {
+    if (inMine[b] < 0 || inTheirs[b] < 0) continue
+    stretch(b, inMine[b], inTheirs[b])
+    out.push(base[b])
+    ;[b0, m0, t0] = [b, inMine[b], inTheirs[b]]
+  }
+  stretch(base.length, mine.length, theirs.length)
+  return out
+}
