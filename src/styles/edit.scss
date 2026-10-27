@@ -21,8 +21,14 @@ $mobile: "(max-width: 800px)";
   display: none !important;
 }
 
+// no arrival (motion.scss) for the editor: it would rise into place, and be measured on its way
+:root[data-editing] article[data-edit-slug] > .edit-doc {
+  animation: none !important;
+}
+
 .edit-doc {
   display: none;
+  position: relative;
 
   .cm-editor {
     background: transparent;
@@ -104,6 +110,12 @@ $mobile: "(max-width: 800px)";
   overflow: hidden;
 }
 
+// a block with a frame or a player, over its stand-in (editor.ts)
+.edit-float {
+  position: absolute;
+  z-index: 1;
+}
+
 // a footnote, numbered as at the foot of the page
 .edit-footnote {
   margin: 0.25rem 0;
@@ -137,6 +149,12 @@ $mobile: "(max-width: 800px)";
 .edit-doc .cm-line.md-code-line {
   font-family: var(--codeFont);
   font-size: 0.85em;
+
+  // the frontmatter's lines, which markdown would take for a heading
+  .md-h {
+    font: inherit;
+    color: inherit;
+  }
 }
 
 .md-em {

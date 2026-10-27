@@ -18,6 +18,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { markdown, markdownKeymap, markdownLanguage } from "@codemirror/lang-markdown"
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language"
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext } from "@codemirror/autocomplete"
+import { search, searchKeymap } from "@codemirror/search"
 import { tags } from "@lezer/highlight"
 import { lineMap } from "../lib/linemap"
 import { diff } from "./diff"
@@ -83,7 +84,7 @@ export async function setEditing(on: boolean) {
     } catch (err) {
       return status(say("editFailed", { error: (err as Error).message }))
     }
-    measure([...art.children])
+    measure(art)
     const host = document.createElement("div")
     host.className = "edit-doc"
     host.setAttribute("data-edit-doc", "")
@@ -110,6 +111,15 @@ export async function setEditing(on: boolean) {
     // the cursor at the end, so the note opens drawn, all of it
     view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length) })
     view.focus()
+    // laid out again whenever what's drawn changes size (a font, an image, a diagram)
+    let frame = 0
+    const resized = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => note?.view === view && (spaced(view), floated(view)))
+    })
+    resized.observe(view.contentDOM)
+    const header = document.querySelector(".page-header")
+    if (header) resized.observe(header)
   } else if (!on && note) {
     const { backend } = note
     await leave()
@@ -123,6 +133,7 @@ async function leave() {
   const { view, host, started } = note
   await save()
   started.abort()
+  floats.clear()
   note = null
   window.basaltEdit = undefined
   root.removeAttribute("data-editing")
@@ -157,12 +168,20 @@ const drawn = new Map<string, Node[]>()
 const ends = new WeakMap<HTMLElement, [Element, Element]>()
 /** the page's own space above each of its blocks, measured before editing moves them (spaced) */
 const gapAbove = new WeakMap<Element, number>()
-function measure(elements: Element[]) {
+/** each block's height as it was last drawn (on the page, or in the editor): the editor's guess for one it hasn't drawn yet */
+const heightOf = new Map<string, number>()
+const pageHeight = new WeakMap<Element, number>()
+/** how far below the page's header its first block's top was: the editor's first block goes there */
+let firstTop: { el: Element; y: number } | undefined
+const headerBottom = () => document.querySelector(".page-header")?.getBoundingClientRect().bottom ?? 0
+function measure(art: HTMLElement) {
   let bottom: number | undefined
-  for (const el of elements) {
+  for (const el of art.children) {
     if (!el.checkVisibility() || !el.getBoundingClientRect().height) continue
     const box = el.getBoundingClientRect()
-    if (bottom !== undefined) gapAbove.set(el, box.top - bottom)
+    if (bottom === undefined) firstTop = { el, y: box.top - headerBottom() }
+    else gapAbove.set(el, box.top - bottom)
+    pageHeight.set(el, box.height + (bottom === undefined ? 0 : box.top - bottom))
     bottom = box.bottom
   }
 }
@@ -176,16 +195,20 @@ const unstarted = new WeakSet<Node>()
  * (the blank line before it takes none, gaps), and the margin hears of it.
  */
 function placed(box: HTMLElement, key: string) {
-  const fresh = [...box.childNodes].some((n) => unstarted.has(n))
-  box.childNodes.forEach((n) => unstarted.delete(n))
+  const nodes = drawn.get(key) ?? []
+  const fresh = nodes.some((n) => unstarted.has(n))
+  nodes.forEach((n) => unstarted.delete(n))
   requestAnimationFrame(() => {
     if (!box.isConnected || !note) return
     if (!box.classList.contains("edit-spaced")) {
       // its own space above and below, as the page has it; then the editor's gaps are these (spaced)
       // (an aside's in the margin, not here, and a paragraph an embed was lifted out of is empty: no room)
       const empty = (c: Element) => !c.checkVisibility() || !c.getBoundingClientRect().height
-      for (const c of box.children) if (empty(c)) (c as HTMLElement).style.margin = "0"
-      const shown = [...box.children].filter((c) => !empty(c))
+      const stand = box.querySelector<HTMLElement>(":scope > .edit-stand")
+      const inside = stand ? floats.get(key)!.layer : box
+      if (stand) floated(note.view)
+      for (const c of inside.children) if (empty(c)) (c as HTMLElement).style.margin = "0"
+      const shown = [...inside.children].filter((c) => !empty(c))
       if (!shown.length) box.dataset.empty = ""
       else {
         box.dataset.above = getComputedStyle(shown[0]).marginTop
@@ -193,20 +216,25 @@ function placed(box: HTMLElement, key: string) {
         // the page's own, measured, where it's the page's own block
         const gap = gapAbove.get(shown[0])
         if (gap !== undefined) box.dataset.gap = String(gap)
+        if (firstTop?.el === shown[0]) box.dataset.pageTop = String(firstTop.y)
       }
       box.classList.add("edit-spaced")
+      inside.classList.add("edit-spaced")
       // margins inside it that the page lets out (through a figure to its code's) stay in the box: so much less to add
       if (shown.length) {
         ;(shown[shown.length - 1] as HTMLElement).style.marginBottom = "0"
-        ends.set(box, [shown[0], shown[shown.length - 1]])
+        ends.set(box, stand ? [stand, stand] : [shown[0], shown[shown.length - 1]])
       }
       spaced(note.view)
     }
     if (fresh) {
-      startContent(note.started.signal, box)
+      const stand = box.querySelector(":scope > .edit-stand")
+      const inside = stand ? floats.get(key)!.layer : box
+      startContent(note.started.signal, inside)
       // what the parts made of it (a diagram drawn in place of its code) is what's drawn from now on
-      drawn.set(key, [...box.childNodes])
+      drawn.set(key, [...inside.childNodes])
     }
+    heightOf.set(key, box.getBoundingClientRect().height)
     marginAgain()
   })
 }
@@ -218,7 +246,8 @@ function placed(box: HTMLElement, key: string) {
  */
 function spaced(view: EditorView) {
   let below = 0
-  let bottom: number | undefined
+  const top = view.contentDOM.getBoundingClientRect().top
+  let bottom: number | undefined = top
   for (const el of view.contentDOM.children as HTMLCollectionOf<HTMLElement>) {
     if (el.classList.contains("edit-gap")) continue
     if (!el.classList.contains("edit-spaced")) {
@@ -229,12 +258,18 @@ function spaced(view: EditorView) {
     // nothing in the text (an aside, in the margin): no room, and the block above's space goes on past it
     const shown = ends.get(el)
     if (!shown) continue
-    const want = el.dataset.gap !== undefined ? parseFloat(el.dataset.gap) : Math.max(parseFloat(el.dataset.above!), below)
+    const want =
+      // the page's first block: where it was on the page
+      bottom === top && el.dataset.pageTop !== undefined
+        ? headerBottom() + parseFloat(el.dataset.pageTop) - top
+        : el.dataset.gap !== undefined
+          ? parseFloat(el.dataset.gap)
+          : Math.max(parseFloat(el.dataset.above!), below)
     // as much as it takes for the space between them to be that (a margin inside one may be in it already)
     const pad = parseFloat(el.style.paddingTop || "0")
     const space = bottom === undefined ? 0 : shown[0].getBoundingClientRect().top - bottom
     const next = `${Math.max(0, Math.round((pad + want - space) * 10) / 10)}px`
-    if (bottom !== undefined && Math.abs(want - space) > 0.5) el.style.paddingTop = next
+    if (Math.abs(want - space) > 0.5) el.style.paddingTop = next
     below = parseFloat(el.dataset.below!)
     bottom = shown[1].getBoundingClientRect().bottom
   }
@@ -294,6 +329,7 @@ function learn(text: string, elements: Element[], live = false): Block[] {
   if (fm) found.set(fm[0], { lines: [1, fm[0].split("\n").length], nodes: [] })
   // what's drawn for a text already stays drawn (an island running, a diagram drawn)
   for (const [key, { nodes }] of found) {
+    if (live) heightOf.set(key, nodes.reduce((h, n) => h + (pageHeight.get(n as Element) ?? 0), 0))
     if (!live && drawn.has(key)) continue
     drawn.set(key, nodes)
     renderedBy.set(key, live ? 0 : rendering)
@@ -334,22 +370,85 @@ class Drawn extends WidgetType {
   eq(other: Drawn) {
     return other.key === this.key
   }
+  get estimatedHeight() {
+    return heightOf.get(this.key) ?? -1
+  }
   toDOM(view: EditorView) {
     const box = document.createElement("div")
     box.className = "edit-drawn"
     box.dataset.rendered = String(renderedBy.get(this.key) ?? 0)
-    box.append(...(drawn.get(this.key) ?? []))
+    const nodes = drawn.get(this.key) ?? []
+    if (nodes.some((n) => n instanceof Element && (n.matches(LIVE) || n.querySelector(LIVE)))) {
+      // a frame or a player: kept in the page in a layer of its own, over a stand-in of its size
+      const stand = document.createElement("div")
+      stand.className = "edit-stand"
+      box.append(stand)
+      floatFor(view, this.key, nodes).stand = stand
+    } else box.append(...nodes)
     placed(box, this.key)
     box.addEventListener("mousedown", (e) => reveal(view, box, this.key, e))
     return box
   }
   destroy(box: HTMLElement) {
     // drawn again later as it is now (a tab chosen, a diagram drawn)
-    if (box.childNodes.length) drawn.set(this.key, [...box.childNodes])
+    if (box.childNodes.length && !box.querySelector(":scope > .edit-stand")) drawn.set(this.key, [...box.childNodes])
     marginAgain()
   }
   ignoreEvent() {
     return true
+  }
+}
+
+/**
+ * A frame (an embed, a live html island) loads again, and a player stops,
+ * when it leaves the page, as a block does when it's scrolled far out of the
+ * editor's view or opened: a block with one stays in the page, in a layer
+ * over the editor, laid over its stand-in in the text, and hidden when that's
+ * not there.
+ */
+const LIVE = "iframe, video, audio"
+const floats = new Map<string, { layer: HTMLElement; stand?: HTMLElement }>()
+
+function floatFor(view: EditorView, key: string, nodes: Node[]) {
+  let f = floats.get(key)
+  if (!f) {
+    const layer = document.createElement("div") as HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void }
+    layer.className = "edit-drawn edit-float"
+    note!.host.append(layer)
+    // moved, not taken out and put back: the page's own frame doesn't load again (Chrome's moveBefore)
+    for (const n of nodes) {
+      if (layer.moveBefore && n.isConnected) layer.moveBefore(n, null)
+      else layer.append(n)
+    }
+    layer.addEventListener("mousedown", (e) => {
+      const box = f!.stand?.parentElement
+      if (box?.isConnected) reveal(view, box, key, e)
+    })
+    new ResizeObserver(() => floated(view)).observe(layer)
+    f = { layer }
+    floats.set(key, f)
+  }
+  return f
+}
+
+/** Each frame's layer over its stand-in, and the stand-in its height; hidden where there's none. */
+function floated(view: EditorView) {
+  const host = note?.host
+  if (!host) return
+  const origin = host.getBoundingClientRect()
+  for (const { layer, stand } of floats.values()) {
+    const shown = !!stand?.isConnected
+    layer.style.visibility = shown ? "" : "hidden"
+    if (!shown) continue
+    const at = stand!.getBoundingClientRect()
+    layer.style.top = `${at.top - origin.top}px`
+    layer.style.left = `${at.left - origin.left}px`
+    layer.style.width = `${at.width}px`
+    const height = `${layer.offsetHeight}px`
+    if (stand!.style.height !== height) {
+      stand!.style.height = height
+      view.requestMeasure()
+    }
   }
 }
 
@@ -377,7 +476,11 @@ const lines = ViewPlugin.fromClass(
     }
     update(u: ViewUpdate) {
       this.mark(u.view)
-      requestAnimationFrame(() => note?.view === u.view && spaced(u.view))
+      requestAnimationFrame(() => {
+        if (note?.view !== u.view) return
+        spaced(u.view)
+        floated(u.view)
+      })
     }
     mark(view: EditorView) {
       const { doc } = view.state
@@ -523,6 +626,27 @@ const blockAt = (state: EditorState) => {
   return state.field(blocks).find((b) => b.from <= head && head <= b.to)
 }
 
+/**
+ * Scrolled to somewhere drawn blocks it hadn't measured were (a search's match
+ * far down the note): CodeMirror guessed their heights, and lands short. Once
+ * they're measured, again, till it's there.
+ */
+const reach = EditorView.updateListener.of((u) => {
+  if (!u.transactions.some((tr) => tr.scrollIntoView || tr.isUserEvent("select.search"))) return
+  const view = u.view
+  const head = view.state.selection.main.head
+  let tries = 0
+  const check = () =>
+    setTimeout(() => {
+      if (view.state.selection.main.head !== head || tries++ > 8) return
+      const at = view.coordsAtPos(head)
+      if (at && at.top >= 0 && at.bottom <= innerHeight) return
+      view.dispatch({ effects: EditorView.scrollIntoView(head, { y: "center" }) })
+      check()
+    }, 60)
+  check()
+})
+
 let timer: ReturnType<typeof setTimeout> | undefined
 const changed = EditorView.updateListener.of((u) => {
   const n = note
@@ -646,6 +770,8 @@ const style = HighlightStyle.define([
   { tag: tags.list, class: "md-list" },
 ])
 
+const frontmatterEnd = (text: string) => /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(text)?.[0].length ?? 0
+
 /** Live Preview's quiet marks: off the lines the cursor is on, a heading's #, emphasis's * and _, ~~ and inline code's ` don't show. */
 const quietMarks = ViewPlugin.fromClass(
   class {
@@ -659,6 +785,8 @@ const quietMarks = ViewPlugin.fromClass(
     build(view: EditorView): DecorationSet {
       const { doc, selection } = view.state
       const active = new Set(selection.ranges.flatMap((r) => [doc.lineAt(r.from).number, doc.lineAt(r.to).number]))
+      // the frontmatter isn't markdown (its closing --- isn't a heading's underline)
+      const after = frontmatterEnd(doc.toString())
       const hide = Decoration.replace({})
       const out = []
       for (const { from, to } of view.visibleRanges) {
@@ -667,6 +795,7 @@ const quietMarks = ViewPlugin.fromClass(
           to,
           enter: (node) => {
             const name = node.name
+            if (node.from < after) return
             const quiet = name === "EmphasisMark" || name === "StrikethroughMark" || name === "HeaderMark" || (name === "CodeMark" && node.node.parent?.name === "InlineCode")
             if (!quiet || active.has(doc.lineAt(node.from).number)) return
             // a heading's # takes its space with it
@@ -696,6 +825,9 @@ const codeLines = ViewPlugin.fromClass(
       const { doc } = view.state
       const line = Decoration.line({ class: "md-code-line" })
       const out = []
+      // the frontmatter, as code too
+      const after = frontmatterEnd(doc.toString())
+      if (after) for (let n = 1; n <= doc.lineAt(after).number; n++) out.push(line.range(doc.line(n).from))
       for (const { from, to } of view.visibleRanges) {
         syntaxTree(view.state).iterate({
           from,
@@ -780,9 +912,12 @@ function extensions(): Extension[] {
     gaps,
     lines,
     changed,
+    reach,
+    // ⌘F finds in the whole note, as Obsidian's does (Basalt's own search is ⌘K)
+    search({ top: true }),
     closeBrackets(),
     autocompletion({ override: [wikilinks], icons: false }),
-    keymap.of([{ key: "ArrowDown", run: into(true) }, { key: "ArrowUp", run: into(false) }, ...closeBracketsKeymap, ...completionKeymap, ...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
+    keymap.of([{ key: "ArrowDown", run: into(true) }, { key: "ArrowUp", run: into(false) }, ...searchKeymap, ...closeBracketsKeymap, ...completionKeymap, ...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
     EditorView.contentAttributes.of({ "aria-label": say("edit") }),
   ]
 }
