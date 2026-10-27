@@ -69,8 +69,10 @@ $mobile: "(max-width: 800px)";
 .edit-drawn {
   display: flow-root;
   cursor: text;
-  // the page's own wrapping, not the editor's (which keeps every space and newline)
+  // the page's own wrapping and leading, not the editor's (which keeps every
+  // space and newline, and sets every line 1.6 high)
   white-space: normal;
+  line-height: normal;
 
   > * {
     box-sizing: border-box;
@@ -81,17 +83,14 @@ $mobile: "(max-width: 800px)";
     display: block;
   }
 
-  // the blank lines between blocks are their space: the page's own margins, less a line
-  > :first-child {
+  // its space above it is its own (taken from its first element, editor.ts); the
+  // blank lines around it take none
+  &.edit-spaced > * {
     margin-top: 0;
   }
 
-  > :last-child {
+  &.edit-spaced > :last-child {
     margin-bottom: 0;
-  }
-
-  > :is(h1, h2, h3, h4):first-child {
-    margin-top: 0.6rem;
   }
 
   a[href] {
@@ -99,17 +98,16 @@ $mobile: "(max-width: 800px)";
   }
 }
 
+// a blank line before a drawn block: the block's own space is the gap
+.edit-doc .cm-line.edit-gap {
+  height: 0;
+  overflow: hidden;
+}
+
 // a footnote, numbered as at the foot of the page
 .edit-footnote {
   margin: 0.25rem 0;
   font-size: 0.9em;
-}
-
-// the frontmatter, quiet, as Obsidian's properties
-.edit-properties {
-  color: var(--gray);
-  font-size: 0.8rem;
-  font-family: var(--codeFont);
 }
 
 // ---------- markdown, quiet: set like the page sets it ----------

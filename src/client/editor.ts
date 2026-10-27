@@ -22,6 +22,7 @@ import { tags } from "@lezer/highlight"
 import { lineMap } from "../lib/linemap"
 import { diff } from "./diff"
 import { startContent } from "./content"
+import { noteOf } from "./margin"
 import { devBackend, type Backend, type EditorHooks, type Version } from "./backend"
 
 declare global {
@@ -82,6 +83,7 @@ export async function setEditing(on: boolean) {
     } catch (err) {
       return status(say("editFailed", { error: (err as Error).message }))
     }
+    measure([...art.children])
     const host = document.createElement("div")
     host.className = "edit-doc"
     host.setAttribute("data-edit-doc", "")
@@ -151,20 +153,98 @@ document.addEventListener("astro:before-preparation", (e) => {
 
 /** a block's text → its drawn nodes: the same text, the same nodes */
 const drawn = new Map<string, Node[]>()
+/** a drawn block's first and last elements that show */
+const ends = new WeakMap<HTMLElement, [Element, Element]>()
+/** the page's own space above each of its blocks, measured before editing moves them (spaced) */
+const gapAbove = new WeakMap<Element, number>()
+function measure(elements: Element[]) {
+  let bottom: number | undefined
+  for (const el of elements) {
+    if (!el.checkVisibility() || !el.getBoundingClientRect().height) continue
+    const box = el.getBoundingClientRect()
+    if (bottom !== undefined) gapAbove.set(el, box.top - bottom)
+    bottom = box.bottom
+  }
+}
 /** which rendering a text's nodes came from (0: the page's own), for the edit proof */
 const renderedBy = new Map<string, number>()
 /** nodes rendered anew that haven't been started as a page's content is (tabs, diagrams, islands, code's controls) */
 const unstarted = new WeakSet<Node>()
-/** Starts what's drawn anew in a block once it's in the page (content.ts), till editing ends. */
-function startDrawn(box: HTMLElement, key: string) {
-  if (![...box.childNodes].some((n) => unstarted.has(n))) return
+/**
+ * Once a drawn block is in the page: what's drawn anew in it is started
+ * (content.ts) till editing ends, it takes its first element's space above it
+ * (the blank line before it takes none, gaps), and the margin hears of it.
+ */
+function placed(box: HTMLElement, key: string) {
+  const fresh = [...box.childNodes].some((n) => unstarted.has(n))
   box.childNodes.forEach((n) => unstarted.delete(n))
   requestAnimationFrame(() => {
     if (!box.isConnected || !note) return
-    startContent(note.started.signal, box)
-    // what the parts made of it (a diagram drawn in place of its code) is what's drawn from now on
-    drawn.set(key, [...box.childNodes])
+    if (!box.classList.contains("edit-spaced")) {
+      // its own space above and below, as the page has it; then the editor's gaps are these (spaced)
+      // (an aside's in the margin, not here, and a paragraph an embed was lifted out of is empty: no room)
+      const empty = (c: Element) => !c.checkVisibility() || !c.getBoundingClientRect().height
+      for (const c of box.children) if (empty(c)) (c as HTMLElement).style.margin = "0"
+      const shown = [...box.children].filter((c) => !empty(c))
+      if (!shown.length) box.dataset.empty = ""
+      else {
+        box.dataset.above = getComputedStyle(shown[0]).marginTop
+        box.dataset.below = getComputedStyle(shown[shown.length - 1]).marginBottom
+        // the page's own, measured, where it's the page's own block
+        const gap = gapAbove.get(shown[0])
+        if (gap !== undefined) box.dataset.gap = String(gap)
+      }
+      box.classList.add("edit-spaced")
+      // margins inside it that the page lets out (through a figure to its code's) stay in the box: so much less to add
+      if (shown.length) {
+        ;(shown[shown.length - 1] as HTMLElement).style.marginBottom = "0"
+        ends.set(box, [shown[0], shown[shown.length - 1]])
+      }
+      spaced(note.view)
+    }
+    if (fresh) {
+      startContent(note.started.signal, box)
+      // what the parts made of it (a diagram drawn in place of its code) is what's drawn from now on
+      drawn.set(key, [...box.childNodes])
+    }
+    marginAgain()
   })
+}
+
+/**
+ * The space between drawn blocks, as the page has it: the larger of the
+ * block above's space below it and this one's above (their margins collapse
+ * there); the blank lines between take none (gaps).
+ */
+function spaced(view: EditorView) {
+  let below = 0
+  let bottom: number | undefined
+  for (const el of view.contentDOM.children as HTMLCollectionOf<HTMLElement>) {
+    if (el.classList.contains("edit-gap")) continue
+    if (!el.classList.contains("edit-spaced")) {
+      below = 0
+      bottom = el.getBoundingClientRect().bottom
+      continue
+    }
+    // nothing in the text (an aside, in the margin): no room, and the block above's space goes on past it
+    const shown = ends.get(el)
+    if (!shown) continue
+    const want = el.dataset.gap !== undefined ? parseFloat(el.dataset.gap) : Math.max(parseFloat(el.dataset.above!), below)
+    // as much as it takes for the space between them to be that (a margin inside one may be in it already)
+    const pad = parseFloat(el.style.paddingTop || "0")
+    const space = bottom === undefined ? 0 : shown[0].getBoundingClientRect().top - bottom
+    const next = `${Math.max(0, Math.round((pad + want - space) * 10) / 10)}px`
+    if (bottom !== undefined && Math.abs(want - space) > 0.5) el.style.paddingTop = next
+    below = parseFloat(el.dataset.below!)
+    bottom = shown[1].getBoundingClientRect().bottom
+  }
+}
+
+/** the margin's notes, laid out again from what's drawn now (margin.ts), once a frame */
+let margin = 0
+function marginAgain() {
+  cancelAnimationFrame(margin)
+  margin = requestAnimationFrame(() => document.dispatchEvent(new Event("basalt:drawn")))
 }
 
 interface Block {
@@ -209,14 +289,9 @@ function learn(text: string, elements: Element[], live = false): Block[] {
     }
     add(el)
   }
-  // the frontmatter, as Obsidian's properties: a quiet line
+  // the frontmatter: drawn as the page draws it, as the title above (a click on which opens it)
   const fm = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(text)
-  if (fm) {
-    const props = document.createElement("div")
-    props.className = "edit-properties"
-    props.textContent = `${fm[0].split("\n").length - 2} properties`
-    found.set(fm[0], { lines: [1, fm[0].split("\n").length], nodes: [props] })
-  }
+  if (fm) found.set(fm[0], { lines: [1, fm[0].split("\n").length], nodes: [] })
   // what's drawn for a text already stays drawn (an island running, a diagram drawn)
   for (const [key, { nodes }] of found) {
     if (!live && drawn.has(key)) continue
@@ -264,13 +339,14 @@ class Drawn extends WidgetType {
     box.className = "edit-drawn"
     box.dataset.rendered = String(renderedBy.get(this.key) ?? 0)
     box.append(...(drawn.get(this.key) ?? []))
-    startDrawn(box, this.key)
+    placed(box, this.key)
     box.addEventListener("mousedown", (e) => reveal(view, box, this.key, e))
     return box
   }
   destroy(box: HTMLElement) {
     // drawn again later as it is now (a tab chosen, a diagram drawn)
     if (box.childNodes.length) drawn.set(this.key, [...box.childNodes])
+    marginAgain()
   }
   ignoreEvent() {
     return true
@@ -301,6 +377,7 @@ const lines = ViewPlugin.fromClass(
     }
     update(u: ViewUpdate) {
       this.mark(u.view)
+      requestAnimationFrame(() => note?.view === u.view && spaced(u.view))
     }
     mark(view: EditorView) {
       const { doc } = view.state
@@ -311,6 +388,42 @@ const lines = ViewPlugin.fromClass(
       }
     }
   },
+)
+
+/**
+ * The page's own space between its blocks: a blank line before a drawn block
+ * takes none (the block keeps its own space above it), unless the cursor's
+ * on it.
+ */
+const gaps = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = this.build(view)
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.selectionSet || u.viewportChanged || u.transactions.some((tr) => tr.effects.some((e) => e.is(setBlocks))))
+        this.decorations = this.build(u.view)
+    }
+    build(view: EditorView): DecorationSet {
+      const { doc, selection } = view.state
+      const starts = new Set<number>()
+      view.state.field(drawing).between(0, doc.length, (from) => void starts.add(doc.lineAt(from).number))
+      const here = doc.lineAt(selection.main.head).number
+      const gap = Decoration.line({ class: "edit-gap" })
+      const out = []
+      for (const { from, to } of view.visibleRanges) {
+        for (let n = doc.lineAt(from).number; n <= doc.lineAt(to).number; n++) {
+          if (n === here || doc.line(n).text.trim()) continue
+          let next = n + 1
+          while (next <= doc.lines && !doc.line(next).text.trim()) next++
+          if (starts.has(next)) out.push(gap.range(doc.line(n).from))
+        }
+      }
+      return Decoration.set(out)
+    }
+  },
+  { decorations: (v) => v.decorations },
 )
 
 /** ↑ ↓ into a drawn block, not over it: the cursor goes to its edge, and it opens */
@@ -328,6 +441,50 @@ const into = (forward: boolean) => (view: EditorView) => {
   view.dispatch({ selection: EditorSelection.cursor(forward ? from : to), scrollIntoView: true })
   return true
 }
+
+// a click on the title: the frontmatter, where the title's set
+document.addEventListener(
+  "mousedown",
+  (e) => {
+    const n = note
+    if (!n || e.button !== 0 || !(e.target as Element).closest?.(".page-header h1.article-title")) return
+    const fm = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n|$)/.exec(n.view.state.doc.toString())
+    if (!fm) return
+    e.preventDefault()
+    const title = /^title:.*$/m.exec(fm[0])
+    n.view.dispatch({ selection: EditorSelection.cursor(title ? title.index + title[0].length : fm[0].length - 3), scrollIntoView: true })
+    n.view.focus()
+  },
+  true,
+)
+
+// a click on a note in the margin: its lines (a footnote's definition, an aside)
+document.addEventListener(
+  "mousedown",
+  (e) => {
+    const copy = (e.target as Element).closest?.<HTMLElement>(".margin-layer > *")
+    const n = note
+    if (!copy || !n || e.button !== 0 || (e.target as Element).closest("a[href], button")) return
+    const of = noteOf.get(copy)
+    if (!of) return
+    const { view } = n
+    const { doc } = view.state
+    let at: number | undefined
+    const id = of.dataset.sidenote?.replace(/^user-content-fn-/, "")
+    if (of.classList.contains("sidenote") && id) {
+      for (let i = 1; i <= doc.lines && at === undefined; i++) if (doc.line(i).text.startsWith(`[^${id}]:`)) at = doc.line(i).to
+    } else {
+      const box = of.closest<HTMLElement>(".edit-drawn")
+      const from = box?.isConnected ? view.posAtDOM(box) : undefined
+      at = from === undefined ? undefined : view.state.field(blocks).find((b) => b.from === from)?.to
+    }
+    if (at === undefined) return
+    e.preventDefault()
+    view.dispatch({ selection: EditorSelection.cursor(at), scrollIntoView: true })
+    view.focus()
+  },
+  true,
+)
 
 /** A click on a drawn block (not on a link or a control in it): the cursor goes where it was, in its markdown. */
 function reveal(view: EditorView, box: HTMLElement, key: string, e: MouseEvent) {
@@ -447,6 +604,7 @@ async function render() {
   // a rendering of what's typed by now may be on its way already
   if (html === null || note !== n || mine !== rendering) return
   hooks.learn(text, html)
+  marginAgain()
 }
 
 document.addEventListener("keydown", (e) => {
@@ -619,6 +777,7 @@ function extensions(): Extension[] {
     codeLines,
     blocks,
     drawing,
+    gaps,
     lines,
     changed,
     closeBrackets(),
