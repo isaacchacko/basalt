@@ -109,11 +109,166 @@ export async function deployed<P>(
   }
 }
 
+// ---------- the editor's backend for a built site (client/backend.ts) ----------
+
+const tokenKey = (repo: string) => `basalt-github-token:${repo}`
+
+/** git's name for a text (what the GitHub API calls a file's sha, and the page's data-edit-sha) */
+export async function blobSha(text: string): Promise<string> {
+  const body = new TextEncoder().encode(text)
+  const head = new TextEncoder().encode(`blob ${body.length}\0`)
+  const all = new Uint8Array(head.length + body.length)
+  all.set(head)
+  all.set(body, head.length)
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-1", all))
+  return [...hash].map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
 /**
- * The editor's backend for a built site (client/backend.ts): connected with a
- * token, or null when it isn't. Ported onto the one-document editor by the
- * GitHub mode's own change; till then, editing a built site does nothing.
+ * The editor's backend for a built site with "edit" (article[data-edit=github]):
+ * the note is read from and committed to its repo with the editor's token
+ * (kept in this browser, else asked for once), as the cursor leaves a block it
+ * changed and on ⌘S. GitHub can't render a text, so a block that's new shows
+ * its markdown till the deploy the commit sets off is live: render() waits for
+ * the page to be built from that commit (its data-edit-sha) and gives back its
+ * blocks. Null when there's no token (cancelled).
  */
-export async function githubBackend(_article: HTMLElement, _hooks: import("./backend").EditorHooks): Promise<import("./backend").Backend | null> {
-  return null
+export async function githubBackend(article: HTMLElement, hooks: import("./backend").EditorHooks): Promise<import("./backend").Backend | null> {
+  const { editRepo: repo, editBranch: branch, editPath: path, editSha: pageSha } = article.dataset as Record<string, string>
+  const words: Record<string, string> = JSON.parse(document.querySelector<HTMLElement>("[data-edit-words]")?.dataset.editWords ?? "{}")
+  const say = (key: string, vars: Record<string, string> = {}) => (words[key] ?? key).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all)
+  const token = await tokenFor(repo, say)
+  if (!token) return null
+  const gh = gitHub(repo, token)
+  const forgetting = (err: unknown): never => {
+    if (err instanceof GitHubError && err.status === 401) {
+      try {
+        localStorage.removeItem(tokenKey(repo))
+      } catch {}
+      document.documentElement.removeAttribute("data-edit-connected")
+    }
+    throw err
+  }
+  /** the texts committed (and the one loaded), by sha: what a deploy can bring */
+  const committed = new Set<string>()
+  /** the last commit, and its deploy's page once it's in (one wait, for render() and close() alike) */
+  let waiting: { sha: string; since: number; page: Promise<Document | "slow" | undefined> } | null = null
+  let learnedPage = false
+  const { fetchPage, swapIn } = await import("./swap")
+  /** the deploy of the commit `sha`, waited for (a newer commit's takes its place) */
+  const wait = (sha: string) => {
+    if (waiting?.sha === sha) return waiting
+    const w: NonNullable<typeof waiting> = { sha, since: Date.now(), page: Promise.resolve(undefined) }
+    const want = () => (waiting === w ? w : null)
+    w.page = deployed(fetchPage, (doc) => doc.querySelector<HTMLElement>("article[data-edit-slug]")?.dataset.editSha, want, {
+      tick: () => {
+        if (want()) hooks.status(say("editDeploying", { s: String(Math.round((Date.now() - w.since) / 1000)) }))
+      },
+    })
+    void w.page.then((page) => {
+      if (waiting !== w) return
+      waiting = null
+      hooks.status(say(page === "slow" ? "editSlowDeploy" : "editLive"))
+    })
+    waiting = w
+    return w
+  }
+
+  return {
+    saveOn: "leave",
+    async load() {
+      const now = await gh.read(path, branch).catch(forgetting)
+      committed.add(now.sha)
+      // a page built from this very text: the editor takes its blocks in itself
+      if (now.sha === pageSha) learnedPage = true
+      return now
+    },
+    async save(text, base) {
+      hooks.status(say("editPublishing"))
+      const res = await gh.write(path, branch, text, base, say("editCommit", { path })).catch(forgetting)
+      if ("sha" in res) {
+        committed.add(res.sha)
+        wait(res.sha)
+      }
+      return res
+    },
+    async render(text) {
+      // the page as it was built, older than the note: its blocks are drawn wherever their text still is
+      if (!learnedPage && pageSha) {
+        learnedPage = true
+        const old = await gh.blob(pageSha).catch(() => undefined)
+        if (old !== undefined) hooks.learn(old, [...article.children].filter((c) => !c.matches("[data-edit-doc]")))
+      }
+      const sha = await blobSha(text)
+      // a text that isn't committed has no deploy to wait for: its new blocks show their markdown
+      if (!committed.has(sha)) return null
+      const doc = await wait(sha).page
+      if (!doc || doc === "slow") return null
+      return doc.querySelector("article[data-edit-slug]")?.innerHTML ?? null
+    },
+    async close() {
+      // the page, as deployed now; and again once the last commit's deploy is in
+      const doc = await fetchPage()
+      if (doc) await swapIn(doc)
+      const later = await waiting?.page
+      if (later && later !== "slow") await swapIn(later)
+    },
+  }
+}
+
+/** the token for the repo: kept in this browser, else asked for */
+async function tokenFor(repo: string, say: (key: string, vars?: Record<string, string>) => string): Promise<string | undefined> {
+  let token: string | null = null
+  try {
+    token = localStorage.getItem(tokenKey(repo))
+  } catch {}
+  return (token ?? (await connect(repo, say))) || undefined
+}
+
+/** Asks for a token for the repo, once, in a dialog, and checks it can write there. */
+function connect(repo: string, say: (key: string, vars?: Record<string, string>) => string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const dialog = document.createElement("dialog")
+    dialog.className = "edit-connect"
+    dialog.innerHTML = `<form method="dialog">
+      <h2></h2><p class="edit-connect-help"></p>
+      <label><span></span><input name="token" type="password" autocomplete="off" spellcheck="false" required></label>
+      <p class="edit-connect-error" hidden></p>
+      <menu><a target="_blank" rel="noopener"></a><button type="button"></button><button type="submit"></button></menu>
+    </form>`
+    dialog.querySelector("h2")!.textContent = say("editConnect")
+    dialog.querySelector(".edit-connect-help")!.textContent = say("editTokenHelp", { repo })
+    dialog.querySelector("label span")!.textContent = say("editToken")
+    const link = dialog.querySelector("a")!
+    link.textContent = say("editMakeToken")
+    link.href = `https://github.com/settings/personal-access-tokens/new?name=${encodeURIComponent(`Basalt ${repo}`)}`
+    const [cancel, ok] = dialog.querySelectorAll("button")
+    cancel.textContent = say("editCancel")
+    ok.textContent = say("editConnectButton")
+    const input = dialog.querySelector("input")!
+    const error = dialog.querySelector<HTMLElement>(".edit-connect-error")!
+    const done = (token: string | null) => {
+      dialog.close()
+      dialog.remove()
+      resolve(token)
+    }
+    cancel.addEventListener("click", () => done(null))
+    dialog.addEventListener("cancel", () => done(null))
+    dialog.querySelector("form")!.addEventListener("submit", async (e) => {
+      e.preventDefault()
+      const token = input.value.trim()
+      if (!(await gitHub(repo, token).canPush())) {
+        error.hidden = false
+        error.textContent = say("editTokenWrong", { repo })
+        return
+      }
+      try {
+        localStorage.setItem(tokenKey(repo), token)
+      } catch {}
+      document.documentElement.setAttribute("data-edit-connected", "")
+      done(token)
+    })
+    document.body.append(dialog)
+    dialog.showModal()
+  })
 }
