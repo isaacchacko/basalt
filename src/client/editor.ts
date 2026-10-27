@@ -40,7 +40,7 @@ import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/lang
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, completionStatus, type CompletionContext } from "@codemirror/autocomplete"
 import { tags } from "@lezer/highlight"
 import { lineMap, merge, type LineMap } from "../lib/linemap"
-import { fetchPage, swapIn } from "./swap"
+import { fetchPage, swapIn, swapped } from "./swap"
 import { GitHubError, deployed, gitHub, type Version } from "./github"
 
 interface Backend {
@@ -421,7 +421,10 @@ function rebase(base: string, now: Version) {
 function neighbour(dir: -1 | 1): HTMLElement | null {
   const r = region
   if (!r) return null
-  const shown = blocks().filter((el) => !el.hasAttribute("data-edit-hidden") && el.checkVisibility())
+  // a margin note is in the margin, not where it's written: it's there all the same
+  const inMargin = (el: HTMLElement) =>
+    [...document.querySelectorAll<HTMLElement>(`.sidebar [data-src="${el.dataset.src}"]`)].some((m) => m.checkVisibility())
+  const shown = blocks().filter((el) => !el.hasAttribute("data-edit-hidden") && (el.checkVisibility() || inMargin(el)))
   const header = document.querySelector<HTMLElement>(".page-header .popover-hint")
   if (r.header) return dir === 1 ? (shown[0] ?? null) : null
   const spans = shown.map((el) => [el, linesOf(el)] as const)
@@ -705,24 +708,32 @@ document.addEventListener("astro:before-preparation", (e) => {
 
 // a newer version of this page swapped in (a save, a deploy): the open block stays open in it
 document.addEventListener("basalt:swap-document", (e) => {
-  const doc = (e as CustomEvent<Document>).detail
-  const sha = article(doc)?.dataset.editSha
+  const sha = article((e as CustomEvent<Document>).detail)?.dataset.editSha
   if (sha && !texts.has(sha)) void learn()
-  if (region) place(doc, region, sha)
 })
 
-// Astro puts the focus back in the editor once it's moved, but at the start
-// of it (a contenteditable's caret goes there), and CodeMirror would take
-// that for where you are: the caret goes back where it was, in the page
-// itself, before the next key lands
+// The page swapped in gets the open block's editor where its blocks are,
+// placed at the last moment (the block may have closed, or another opened,
+// since the page was fetched). Astro puts the focus back in the editor once
+// it's moved, but at the start of it (a contenteditable's caret goes there),
+// and CodeMirror would take that for where you are: the caret goes back where
+// it was, in the page itself, before the next key lands
 let caret: EditorSelection | undefined
-document.addEventListener("astro:before-swap", () => {
-  caret = region?.view.hasFocus ? region.view.state.selection : undefined
+const PERSISTED = `[data-astro-transition-persist="${PERSIST}"]`
+document.addEventListener("astro:before-swap", (e) => {
+  const doc = e.newDocument
+  const r = swapped.has(doc) ? region : null
+  // not a page's own focus: one of several windows has it (document.hasFocus) or not
+  caret = r && document.activeElement === r.view.contentDOM ? r.view.state.selection : undefined
+  doc.querySelectorAll(PERSISTED).forEach((el) => el.remove())
+  if (r) place(doc, r, article(doc)?.dataset.editSha)
 })
 
 document.addEventListener("astro:after-swap", () => {
   picked = null
   const r = region
+  // nothing but the open block's editor is kept from page to page
+  document.querySelectorAll(PERSISTED).forEach((el) => el !== r?.host && el.remove())
   if (!r?.host.isConnected || !caret) return
   r.view.focus()
   const { anchor, head } = caret.main

@@ -37,8 +37,12 @@ export async function fetchPage(): Promise<Document | undefined> {
   }
 }
 
+/** the documents swapIn brought in: a newer version of the page, not another page */
+export const swapped = new WeakSet<Document>()
+
 export async function swapIn(doc: Document) {
   if (!doc.querySelector('[name="astro-view-transitions-enabled"]')) return void location.reload()
+  swapped.add(doc)
   document.dispatchEvent(new CustomEvent("basalt:swap-document", { detail: doc }))
   const url = location.pathname + location.search
   const hash = location.hash
