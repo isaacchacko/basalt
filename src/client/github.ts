@@ -226,7 +226,7 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
   let learnedPage = false
   const { fetchPage, swapIn } = await import("./swap")
   /** the note rendered in the browser, once it's loaded; null where it can't be */
-  let renderer: Promise<((slug: string, text: string) => Promise<import("./backend").Rendering>) | null> | undefined
+  let renderer: Promise<((slug: string, text: string, at?: string) => Promise<import("./backend").Rendering>) | null> | undefined
   const inBrowser = () =>
     (renderer ??= (async () => {
       const [facts, { browserRenderer }] = await Promise.all([
@@ -291,7 +291,7 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
         if (old !== undefined) hooks.learn(old, [...article.children].filter((c) => !c.matches("[data-edit-doc]")))
       }
       const own = await inBrowser()
-      if (own) return own(article.dataset.editSlug!, text)
+      if (own) return own(article.dataset.editSlug!, text, path)
       const sha = await blobSha(text)
       // a text that isn't committed has no deploy to wait for: its new blocks show their markdown
       if (!committed.has(sha)) return null

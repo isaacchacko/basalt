@@ -63,7 +63,7 @@ const SONGS = `${SITE.work}/cache/spotify.json`
 const UNDRAWN = "basalt-undrawn"
 
 /** The site's notes, rendered here; null for a site that has plugins of its own. */
-export function browserRenderer(facts: SiteFacts, read: Reader): ((slug: string, text: string) => Promise<Rendering>) | null {
+export function browserRenderer(facts: SiteFacts, read: Reader): ((slug: string, text: string, at?: string) => Promise<Rendering>) | null {
   if (facts.own) return null
   const site = { ...SITE, config: { ...SITE.config, title: facts.title, locale: facts.locale } }
   const all: SiteFile[] = facts.files.map((f) => ({ abs: `${ROOT}/${f.rel}`, rel: f.rel as FilePath, slug: f.slug as FullSlug, isNote: f.isNote }))
@@ -126,8 +126,23 @@ export function browserRenderer(facts: SiteFacts, read: Reader): ((slug: string,
     return want.length > 0
   }
 
-  return async (slug, text) => {
-    const file = reg.bySlug.get(slug as FullSlug)
+  /** each folder of notes in the repo, and where its notes go in the site (a note's repo path, less its path in the site) */
+  const sources = [...new Set(facts.files.flatMap((f) => (f.repo?.endsWith(f.rel) ? [f.repo.slice(0, f.repo.length - f.rel.length)] : [])))].sort((a, b) => b.length - a.length)
+  /** a note the build hasn't (one the explorer made since, files.ts), by its path in the repo: in the site where it'll be */
+  const adopt = (slug: string, at: string): SiteFile | undefined => {
+    const source = sources.find((p) => at.startsWith(p))
+    if (source === undefined) return undefined
+    const file: SiteFile = { abs: `${ROOT}/${at.slice(source.length)}`, rel: at.slice(source.length) as FilePath, slug: slug as FullSlug, isNote: true }
+    reg.files.push(file)
+    reg.slugs.push(file.slug)
+    reg.byAbs.set(file.abs, file)
+    reg.bySlug.set(file.slug, file)
+    repo.set(file.abs, at)
+    return file
+  }
+
+  return async (slug, text, at) => {
+    const file = reg.bySlug.get(slug as FullSlug) ?? (at ? adopt(slug, at) : undefined)
     if (!file) throw new Error(`basalt: ${slug} isn't one of the site's notes`)
     const { frontmatter, content } = parseFrontmatter(transformText(text, file, basaltText))
     let html = ""
