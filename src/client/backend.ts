@@ -31,6 +31,10 @@ export interface Backend {
   render(text: string): Promise<string | null>
   /** editing's over, after its last save: whatever the page does next (dev: the page swapped in once) */
   close?(): Promise<void>
+  /** a built site's: the explorer's file ops kept for the branch, as publishing takes them (none: undefined) */
+  filing?(): import("./commit").Filing | undefined
+  /** a built site's: the note committed as `sha` some other way (with the file ops): its deploy waited for, as a save's is */
+  deploying?(sha: string): void
 }
 
 /** What a backend may tell the editor of its own accord. */

@@ -36,11 +36,17 @@ function sync() {
   b.setAttribute("aria-pressed", String(root.hasAttribute("data-editing")))
 }
 
+/** the explorer's file ops (files.ts), in editing view: loaded with the editor */
+const files = () => import("./files")
+
 async function toggle(on = !root.hasAttribute("data-editing")) {
   if (!article()) return
   const { setEditing } = await load()
   await setEditing(on)
   sync()
+  const f = await files()
+  if (root.hasAttribute("data-editing")) f.start()
+  else f.stop()
 }
 
 document.addEventListener("click", (e) => {
@@ -67,7 +73,7 @@ document.addEventListener("astro:before-swap", (e) => {
 
 document.addEventListener("astro:page-load", () => {
   sync()
-  if (editor) void editor.then((m) => m.pageLoaded()).then(sync)
+  if (editor) void editor.then((m) => m.pageLoaded()).then(sync).then(() => root.hasAttribute("data-editing") && files().then((f) => f.start()))
 })
 
 /** a built site's page whose note has a draft, in a browser that's connected */

@@ -509,7 +509,14 @@ function setup(server: ViteDevServer) {
       }
       return send(...args)
     }
-    if (!build) return send(...args)
+    if (!build) {
+      // Astro's own reload for a note added, moved or deleted (the explorer's
+      // file ops), after the build that swapped it in: a swap too, so a page
+      // being edited isn't reloaded out from under its editor
+      if (payload.type === "full-reload" && status.change === "swap" && Date.now() - lastFinish < 3000)
+        return send({ type: "custom", event: "basalt:swap", data: { files: status.trigger } })
+      return send(...args)
+    }
     if (payload.type === "update") {
       if (build.seen !== "reload") build.seen = "hot"
       later()

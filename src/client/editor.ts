@@ -30,7 +30,8 @@ import { startContent } from "./content"
 import { keysOf, textOf } from "./blocks"
 import { noteOf } from "./margin"
 import { devBackend, type Backend, type EditorHooks, type Version } from "./backend"
-import { draftKey, draftsOf, draftsUnder, draftStore, type DraftStore } from "./draft"
+import { draftKey, draftsOf, draftsUnder, draftStore, filesStore, type DraftStore } from "./draft"
+import { pageOf } from "../lib/fileops"
 import { openPublish, type Drafting } from "./publish"
 
 declare global {
@@ -904,10 +905,13 @@ let dialog: Promise<"published" | "kept" | "discarded"> | null = null
 function publishing(n: Note) {
   if (dialog) return dialog
   keepDraft()
-  if (n.began === null) {
+  // the explorer's file ops (files.ts) go with the note's draft, in one commit
+  const filing = n.backend.filing?.()
+  if (n.began === null && !filing) {
     flash(say("editNothing"))
     return Promise.resolve("kept" as const)
   }
+  let at: string | null | undefined
   const drafting: Drafting = {
     now: () => ({ text: asFile(n, n.view.state.doc.toString()), saved: n.saved, began: n.began ?? n.saved.sha }),
     merge(now) {
@@ -929,6 +933,8 @@ function publishing(n: Note) {
     repo,
     branch,
     path,
+    filing,
+    filed: (where) => (at = where),
     discard() {
       // the note as the file has it: what was typed, undone, so its blocks are where they were (⌘Z brings it back, a draft again)
       const base = Text.of(lf(n.saved.text).split("\n"))
@@ -941,6 +947,14 @@ function publishing(n: Note) {
     },
   }).then((how) => {
     dialog = null
+    if (how !== "kept") document.dispatchEvent(new Event("basalt:files"))
+    // committed with the file ops: its deploy waited for where it is; or, moved or gone, its new page once that's deployed
+    if (filing && at !== undefined) {
+      if (at === filing.note) n.backend.deploying?.(n.saved.sha)
+      else void gone(at)
+    }
+    // a new note discarded, and with it its page (made here, files.ts): the top of the site instead
+    if (how === "discarded" && filing?.ops.some((o) => o.op === "create" && o.path === filing.note)) void import("astro:transitions/client").then(({ navigate }) => navigate("/"))
     if (note === n) {
       n.view.focus()
       if (how !== "kept") void render()
@@ -954,6 +968,24 @@ function publishing(n: Note) {
 document.addEventListener("click", (e) => {
   if (note && (e.target as Element).closest?.(".edit-status .edit-draft")) void publishing(note)
 })
+
+/** The note being edited moved or went with the file ops just published: editing's over, and its new page (else the top) comes once it's deployed. */
+async function gone(at: string | null) {
+  await setEditing(false)
+  const { navigate } = await import("astro:transitions/client")
+  const href = at === null ? "/" : pageOf(at)
+  const since = Date.now()
+  for (;;) {
+    const res = await fetch(href, { cache: "no-store" }).catch(() => undefined)
+    if (res?.ok) return navigate(href)
+    if (Date.now() - since > 20 * 60_000) return status(say("editSlowDeploy"))
+    status(say("editDeploying", { s: String(Math.round((Date.now() - since) / 1000)) }))
+    await new Promise((r) => setTimeout(r, 4000))
+  }
+}
+
+// the explorer's file ops changed (files.ts): the count in the corner says so
+document.addEventListener("basalt:files", () => status())
 
 // ---------- the status, in the corner ----------
 
@@ -978,6 +1010,9 @@ function status(message?: string) {
   const n = note
   const t = n?.draft && n.began === null ? n.backend.target : undefined
   const elsewhere = t ? draftsUnder(draftsOf(t.repo, t.branch), draftKey(t.repo, t.branch, t.path)) : []
+  // the explorer's file ops, kept for the branch: changes this page publishes too
+  const target = n?.draft ? n.backend.target : undefined
+  const ops = target ? filesStore(target.repo, target.branch).get().length : 0
   if (!n && !message) return void el?.remove()
   if (!el) {
     el = document.createElement("div")
@@ -985,12 +1020,12 @@ function status(message?: string) {
     el.setAttribute("role", "status")
     document.body.append(el)
   }
-  if (n?.draft && (n.began !== null || elsewhere.length)) {
+  if (n?.draft && (n.began !== null || ops || elsewhere.length)) {
     // a word for a while (the draft restored) is said by the count's button itself; what's going on (a deploy), beside it
     const said = message && (message !== flash || n.began === null) ? message : ""
     const [label, href] =
-      n.began !== null
-        ? [flash ?? say("editDraft", { n: String(n.changes) }), ""]
+      n.began !== null || ops
+        ? [flash ?? say("editDraft", { n: String(n.changes + ops) }), ""]
         : [say("editDraftElsewhere", { title: elsewhere[0].title, n: String(elsewhere.length) }), elsewhere[0].url]
     // made again only when it says something else: a button that has the focus keeps it
     const key = JSON.stringify([said, label, href])

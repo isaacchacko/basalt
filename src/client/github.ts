@@ -8,12 +8,35 @@
 //   write      a commit of the note over the version it was read at; a conflict
 //              (it was committed to since) gives back the note as it is now
 //   blob       the note as the page was built from it, by its sha
+//   head       the branch's last commit, its tree, and every file in it
+//   commitTree many files changed in one commit (git's own objects: blobs, a
+//              tree, a commit, the branch moved to it); a conflict (it was
+//              committed to since) when the branch isn't where it was read
 //   deployed   the page, fetched till it's the one built from a commit
+
+import { filing } from "./commit.ts"
 
 /** a version of a file, by its sha (git's) */
 export interface Version {
   text: string
   sha: string
+}
+
+/** a file in a commit's tree */
+export interface TreeFile {
+  path: string
+  mode: string
+  sha: string
+}
+
+/** a change to a tree: a file's new text, a file's blob (moved, as it was) at a path, or a path gone */
+export type TreeChange = { path: string; text: string; mode?: string } | { path: string; sha: string; mode: string } | { path: string; gone: true }
+
+/** a branch, as it is: its commit, that commit's tree, and every file in it */
+export interface Head {
+  commit: string
+  tree: string
+  files: TreeFile[]
 }
 
 export const API = "https://api.github.com"
@@ -78,6 +101,49 @@ export function gitHub(repo: string, token: string, api = API) {
       const res = await call(`/git/blobs/${sha}`)
       if (!res.ok) throw await fail(res)
       return base64.decode((await res.json()).content)
+    },
+    async head(branch: string): Promise<Head> {
+      const ref = await call(`/git/ref/heads/${branch.split("/").map(encodeURIComponent).join("/")}`)
+      if (!ref.ok) throw await fail(ref)
+      const commit: string = (await ref.json()).object.sha
+      const c = await call(`/git/commits/${commit}`)
+      if (!c.ok) throw await fail(c)
+      const tree: string = (await c.json()).tree.sha
+      const t = await call(`/git/trees/${tree}?recursive=1`)
+      if (!t.ok) throw await fail(t)
+      const all: { path: string; mode: string; type: string; sha: string }[] = (await t.json()).tree
+      return { commit, tree, files: all.filter((f) => f.type === "blob").map(({ path, mode, sha }) => ({ path, mode, sha })) }
+    },
+    /**
+     * One commit of `changes` over `head` (as head() read it), the branch moved
+     * to it: the commit's sha; or, the branch moved on since, a conflict (nothing's changed).
+     */
+    async commitTree(branch: string, head: Head, changes: TreeChange[], message: string): Promise<{ sha: string } | { conflict: true }> {
+      const post = async (url: string, body: unknown, method = "POST") => {
+        const res = await call(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+        if (!res.ok) throw await fail(res)
+        return res.json()
+      }
+      const tree = []
+      for (const c of changes) {
+        if ("gone" in c) tree.push({ path: c.path, mode: "100644", type: "blob", sha: null })
+        else if ("sha" in c) tree.push({ path: c.path, mode: c.mode, type: "blob", sha: c.sha })
+        else {
+          const blob = await post("/git/blobs", { content: base64.encode(c.text), encoding: "base64" })
+          tree.push({ path: c.path, mode: c.mode ?? "100644", type: "blob", sha: blob.sha })
+        }
+      }
+      const made = await post("/git/trees", { base_tree: head.tree, tree })
+      const commit = await post("/git/commits", { message, tree: made.sha, parents: [head.commit] })
+      // not forced: a branch committed to since isn't a fast-forward, and stays as it is
+      const res = await call(`/git/refs/heads/${branch.split("/").map(encodeURIComponent).join("/")}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sha: commit.sha, force: false }),
+      })
+      if (res.status === 409 || res.status === 422) return { conflict: true }
+      if (!res.ok) throw await fail(res)
+      return { sha: commit.sha }
     },
   }
   return gh
@@ -179,6 +245,8 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
     saveOn: "publish",
     target: { repo, branch, path },
     async load() {
+      // a note the explorer made, not yet published (files.ts): nothing on the branch to read, only what it was made with
+      if (article.dataset.editNew !== undefined) return { text: article.dataset.editNew, sha: "" }
       const now = await gh.read(path, branch).catch(forgetting)
       committed.add(now.sha)
       // a page built from this very text: the editor takes its blocks in itself
@@ -207,6 +275,15 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
       const doc = await wait(sha).page
       if (!doc || doc === "slow") return null
       return doc.querySelector("article[data-edit-slug]")?.innerHTML ?? null
+    },
+    filing() {
+      const roots = JSON.parse(document.querySelector<HTMLElement>(".explorer[data-edit-roots]")?.dataset.editRoots ?? "null")
+      return roots ? filing({ gh, repo, branch, roots, path, sha: blobSha }) : undefined
+    },
+    deploying(sha) {
+      delete article.dataset.editNew
+      committed.add(sha)
+      wait(sha)
     },
     async close() {
       // the page, as deployed now; and again once the last commit's deploy is in

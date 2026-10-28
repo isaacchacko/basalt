@@ -112,6 +112,8 @@ export interface TreeNode {
   slug: string
   name: string
   isFolder: boolean
+  /** its file's path in the tree as written ("blog/a post.md"), a folder's without its slash */
+  path: string
   /** a folder's own index note */
   note?: Note
   children: TreeNode[]
@@ -119,7 +121,7 @@ export interface TreeNode {
 
 /** The notes as folders and files, folders first, each sorted by name (Quartz's explorer order). */
 export function tree(all: Note[]): TreeNode {
-  const root: TreeNode = { segment: "", slug: "", name: "", isFolder: true, children: [] }
+  const root: TreeNode = { segment: "", slug: "", name: "", isFolder: true, path: "", children: [] }
   for (const note of all) {
     const parts = note.id.split("/")
     // the folder names as written, for a folder with no index note to title it
@@ -139,6 +141,7 @@ export function tree(all: Note[]): TreeNode {
           slug: parts.slice(0, i + 1).join("/"),
           name: last ? titleOf(note) : (written[i] ?? segment),
           isFolder: !last,
+          path: last ? written.join("/") : written.slice(0, i + 1).join("/"),
           children: [],
         }
         at.children.push(child)
