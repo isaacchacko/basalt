@@ -52,8 +52,27 @@ export const strings = {
   editCancel: "Cancel",
   editConnectButton: "Connect",
   editTokenWrong: "That token can't write to {repo}.",
-  /** the commit message of an edit */
+  /** the commit message of an edit (the publish dialog's, to begin with) */
   editCommit: "Edit {path}",
+  /** a built site's draft, unpublished (client/publish.ts): the count in the corner, and the dialog */
+  editDraft: "{n} unpublished change|{n} unpublished changes",
+  editDraftElsewhere: "Unpublished changes on {title}|Unpublished changes on {n} pages",
+  editRestored: "Your unpublished changes are back",
+  editKept: "Your unpublished changes are kept in this browser",
+  editNothing: "Nothing to publish",
+  editDiscarded: "Discarded",
+  editPublishTitle: "Publish your changes",
+  editPublishTo: "Commits {path} to {branch} of {repo}.",
+  editPublishMoved: "{path} was committed to since you began. Those changes are kept, and yours go in around them.",
+  editReading: "Reading the note on GitHub…",
+  editChanges: "Your changes",
+  editMessage: "Commit message",
+  editPublish: "Publish",
+  editKeepEditing: "Keep editing",
+  editDiscard: "Discard",
+  editDiscardSure: "Discard your unpublished changes? They're kept nowhere else.",
+  editDiscardNo: "Keep them",
+  editDiscardYes: "Discard them",
   /** a note's history (client/history.ts): its button, and its timeline */
   history: "Show this page's history",
   historyTitle: "History",

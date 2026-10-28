@@ -11,6 +11,10 @@
 // same nodes, moved, not made again, so an island keeps running and a diagram
 // stays drawn. While editing, the page isn't swapped for a save: the editor
 // is the page. Turning editing off swaps the page in once.
+//
+// A built site's note isn't saved as it's typed: what's typed is a draft,
+// kept in this browser (draft.ts), and committed once you publish it
+// (publish.ts: ⌘S, or the count of unpublished changes in the corner).
 
 import { Annotation, ChangeSet, EditorSelection, EditorState, StateEffect, StateField, Text, type Extension } from "@codemirror/state"
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view"
@@ -26,6 +30,8 @@ import { startContent } from "./content"
 import { keysOf, textOf } from "./blocks"
 import { noteOf } from "./margin"
 import { devBackend, type Backend, type EditorHooks, type Version } from "./backend"
+import { draftKey, draftsOf, draftsUnder, draftStore, type DraftStore } from "./draft"
+import { openPublish, type Drafting } from "./publish"
 
 declare global {
   interface Window {
@@ -40,13 +46,21 @@ declare global {
       idle(): Promise<void>
       /** the sha of the file as it's saved */
       saved(): string
+      /** a built site's: the draft kept in this browser, and the publish dialog, opened */
+      draft(): import("./draft").Draft | null
+      publish(): Promise<"published" | "kept" | "discarded" | undefined>
     }
   }
 }
 
 const root = document.documentElement
 let words: Record<string, string> = {}
-const say = (key: string, vars: Record<string, string> = {}) => (words[key] ?? key).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all)
+/** a word, its {name}s filled in, in the form for its count when it has two ("one|many", lib/strings.ts) */
+const say = (key: string, vars: Record<string, string> = {}) => {
+  const forms = (words[key] ?? key).split("|")
+  const form = forms.length > 1 && vars.n !== "1" ? forms[forms.length - 1] : forms[0]
+  return form.replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all)
+}
 const article = () => document.querySelector<HTMLElement>("article[data-edit-slug]")
 
 interface Note {
@@ -61,6 +75,10 @@ interface Note {
   started: AbortController
   /** the file's lines end in \r\n: so they're written */
   crlf: boolean
+  /** a built site's: the draft kept in this browser, the sha it began over (null: there's none), and how many changes it has */
+  draft?: DraftStore
+  began: string | null
+  changes: number
 }
 let note: Note | null = null
 
@@ -89,13 +107,20 @@ export async function setEditing(on: boolean) {
     } catch (err) {
       return status(say("editFailed", { error: (err as Error).message }))
     }
+    // a built site's draft, kept from before (a reload, another page): the note as it was written, over the version it was
+    const t = backend.target
+    const store = t && draftStore(draftKey(t.repo, t.branch, t.path))
+    const kept = store?.get()
+    const remote = saved
+    if (kept) saved = kept.base
     measure(art)
     const host = document.createElement("div")
     host.className = "edit-doc"
     host.setAttribute("data-edit-doc", "")
     art.append(host)
-    const view = new EditorView({ parent: host, state: EditorState.create({ doc: saved.text, extensions: extensions() }) })
-    note = { backend, view, host, saved, mine: ChangeSet.empty(view.state.doc.length), started: new AbortController(), crlf: saved.text.includes("\r\n") }
+    const view = new EditorView({ parent: host, state: EditorState.create({ doc: lf(kept?.text ?? saved.text), extensions: extensions() }) })
+    const mine = kept ? diff(lf(saved.text), lf(kept.text)) : ChangeSet.empty(view.state.doc.length)
+    note = { backend, view, host, saved, mine, started: new AbortController(), crlf: saved.text.includes("\r\n"), draft: store, began: kept?.began ?? null, changes: 0 }
     window.basaltEdit = {
       view,
       blocks: () => {
@@ -112,11 +137,20 @@ export async function setEditing(on: boolean) {
         while (timer !== undefined || saving || renders > 0) await new Promise((r) => setTimeout(r, 25))
       },
       saved: () => (note ?? { saved }).saved.sha,
+      draft: () => note?.draft?.get() ?? null,
+      publish: async () => (note ? publishing(note) : undefined),
     }
     root.setAttribute("data-editing", "")
-    // the page as it is, block by block, when it's of this text; else rendered afresh
-    if (art.dataset.editSha === saved.sha) view.dispatch({ effects: setBlocks.of(learn(saved.text, [...art.children], true)) })
+    // the page as it is, block by block, when it's of this text (where it still is, in a draft); else rendered afresh
+    const of = [saved, remote].find((v) => v.sha === art.dataset.editSha)
+    if (of) view.dispatch({ effects: setBlocks.of(learn(of.text, [...art.children], true)) })
     else void render()
+    if (kept) {
+      // committed to since: theirs goes in around the draft now, as it would on publishing
+      if (remote.sha !== saved.sha) rebase(note, saved, ChangeSet.empty(lf(saved.text).length), remote)
+      keepDraft()
+      flash(say("editRestored"))
+    }
     // the cursor at the end, so the note opens drawn, all of it
     view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length), annotations: opening.of(true) })
     view.focus()
@@ -131,8 +165,12 @@ export async function setEditing(on: boolean) {
     if (header) resized.observe(header)
   } else if (!on && note) {
     const { backend } = note
+    if (note.draft) keepDraft()
+    const drafted = note.began !== null
     await leave()
     await backend.close?.()
+    // what's unpublished stays in this browser, for next time
+    if (drafted) flash(say("editKept"))
   }
   status()
 }
@@ -140,7 +178,8 @@ export async function setEditing(on: boolean) {
 async function leave() {
   if (!note) return
   const { view, host, started } = note
-  await save()
+  if (note.draft) keepDraft()
+  else await save()
   started.abort()
   floats.clear()
   note = null
@@ -717,12 +756,6 @@ function offsetIn(box: HTMLElement, at: { clientX: number; clientY: number }, so
 /** a change of theirs (a save from elsewhere): not one of the edits being saved */
 const theirs = Annotation.define<boolean>()
 
-/** the block the cursor's in (or at the edge of), if it's in one */
-const blockAt = (state: EditorState) => {
-  const { head } = state.selection.main
-  return state.field(blocks).find((b) => b.from <= head && head <= b.to)
-}
-
 /**
  * Scrolled to somewhere drawn blocks it hadn't measured were (a search's match
  * far down the note): CodeMirror guessed their heights, and lands short. Once
@@ -751,21 +784,15 @@ const changed = EditorView.updateListener.of((u) => {
   const n = note
   if (!n || n.view !== u.view) return
   if (u.docChanged && !u.transactions.some((tr) => tr.annotation(theirs))) n.mine = n.mine.compose(u.changes)
-  if (n.backend.saveOn === "idle") {
-    if (!u.docChanged) return
-    clearTimeout(timer)
-    timer = setTimeout(() => {
-      timer = undefined
-      void save().then(render)
-    }, 300)
-  } else if (u.selectionSet) {
-    // a block changed and left: saved (a commit, on GitHub)
-    const was = blockAt(u.startState)
-    const is = blockAt(u.state)
-    const left = was && (!is || is.from !== u.changes.mapPos(was.from))
-    if (left && asFile(n, u.state.doc.toString()) !== n.saved.text) void save().then(render)
-  }
   status()
+  if (!u.docChanged) return
+  clearTimeout(timer)
+  timer = setTimeout(() => {
+    timer = undefined
+    // a built site's: kept as a draft, not saved
+    if (n.draft) keepDraft()
+    else void save().then(render)
+  }, 300)
 })
 
 let saving: Promise<void> | null = null
@@ -833,21 +860,151 @@ async function render() {
 document.addEventListener("keydown", (e) => {
   if (!note || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return
   e.preventDefault()
-  void save().then(render)
+  if (note.draft) void publishing(note)
+  else void save().then(render)
+})
+
+// ---------- a built site's draft, and publishing it ----------
+
+/**
+ * What's typed, kept in this browser as the note's draft (draft.ts), over the
+ * version it's written over; none once it's the file again.
+ */
+function keepDraft() {
+  clearTimeout(timer)
+  timer = undefined
+  const n = note
+  if (!n?.draft) return
+  const text = asFile(n, n.view.state.doc.toString())
+  if (text === n.saved.text) {
+    n.draft.drop()
+    n.began = null
+    n.changes = 0
+  } else {
+    n.began ??= n.saved.sha
+    n.changes = changesIn(lf(n.saved.text), lf(text))
+    const title = document.querySelector(".page-header h1.article-title")?.textContent?.trim() || n.backend.target!.path
+    n.draft.put({ text, base: n.saved, began: n.began, url: location.pathname + location.search, title, at: Date.now() })
+  }
+  status()
+}
+
+/** how many stretches of lines changed from one text to another */
+function changesIn(a: string, b: string) {
+  let count = 0
+  diff(a, b).iterChanges(() => count++)
+  return count
+}
+
+// the tab closed, or the page left: what's typed is kept, however soon after typing
+addEventListener("pagehide", () => note?.draft && timer !== undefined && keepDraft())
+
+/** ⌘S or the count in the corner: the publish dialog, for the note's draft */
+let dialog: Promise<"published" | "kept" | "discarded"> | null = null
+function publishing(n: Note) {
+  if (dialog) return dialog
+  keepDraft()
+  if (n.began === null) {
+    flash(say("editNothing"))
+    return Promise.resolve("kept" as const)
+  }
+  const drafting: Drafting = {
+    now: () => ({ text: asFile(n, n.view.state.doc.toString()), saved: n.saved, began: n.began ?? n.saved.sha }),
+    merge(now) {
+      if (now.sha === n.saved.sha) return
+      rebase(n, n.saved, ChangeSet.empty(lf(n.saved.text).length), now)
+      keepDraft()
+    },
+    published(v) {
+      n.saved = v
+      n.mine = ChangeSet.empty(n.view.state.doc.length)
+      keepDraft()
+    },
+  }
+  const { repo, branch, path } = n.backend.target!
+  dialog = openPublish({
+    backend: n.backend,
+    drafting,
+    say,
+    repo,
+    branch,
+    path,
+    discard() {
+      // the note as the file has it: what was typed, undone, so its blocks are where they were (⌘Z brings it back, a draft again)
+      const base = Text.of(lf(n.saved.text).split("\n"))
+      const doc = n.view.state.doc
+      let undo = n.mine.length === base.length ? n.mine.invert(base) : null
+      if (!undo || !undo.apply(doc).eq(base)) undo = diff(doc.toString(), base.toString())
+      n.view.dispatch({ changes: undo, annotations: theirs.of(true) })
+      n.mine = ChangeSet.empty(n.view.state.doc.length)
+      keepDraft()
+    },
+  }).then((how) => {
+    dialog = null
+    if (note === n) {
+      n.view.focus()
+      if (how !== "kept") void render()
+      if (how === "discarded") flash(say("editDiscarded"))
+    }
+    return how
+  })
+  return dialog
+}
+
+document.addEventListener("click", (e) => {
+  if (note && (e.target as Element).closest?.(".edit-status .edit-draft")) void publishing(note)
 })
 
 // ---------- the status, in the corner ----------
 
+/** a word in the corner for a while (a draft restored, discarded), over what it says otherwise */
+let flashed: { message: string; timer: ReturnType<typeof setTimeout> } | undefined
+function flash(message: string, ms = 5000) {
+  clearTimeout(flashed?.timer)
+  flashed = { message, timer: setTimeout(() => ((flashed = undefined), status()), ms) }
+  status()
+}
+
+/**
+ * The status in the corner: what's going on (a message), else whether it's
+ * saved. A built site's says how many changes are unpublished instead, and a
+ * click on that publishes them; on a page with none, it says which other
+ * page has some, a link to it.
+ */
 function status(message?: string) {
   let el = document.querySelector<HTMLElement>(".edit-status")
-  if (!note && !message) return void el?.remove()
+  const flash = message === undefined ? flashed?.message : undefined
+  message ??= flash
+  const n = note
+  const t = n?.draft && n.began === null ? n.backend.target : undefined
+  const elsewhere = t ? draftsUnder(draftsOf(t.repo, t.branch), draftKey(t.repo, t.branch, t.path)) : []
+  if (!n && !message) return void el?.remove()
   if (!el) {
     el = document.createElement("div")
     el.className = "edit-status"
     el.setAttribute("role", "status")
     document.body.append(el)
   }
-  const unsaved = !!note && asFile(note, note.view.state.doc.toString()) !== note.saved.text
+  if (n?.draft && (n.began !== null || elsewhere.length)) {
+    // a word for a while (the draft restored) is said by the count's button itself; what's going on (a deploy), beside it
+    const said = message && (message !== flash || n.began === null) ? message : ""
+    const [label, href] =
+      n.began !== null
+        ? [flash ?? say("editDraft", { n: String(n.changes) }), ""]
+        : [say("editDraftElsewhere", { title: elsewhere[0].title, n: String(elsewhere.length) }), elsewhere[0].url]
+    // made again only when it says something else: a button that has the focus keeps it
+    const key = JSON.stringify([said, label, href])
+    if (el.dataset.state === "draft" && el.dataset.key === key) return
+    el.dataset.state = "draft"
+    el.dataset.key = key
+    el.innerHTML = `${said ? "<span></span>" : ""}${href ? `<a class="edit-draft-elsewhere"></a>` : `<button type="button" class="edit-draft" aria-haspopup="dialog"></button>`}`
+    el.querySelector("span")?.replaceChildren(said)
+    const go = el.querySelector<HTMLElement>("a, button")!
+    go.textContent = label
+    if (href) go.setAttribute("href", href)
+    return
+  }
+  const unsaved = !!n && !n.draft && asFile(n, n.view.state.doc.toString()) !== n.saved.text
   el.dataset.state = message ? "message" : saving || unsaved ? "saving" : "idle"
   el.textContent = message ?? (saving || unsaved ? say("editSaving") : say("editing"))
 }

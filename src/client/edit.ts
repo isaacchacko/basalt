@@ -8,7 +8,11 @@
 // nothing to edit.
 //
 // A built site's pencil shows once this browser has connected to its GitHub
-// repository (a token kept for it); till then ⌘E or ?edit connects.
+// repository (a token kept for it); till then ⌘E or ?edit connects. A page
+// whose note has a draft not yet published (draft.ts) opens editing it, as
+// it was left, reloaded or come back to.
+
+import { draftKey, draftStore } from "./draft"
 
 const root = document.documentElement
 let editor: Promise<typeof import("./editor")> | undefined
@@ -66,7 +70,15 @@ document.addEventListener("astro:page-load", () => {
   if (editor) void editor.then((m) => m.pageLoaded()).then(sync)
 })
 
+/** a built site's page whose note has a draft, in a browser that's connected */
+function drafted() {
+  const a = article()
+  if (a?.dataset.edit !== "github" || !root.hasAttribute("data-edit-connected")) return false
+  const { editRepo, editBranch, editPath } = a.dataset as Record<string, string>
+  return !!draftStore(draftKey(editRepo, editBranch, editPath)).get()
+}
+
 sync()
-if (new URLSearchParams(location.search).has("edit") && button()) void toggle(true)
+if ((new URLSearchParams(location.search).has("edit") || drafted()) && button()) void toggle(true)
 
 export {}

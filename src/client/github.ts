@@ -127,8 +127,9 @@ export async function blobSha(text: string): Promise<string> {
 /**
  * The editor's backend for a built site with "edit" (article[data-edit=github]):
  * the note is read from and committed to its repo with the editor's token
- * (kept in this browser, else asked for once), as the cursor leaves a block it
- * changed and on ⌘S. GitHub can't render a text, so a block that's new shows
+ * (kept in this browser, else asked for once), and only when you publish:
+ * till then it's a draft in this browser (draft.ts, publish.ts). GitHub can't
+ * render a text, so a block that's new shows
  * its markdown till the deploy the commit sets off is live: render() waits for
  * the page to be built from that commit (its data-edit-sha) and gives back its
  * blocks. Null when there's no token (cancelled).
@@ -175,7 +176,8 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
   }
 
   return {
-    saveOn: "leave",
+    saveOn: "publish",
+    target: { repo, branch, path },
     async load() {
       const now = await gh.read(path, branch).catch(forgetting)
       committed.add(now.sha)
@@ -183,9 +185,9 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
       if (now.sha === pageSha) learnedPage = true
       return now
     },
-    async save(text, base) {
+    async save(text, base, message = say("editCommit", { path })) {
       hooks.status(say("editPublishing"))
-      const res = await gh.write(path, branch, text, base, say("editCommit", { path })).catch(forgetting)
+      const res = await gh.write(path, branch, text, base, message).catch(forgetting)
       if ("sha" in res) {
         committed.add(res.sha)
         wait(res.sha)

@@ -3,7 +3,8 @@
 // the page in place (⌘E does too, and ?edit in the url). Only on a site whose
 // pages edit: while serving, or built with "edit" (lib/edit.ts). Its script is
 // src/client/edit.ts, which loads the editor (client/editor.ts) only once
-// it's wanted; the words the editor says come with the button.
+// it's wanted; the words the editor says come with the button, as written
+// (it fills them in, a count's form too).
 import { registry } from "../lib/registry"
 import { editTarget } from "../lib/edit"
 import { strings, type StringKey } from "../lib/strings"
@@ -11,7 +12,7 @@ import { words } from "../layouts/words"
 import "../styles/edit.scss"
 const t = await words()
 const target = editTarget(registry().site)
-const said = Object.fromEntries((Object.keys(strings) as StringKey[]).filter((k) => k.startsWith("edit")).map((k) => [k, t(k)]))
+const said = Object.fromEntries((Object.keys(strings) as StringKey[]).filter((k) => k.startsWith("edit")).map((k) => [k, t.raw(k)]))
 ---
 
 {
