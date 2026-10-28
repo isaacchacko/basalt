@@ -784,7 +784,6 @@ const changed = EditorView.updateListener.of((u) => {
   const n = note
   if (!n || n.view !== u.view) return
   if (u.docChanged && !u.transactions.some((tr) => tr.annotation(theirs))) n.mine = n.mine.compose(u.changes)
-  status()
   if (!u.docChanged) return
   clearTimeout(timer)
   timer = setTimeout(() => {
@@ -793,6 +792,7 @@ const changed = EditorView.updateListener.of((u) => {
     if (n.draft) keepDraft()
     else void save().then(render)
   }, 300)
+  status()
 })
 
 let saving: Promise<void> | null = null
