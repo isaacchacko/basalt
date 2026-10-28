@@ -194,11 +194,14 @@ export async function blobSha(text: string): Promise<string> {
  * The editor's backend for a built site with "edit" (article[data-edit=github]):
  * the note is read from and committed to its repo with the editor's token
  * (kept in this browser, else asked for once), and only when you publish:
- * till then it's a draft in this browser (draft.ts, publish.ts). GitHub can't
- * render a text, so a block that's new shows
- * its markdown till the deploy the commit sets off is live: render() waits for
- * the page to be built from that commit (its data-edit-sha) and gives back its
- * blocks. Null when there's no token (cancelled).
+ * till then it's a draft in this browser (draft.ts, publish.ts). A text is
+ * rendered here, in the browser, with Basalt's own markdown (markdown/browser/render.ts,
+ * loaded the first time it's wanted), so what's typed is drawn as it will be
+ * built, before it's published. Where it can't be (a site with markdown
+ * plugins of its own), a block that's new shows its markdown till the deploy
+ * a commit sets off is live: render() waits for the page to be built from
+ * that commit (its data-edit-sha) and gives back its blocks. Null when there's
+ * no token (cancelled).
  */
 export async function githubBackend(article: HTMLElement, hooks: import("./backend").EditorHooks): Promise<import("./backend").Backend | null> {
   const { editRepo: repo, editBranch: branch, editPath: path, editSha: pageSha } = article.dataset as Record<string, string>
@@ -222,6 +225,22 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
   let waiting: { sha: string; since: number; page: Promise<Document | "slow" | undefined> } | null = null
   let learnedPage = false
   const { fetchPage, swapIn } = await import("./swap")
+  /** the note rendered in the browser, once it's loaded; null where it can't be */
+  let renderer: Promise<((slug: string, text: string) => Promise<import("./backend").Rendering>) | null> | undefined
+  const inBrowser = () =>
+    (renderer ??= (async () => {
+      const [facts, { browserRenderer }] = await Promise.all([
+        fetch("/static/edit/site.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status))))),
+        import("../markdown/browser/render"),
+      ])
+      return browserRenderer(facts, {
+        note: (at) => gh.read(at, branch).then((v) => v.text),
+        file: (slug) => fetch("/" + encodeURI(slug)).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`${slug}: ${r.status}`)))),
+      })
+    })().catch((err) => {
+      console.warn("basalt: the note can't be rendered in this browser", err)
+      return null
+    }))
   /** the deploy of the commit `sha`, waited for (a newer commit's takes its place) */
   const wait = (sha: string) => {
     if (waiting?.sha === sha) return waiting
@@ -245,6 +264,8 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
     saveOn: "publish",
     target: { repo, branch, path },
     async load() {
+      // the renderer on its way while the note's read
+      void inBrowser()
       // a note the explorer made, not yet published (files.ts): nothing on the branch to read, only what it was made with
       if (article.dataset.editNew !== undefined) return { text: article.dataset.editNew, sha: "" }
       const now = await gh.read(path, branch).catch(forgetting)
@@ -269,12 +290,15 @@ export async function githubBackend(article: HTMLElement, hooks: import("./backe
         const old = await gh.blob(pageSha).catch(() => undefined)
         if (old !== undefined) hooks.learn(old, [...article.children].filter((c) => !c.matches("[data-edit-doc]")))
       }
+      const own = await inBrowser()
+      if (own) return own(article.dataset.editSlug!, text)
       const sha = await blobSha(text)
       // a text that isn't committed has no deploy to wait for: its new blocks show their markdown
       if (!committed.has(sha)) return null
       const doc = await wait(sha).page
       if (!doc || doc === "slow") return null
-      return doc.querySelector("article[data-edit-slug]")?.innerHTML ?? null
+      const html = doc.querySelector("article[data-edit-slug]")?.innerHTML
+      return html === undefined ? null : { html }
     },
     filing() {
       const roots = JSON.parse(document.querySelector<HTMLElement>(".explorer[data-edit-roots]")?.dataset.editRoots ?? "null")

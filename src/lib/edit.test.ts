@@ -163,6 +163,10 @@ test("a note's path in its repository", () => {
   const target = editTarget(s)
   assert.ok(target?.kind === "github")
   assert.equal(repoPath(target, path.join(top, "garden", "notes", "a.md")), "garden/notes/a.md")
+  // the site reached through a link (macOS's /var is /private/var): git's top is the real path
+  const link = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "basalt-link-")), "top")
+  fs.symlinkSync(top, link)
+  assert.equal(repoPath(target, path.join(link, "garden", "notes", "a.md")), "garden/notes/a.md")
 })
 
 test("blobSha is git's name for the contents", () => {

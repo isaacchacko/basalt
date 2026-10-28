@@ -68,6 +68,13 @@ export function trackOf(kind: SpotifyKind, url: string, html: string): Track | u
 
 const pending = new Map<string, Promise<Track | undefined>>()
 
+let online = true
+
+/** Whether a song that isn't in the cache is looked up on Spotify: not from the browser, which can't read its pages (browser/render.ts). */
+export function lookUpSongs(on: boolean) {
+  online = on
+}
+
 /** The song (or album) a Spotify url is, from the cache or its page. */
 export function track(url: string): Promise<Track | undefined> {
   const item = spotifyItem(url)
@@ -83,7 +90,7 @@ async function fetchTrack(kind: SpotifyKind, id: string): Promise<Track | undefi
   // cached before covers came full size: fetched again for it, kept as it was offline
   if (cache[id] && (!cache[id].cover || cache[id].coverFull)) return cache[id]
   const url = `https://open.spotify.com/${kind}/${id}`
-  const fresh = await fetchPage(kind, id, url, cacheDir).catch(() => undefined)
+  const fresh = online ? await fetchPage(kind, id, url, cacheDir).catch(() => undefined) : undefined
   const found = fresh ?? cache[id]
   if (!found) return undefined
   // read again: other tracks may have landed while this one was fetched

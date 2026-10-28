@@ -4,7 +4,7 @@
 //   PUT /__basalt/source               { slug, text, base } writes it, when `base`
 //                                      (the sha it was edited from) is still its sha;
 //                                      else 409 with { text, sha } as it is now
-//   POST /__basalt/render              { slug, text }: the note rendered with that text
+//   POST /__basalt/render              { slug, text }: the note rendered with that text, and its title
 //   GET /__basalt/history              a note's history (integrations/history.ts)
 //   POST /__basalt/files               { op } a file op of the explorer's (lib/fileops.ts) done:
 //                                      a note made, a note or folder moved (its links taken
@@ -28,6 +28,8 @@ import { loadSite, walkSite } from "../lib/site"
 import { blobSha } from "../lib/edit"
 import { after, applyOps, movesOf, pageOf, relink, within, type FileOp } from "../lib/fileops"
 import { answerHistory } from "./history"
+import { parseFrontmatter } from "@astrojs/markdown-remark"
+import { titleOf } from "../markdown/frontmatter"
 
 /** a note's text rendered as its page's note would be: its html, blocks marked with data-src (markdown/lines.ts) */
 export type RenderNote = (abs: string, text: string) => Promise<string>
@@ -110,7 +112,13 @@ async function rendered(req: IncomingMessage, res: ServerResponse, render: Rende
   if (typeof body.text !== "string") return reply(res, 400, { error: "text is the note's whole file" })
   const started = performance.now()
   const html = await render(found.file.abs, body.text)
-  return reply(res, 200, { sha: blobSha(body.text), html, ms: Math.round(performance.now() - started) })
+  let title: string | undefined
+  try {
+    title = titleOf(parseFrontmatter(body.text).frontmatter, path.parse(found.file.abs).name)
+  } catch {
+    // frontmatter that doesn't parse (yet): the title stays as it was
+  }
+  return reply(res, 200, { sha: blobSha(body.text), html, title, ms: Math.round(performance.now() - started) })
 }
 
 // ---------- the explorer's file ops ----------

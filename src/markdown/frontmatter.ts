@@ -46,6 +46,10 @@ function isoDate(v: unknown): string | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
 }
 
+/** A note's title: its frontmatter's, else its file's name. */
+export const titleOf = (data: Record<string, unknown>, stem?: string): string =>
+  data.title != null && data.title.toString() !== "" ? data.title.toString() : (stem ?? "Untitled")
+
 export function remarkNote() {
   return (_tree: unknown, file: VFile) => {
     const note = noteOf(file)
@@ -53,7 +57,7 @@ export function remarkNote() {
     const astro = (file.data.astro ??= {}) as { frontmatter?: Record<string, unknown> }
     const data = (astro.frontmatter ??= {})
 
-    data.title = data.title != null && data.title.toString() !== "" ? data.title.toString() : (file.stem ?? "Untitled")
+    data.title = titleOf(data, file.stem)
 
     const tags = coerceToArray(coalesce(data, ["tags", "tag"]))
     data.tags = tags ? [...new Set(tags.map((tag) => slugTag(tag)))] : []

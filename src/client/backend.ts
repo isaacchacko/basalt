@@ -2,16 +2,24 @@
 // (editor.ts). The editor knows only this; each kind of site has its own:
 //
 //   dev     while serving: the dev server's /__basalt/source and /__basalt/render
-//   github  a built site with "edit": the repo, and the page as it's deployed (github.ts)
+//   github  a built site with "edit": the repo, and Basalt's markdown run in the
+//           browser (github.ts, markdown/browser/render.ts)
 //
 // A rendering is the note's html as its page has it: its top-level blocks,
-// each with the lines of the text it came from (data-src, markdown/lines.ts).
-// The editor draws a block from the rendering that has its text.
+// each with the lines of the text it came from (data-src, markdown/lines.ts),
+// and its title. The editor draws a block from the rendering that has its
+// text, and the page's title from the latest.
 
 /** a version of the note's file, by its sha (git's) */
 export interface Version {
   text: string
   sha: string
+}
+
+/** a note's text rendered: its html, and its title (its frontmatter's, else its file's name) */
+export interface Rendering {
+  html: string
+  title?: string
 }
 
 export interface Backend {
@@ -27,8 +35,8 @@ export interface Backend {
   load(): Promise<Version>
   /** writes `text` over the version `base` (its sha), as `message` (a commit's); else, the file changed since, the file as it is now */
   save(text: string, base: string, message?: string): Promise<{ sha: string } | { conflict: Version }>
-  /** the note rendered with `text`, or null when it can't be (a built site: its blocks show their markdown till it's deployed, hooks.learn) */
-  render(text: string): Promise<string | null>
+  /** the note rendered with `text`, or null when it can't be (its new blocks show their markdown) */
+  render(text: string): Promise<Rendering | null>
   /** editing's over, after its last save: whatever the page does next (dev: the page swapped in once) */
   close?(): Promise<void>
   /** a built site's: the explorer's file ops kept for the branch, as publishing takes them (none: undefined) */
@@ -64,7 +72,9 @@ export function devBackend(slug: string): Backend {
     },
     async render(text) {
       const res = await fetch("/__basalt/render", { method: "POST", headers: json, body: JSON.stringify({ slug, text }) }).catch(() => undefined)
-      return res?.ok ? (await res.json()).html : null
+      if (!res?.ok) return null
+      const { html, title } = await res.json()
+      return { html, title }
     },
     async close() {
       const { fetchPage, swapIn } = await import("./swap")

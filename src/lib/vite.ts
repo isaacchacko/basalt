@@ -9,6 +9,10 @@
 //                         The site's file can still import Basalt's own
 //                         (by path, or as @basalt/components/X.astro).
 //   basalt:site-styles    <site>/styles/custom.scss, if there is one
+//   browser markdown      in the page's own scripts (not the server's), node's
+//                         modules and @astrojs/markdown-remark are stand-ins
+//                         (src/markdown/browser), so the markdown plugins run
+//                         in the browser too (a page being edited, render.ts)
 //
 // A component or stylesheet added to or removed from the site while serving
 // reloads the page with the new resolution, and so does a save of
@@ -71,4 +75,26 @@ function shadowing(): Plugin {
   }
 }
 
-export const vitePlugins: PluginOption[] = [shadowing()]
+const BROWSER = path.resolve("src/markdown/browser")
+const STAND_INS: Record<string, string> = {
+  fs: "fs.ts",
+  path: "path.ts",
+  "@astrojs/markdown-remark": "astro.ts",
+}
+const NODE = new Set(["url", "module", "child_process", "crypto", "os", "stream", "util"])
+
+function browserMarkdown(): Plugin {
+  return {
+    name: "basalt:browser-markdown",
+    enforce: "pre",
+    resolveId(id) {
+      if (this.environment.config.consumer !== "client") return null
+      const name = id.replace(/^node:/, "")
+      if (STAND_INS[name]) return path.join(BROWSER, STAND_INS[name])
+      if (NODE.has(name)) return path.join(BROWSER, "node.ts")
+      return null
+    },
+  }
+}
+
+export const vitePlugins: PluginOption[] = [shadowing(), browserMarkdown()]

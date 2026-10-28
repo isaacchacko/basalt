@@ -114,6 +114,8 @@ export const strings = {
   editFileWhyPath: "that's not a path in the site",
   editFileCommitMore: "{what}, and {n} more change|{what}, and {n} more changes",
   editReadingFiles: "Reading the branch on GitHub…",
+  /** beside a block a built site can't draw till it's published (a song it hasn't looked up, say) */
+  editUndrawn: "drawn once it's published",
   /** a note's history (client/history.ts): its button, and its timeline */
   history: "Show this page's history",
   historyTitle: "History",
