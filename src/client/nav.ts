@@ -236,6 +236,12 @@ document.addEventListener("astro:after-swap", () => {
   drawBarSoon()
 })
 
+// the explorer drawn again in editing view (files.ts: a note made, moved, deleted)
+document.addEventListener("basalt:explorer", () => {
+  sync()
+  drawBarSoon()
+})
+
 // a navbar kept across transitions is the old page's: if the site's tree
 // changed meanwhile (a note added, a title edited), take the new page's
 document.addEventListener("astro:before-swap", (e) => {

@@ -4,9 +4,11 @@
 // and the one it began over: a commit made since it began is merged into it
 // before it's published, and the dialog says so. The page's own script reads
 // it too (edit.ts: a reload with a draft goes on editing), so nothing heavy
-// is imported here.
+// is imported here. The explorer's file ops (files.ts) are kept beside the
+// notes' drafts, one list for the branch, and published with them.
 
 import type { Version } from "./backend"
+import type { FileOp } from "../lib/fileops"
 
 export interface Draft {
   /** the note as it's written */
@@ -85,3 +87,41 @@ export function draftsUnder(prefix: string, except: string, store: Store | undef
   } catch {}
   return out.sort((a, b) => b.at - a.at)
 }
+
+// ---------- the explorer's file ops, unpublished ----------
+
+/** where a repo's branch keeps the explorer's ops (client/files.ts) till they're published: one list, in the order they were done */
+export const filesKey = (repo: string, branch: string) => `basalt-files:${repo}@${branch}`
+
+/** where the ops just published are kept till the site's deployed with them: the explorer draws them meanwhile */
+export const publishedKey = (repo: string, branch: string) => `basalt-files-published:${repo}@${branch}`
+
+/** The ops kept for a repo's branch: what's kept (none: []), keep them (false when the browser won't), and drop them. */
+export function filesStore(repo: string, branch: string, store: Store | undefined = storage()) {
+  const key = filesKey(repo, branch)
+  return {
+    get(): FileOp[] {
+      try {
+        const ops = JSON.parse(store?.getItem(key) ?? "[]")
+        return Array.isArray(ops) ? ops.filter((o) => o && typeof o.op === "string") : []
+      } catch {
+        return []
+      }
+    },
+    put(ops: FileOp[]): boolean {
+      try {
+        if (ops.length) store!.setItem(key, JSON.stringify(ops))
+        else store?.removeItem(key)
+        return true
+      } catch {
+        return false
+      }
+    },
+    drop() {
+      try {
+        store?.removeItem(key)
+      } catch {}
+    },
+  }
+}
+export type FilesStore = ReturnType<typeof filesStore>

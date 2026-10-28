@@ -496,6 +496,11 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
     clip-path: inset(0 -100vmax -1px);
   }
 
+  // the drawer open over the whole page: the bar's clip would cut it to the bar
+  html.mobile-no-scroll .page > #quartz-body > .sidebar.left {
+    clip-path: none;
+  }
+
   .page-title {
     font-size: 1.5rem;
     flex: 1;

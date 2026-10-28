@@ -106,15 +106,17 @@ const image =
       : undefined
 const hasMath = !!note?.rendered?.html.includes('class="katex')
 // a note's page edits in place (client/editor.ts): while serving, or built with "edit"
-const target = note?.body !== undefined ? editTarget(site) : undefined
+// (an empty note has no body in the store, but a file, empty, all the same)
 const noteFile = note && registry().bySlug.get(note.id as never)
+const body = note && (note.body ?? (noteFile ? "" : undefined))
+const target = body !== undefined ? editTarget(site) : undefined
 const edit =
-  !target || note?.body === undefined || (target.kind === "github" && !noteFile)
+  !target || body === undefined || (target.kind === "github" && !noteFile)
     ? {}
     : {
         "data-edit": target.kind,
-        "data-edit-slug": note.id,
-        "data-edit-sha": blobSha(note.body),
+        "data-edit-slug": note!.id,
+        "data-edit-sha": blobSha(body),
         ...(target.kind === "github"
           ? { "data-edit-repo": target.repo, "data-edit-branch": target.branch, "data-edit-path": repoPath(target, noteFile!.abs) }
           : {}),
