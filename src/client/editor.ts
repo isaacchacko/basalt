@@ -279,8 +279,9 @@ function placed(box: HTMLElement, key: string) {
       const shown = [...inside.children].filter((c) => !empty(c))
       if (!shown.length) box.dataset.empty = ""
       else {
-        box.dataset.above = getComputedStyle(shown[0]).marginTop
-        box.dataset.below = getComputedStyle(shown[shown.length - 1]).marginBottom
+        // its edges' margins, with those of what's inside that go out through them (a figure's code's), as the page collapses them
+        box.dataset.above = `${edges(shown[0], "Top")}px`
+        box.dataset.below = `${edges(shown[shown.length - 1], "Bottom")}px`
         // the page's own, measured, where it's the page's own block
         const gap = gapAbove.get(shown[0])
         if (gap !== undefined) box.dataset.gap = String(gap)
@@ -291,10 +292,6 @@ function placed(box: HTMLElement, key: string) {
       // margins inside it that the page lets out (through a figure to its code's) stay in the box: so much less to add
       if (shown.length) {
         ;(shown[shown.length - 1] as HTMLElement).style.marginBottom = "0"
-        // margins that go out through its edges on the page (a callout's title's, a figure's code's)
-        // would stay in the box here: the spaces between blocks are set above, instead (spaced)
-        edges(shown[0], "Top")
-        edges(shown[shown.length - 1], "Bottom")
         ends.set(box, stand ? [stand, stand] : [shown[0], shown[shown.length - 1]])
       }
       spaced(note.view)
@@ -311,17 +308,26 @@ function placed(box: HTMLElement, key: string) {
   })
 }
 
-/** An element's first (or last) children's margins at that edge, as far down as they'd go out through it. */
-function edges(el: Element, side: "Top" | "Bottom") {
+/**
+ * An element's space at an edge, as the page has it: its own margin, and its
+ * first (or last) children's, as far down as they'd go out through it (a
+ * callout's title's, a figure's code's), collapsed into the largest. Those
+ * children's would stay in the box here, so they're taken out: the spaces
+ * between blocks are set instead (spaced).
+ */
+function edges(el: Element, side: "Top" | "Bottom"): number {
+  let most = parseFloat(getComputedStyle(el)[`margin${side}`]) || 0
   for (let at: Element | null = el; at; ) {
     const style = getComputedStyle(at)
-    if (parseFloat(style[`padding${side}`]) || parseFloat(style[`border${side}Width`]) || style.display !== "block" || style.overflow !== "visible") return
+    if (parseFloat(style[`padding${side}`]) || parseFloat(style[`border${side}Width`]) || style.display !== "block" || style.overflow !== "visible") break
     const child: Element | null = side === "Top" ? at.firstElementChild : at.lastElementChild
     // only a block's margin goes out through its parent's edge (an image's, inline, doesn't)
-    if (!child || !child.checkVisibility() || getComputedStyle(child).display !== "block") return
+    if (!child || !child.checkVisibility() || getComputedStyle(child).display !== "block") break
+    most = Math.max(most, parseFloat(getComputedStyle(child)[`margin${side}`]) || 0)
     ;(child as HTMLElement).style[`margin${side}`] = "0"
     at = child
   }
+  return most
 }
 
 /**
