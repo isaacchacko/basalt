@@ -156,6 +156,8 @@ export async function setEditing(on: boolean) {
       if (remote.sha !== saved.sha) rebase(note, saved, ChangeSet.empty(lf(saved.text).length), remote)
       keepDraft()
       flash(say("editRestored"))
+      // the page draws what the draft hasn't changed; what it has, a rendering of it
+      if (of) void render()
     }
     // the cursor at the end, so the note opens drawn, all of it
     view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length), annotations: opening.of(true) })
