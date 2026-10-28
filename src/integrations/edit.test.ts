@@ -197,12 +197,20 @@ describe("POST /__basalt/render: the note as it would render with the text typed
     const text = ORIGINAL + "\nTyped, not saved.\n"
     const res = await post({ slug: "sub/a", text })
     assert.equal(res.status, 200)
-    const body = (await res.json()) as { sha: string; html: string; ms: number }
+    const body = (await res.json()) as { sha: string; html: string; title: string; ms: number }
     assert.equal(body.sha, blobSha(text))
     assert.equal(body.html, `<p data-src="5-5">${text.length}</p>`)
+    assert.equal(body.title, "a")
     assert.equal(typeof body.ms, "number")
     assert.deepEqual(asked, [{ abs: note, text }])
     assert.equal(fs.readFileSync(note, "utf8"), ORIGINAL)
+  })
+
+  test("the title is the frontmatter's as typed, else the file's name; kept when the frontmatter doesn't parse", async () => {
+    const title = async (text: string) => ((await (await post({ slug: "sub/a", text })).json()) as { title?: string }).title
+    assert.equal(await title("---\ntitle: Garden\n---\n\nHello.\n"), "Garden")
+    assert.equal(await title("Hello.\n"), "a")
+    assert.equal(await title("---\ntitle: [unclosed\n---\n"), undefined)
   })
 
   test("only POST", async () => {

@@ -29,8 +29,9 @@ type Viz = {
   renderString(src: string, options: { format: string; engine?: string }): string
 }
 let viz: Promise<Viz> | null = null
+// in a page's own scripts (a note rendered in the browser, markdown/browser) Vite bundles it; elsewhere node loads it itself
 const graphviz = () =>
-  (viz ??= nativeImport("@viz-js/viz").then((m) => (m as { instance(): Promise<Viz> }).instance()))
+  (viz ??= (import.meta.env?.SSR === false ? import("@viz-js/viz") : nativeImport("@viz-js/viz")).then((m) => (m as { instance(): Promise<Viz> }).instance()))
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")

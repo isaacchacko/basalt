@@ -127,6 +127,15 @@ $narrow: "(max-width: 1055.98px)";
   overflow: hidden;
 }
 
+// a block a built site can't draw till it's published: its markdown, and a word saying so
+.edit-doc .cm-line.edit-undrawn::after {
+  content: attr(data-undrawn);
+  margin-left: 0.75em;
+  color: var(--gray);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
 // a block with a frame or a player, over its stand-in (editor.ts)
 .edit-float {
   position: absolute;

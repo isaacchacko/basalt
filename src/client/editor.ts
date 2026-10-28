@@ -6,8 +6,10 @@
 //
 // A block is drawn from its rendered html, found by its text: the page's own
 // elements to begin with (each has the lines it came from, data-src,
-// markdown/lines.ts), and, for text that's new, the dev server's rendering of
-// the note as it's typed (POST /__basalt/render). The same text is always the
+// markdown/lines.ts), and, for text that's new, a rendering of the note as
+// it's typed: the dev server's (POST /__basalt/render), or a built site's,
+// made in the browser (markdown/browser/render.ts). The page's title follows
+// the frontmatter's the same way. The same text is always the
 // same nodes, moved, not made again, so an island keeps running and a diagram
 // stays drawn. While editing, the page isn't swapped for a save: the editor
 // is the page. Turning editing off swaps the page in once.
@@ -47,6 +49,8 @@ declare global {
       idle(): Promise<void>
       /** the sha of the file as it's saved */
       saved(): string
+      /** the note rendered with `text`, as the editor has it rendered (the edit proof's parity) */
+      render(text: string): Promise<import("./backend").Rendering | null>
       /** a built site's: the draft kept in this browser, and the publish dialog, opened */
       draft(): import("./draft").Draft | null
       publish(): Promise<"published" | "kept" | "discarded" | undefined>
@@ -138,6 +142,7 @@ export async function setEditing(on: boolean) {
         while (timer !== undefined || saving || renders > 0) await new Promise((r) => setTimeout(r, 25))
       },
       saved: () => (note ?? { saved }).saved.sha,
+      render: (text) => backend.render(text),
       draft: () => note?.draft?.get() ?? null,
       publish: async () => (note ? publishing(note) : undefined),
     }
@@ -151,6 +156,8 @@ export async function setEditing(on: boolean) {
       if (remote.sha !== saved.sha) rebase(note, saved, ChangeSet.empty(lf(saved.text).length), remote)
       keepDraft()
       flash(say("editRestored"))
+      // the page draws what the draft hasn't changed; what it has, a rendering of it
+      if (of) void render()
     }
     // the cursor at the end, so the note opens drawn, all of it
     view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length), annotations: opening.of(true) })
@@ -213,6 +220,8 @@ document.addEventListener("astro:before-preparation", (e) => {
 
 /** a block's text → its drawn nodes: the same text, the same nodes */
 const drawn = new Map<string, Node[]>()
+/** the blocks a rendering couldn't draw (markdown/browser/render.ts): their markdown shows, with a word that they're drawn once published */
+const undrawn = new Set<string>()
 /** a drawn block's first and last elements that show */
 const ends = new WeakMap<HTMLElement, [Element, Element]>()
 /** the page's own space above each of its blocks, measured before editing moves them (spaced) */
@@ -270,8 +279,9 @@ function placed(box: HTMLElement, key: string) {
       const shown = [...inside.children].filter((c) => !empty(c))
       if (!shown.length) box.dataset.empty = ""
       else {
-        box.dataset.above = getComputedStyle(shown[0]).marginTop
-        box.dataset.below = getComputedStyle(shown[shown.length - 1]).marginBottom
+        // its edges' margins, with those of what's inside that go out through them (a figure's code's), as the page collapses them
+        box.dataset.above = `${edges(shown[0], "Top")}px`
+        box.dataset.below = `${edges(shown[shown.length - 1], "Bottom")}px`
         // the page's own, measured, where it's the page's own block
         const gap = gapAbove.get(shown[0])
         if (gap !== undefined) box.dataset.gap = String(gap)
@@ -282,10 +292,6 @@ function placed(box: HTMLElement, key: string) {
       // margins inside it that the page lets out (through a figure to its code's) stay in the box: so much less to add
       if (shown.length) {
         ;(shown[shown.length - 1] as HTMLElement).style.marginBottom = "0"
-        // margins that go out through its edges on the page (a callout's title's, a figure's code's)
-        // would stay in the box here: the spaces between blocks are set above, instead (spaced)
-        edges(shown[0], "Top")
-        edges(shown[shown.length - 1], "Bottom")
         ends.set(box, stand ? [stand, stand] : [shown[0], shown[shown.length - 1]])
       }
       spaced(note.view)
@@ -302,17 +308,26 @@ function placed(box: HTMLElement, key: string) {
   })
 }
 
-/** An element's first (or last) children's margins at that edge, as far down as they'd go out through it. */
-function edges(el: Element, side: "Top" | "Bottom") {
+/**
+ * An element's space at an edge, as the page has it: its own margin, and its
+ * first (or last) children's, as far down as they'd go out through it (a
+ * callout's title's, a figure's code's), collapsed into the largest. Those
+ * children's would stay in the box here, so they're taken out: the spaces
+ * between blocks are set instead (spaced).
+ */
+function edges(el: Element, side: "Top" | "Bottom"): number {
+  let most = parseFloat(getComputedStyle(el)[`margin${side}`]) || 0
   for (let at: Element | null = el; at; ) {
     const style = getComputedStyle(at)
-    if (parseFloat(style[`padding${side}`]) || parseFloat(style[`border${side}Width`]) || style.display !== "block" || style.overflow !== "visible") return
+    if (parseFloat(style[`padding${side}`]) || parseFloat(style[`border${side}Width`]) || style.display !== "block" || style.overflow !== "visible") break
     const child: Element | null = side === "Top" ? at.firstElementChild : at.lastElementChild
     // only a block's margin goes out through its parent's edge (an image's, inline, doesn't)
-    if (!child || !child.checkVisibility() || getComputedStyle(child).display !== "block") return
+    if (!child || !child.checkVisibility() || getComputedStyle(child).display !== "block") break
+    most = Math.max(most, parseFloat(getComputedStyle(child)[`margin${side}`]) || 0)
     ;(child as HTMLElement).style[`margin${side}`] = "0"
     at = child
   }
+  return most
 }
 
 /**
@@ -386,12 +401,13 @@ function learn(file: string, elements: Element[], live = false): Block[] {
   const text = lf(file)
   const lines = text.split("\n")
   // each block's lines (the elements drawn from the same lines are one block: an embed lifted out of its paragraph)
-  const spans = new Map<string, { lines: [number, number]; nodes: Node[] }>()
+  const spans = new Map<string, { lines: [number, number]; nodes: Node[]; undrawn?: boolean }>()
   const add = (el: HTMLElement) => {
     const [a, b] = el.dataset.src!.split("-").map(Number)
     if (!(a >= 1 && b >= a && b <= lines.length)) return
     const at = `${a}-${b}`
-    spans.set(at, { lines: [a, b], nodes: [...(spans.get(at)?.nodes ?? []), el] })
+    if (el.dataset.editUndrawn !== undefined) spans.set(at, { lines: [a, b], nodes: [], undrawn: true })
+    else spans.set(at, { lines: [a, b], nodes: [...(spans.get(at)?.nodes ?? []), el] })
   }
   for (const el of elements as HTMLElement[]) {
     if (!el.dataset?.src) continue
@@ -427,10 +443,12 @@ function learn(file: string, elements: Element[], live = false): Block[] {
   const texts = ordered.map(({ lines: [a, b] }) => lines.slice(a - 1, b).join("\n"))
   const keys = keysOf(texts)
   // what's drawn for a block already stays drawn (an island running, a diagram drawn)
-  ordered.forEach(({ nodes }, i) => {
+  ordered.forEach(({ nodes, undrawn: none }, i) => {
     const key = keys[i]
     if (live) heightOf.set(key, nodes.reduce((h, n) => h + (pageHeight.get(n as Element) ?? 0), 0))
     if (!live && drawn.has(key)) return
+    if (none) return void undrawn.add(key)
+    undrawn.delete(key)
     drawn.set(key, nodes)
     renderedBy.set(key, live ? 0 : rendering)
     if (!live) nodes.forEach((n) => unstarted.add(n))
@@ -586,6 +604,7 @@ const drawing = StateField.define<DecorationSet>({
       if (at && selection.ranges.some((r) => r.from <= b.to && r.to >= b.from)) continue
       const key = keys[i]
       if (drawn.has(key)) out.push(Decoration.replace({ widget: new Drawn(key), block: true }).range(b.from, b.to))
+      else if (undrawn.has(key)) out.push(Decoration.line({ class: "edit-undrawn", attributes: { "data-undrawn": say("editUndrawn") } }).range(b.from))
     }
     return Decoration.set(out)
   },
@@ -789,8 +808,8 @@ const changed = EditorView.updateListener.of((u) => {
   clearTimeout(timer)
   timer = setTimeout(() => {
     timer = undefined
-    // a built site's: kept as a draft, not saved
-    if (n.draft) keepDraft()
+    // a built site's: kept as a draft, not saved, and rendered here
+    if (n.draft) void (keepDraft(), render())
     else void save().then(render)
   }, 300)
   status()
@@ -850,12 +869,25 @@ async function render() {
   const text = asFile(n, n.view.state.doc.toString())
   const mine = ++rendering
   renders++
-  const html = await n.backend.render(text).catch(() => null)
+  const got = await n.backend.render(text).catch(() => null)
   renders--
   // a rendering of what's typed by now may be on its way already
-  if (html === null || note !== n || mine !== rendering) return
-  hooks.learn(text, html)
+  if (got === null || note !== n || mine !== rendering) return
+  hooks.learn(text, got.html)
+  if (got.title !== undefined) retitle(got.title)
   marginAgain()
+}
+
+/** The page's title, as the note's frontmatter has it now: its heading, and the tab's (components/Head.astro) */
+function retitle(title: string) {
+  const heading = document.querySelector(".page-header h1.article-title")
+  if (!title.trim() || !heading) return
+  const words = [...heading.childNodes].filter((c) => c.nodeType === Node.TEXT_NODE)
+  if (words.map((w) => w.textContent).join("") === title) return
+  words.forEach((w) => w.remove())
+  heading.append(title)
+  const site = document.querySelector<HTMLMetaElement>('meta[property="og:site_name"]')?.content
+  if (site !== undefined) document.title = title === site ? title : `${title} · ${site}`
 }
 
 document.addEventListener("keydown", (e) => {

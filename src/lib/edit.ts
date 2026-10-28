@@ -12,6 +12,7 @@
 // same way, else main.
 
 import crypto from "node:crypto"
+import fs from "node:fs"
 import path from "node:path"
 import { execFileSync } from "node:child_process"
 import type { Site } from "./site.ts"
@@ -70,9 +71,13 @@ export function editable(site: Site): boolean {
   return serving() || !!site.config.edit
 }
 
-/** A note's path in its repository, for the GitHub API ("garden/notes/a.md"). */
+/** A note's path in its repository, for the GitHub API ("garden/notes/a.md"); the top is git's, a real path, so the note's is too. */
 export function repoPath(target: Extract<EditTarget, { kind: "github" }>, abs: string): string {
-  return path.relative(target.top, abs).split(path.sep).join("/")
+  let real = abs
+  try {
+    real = fs.realpathSync(abs)
+  } catch {}
+  return path.relative(target.top, real).split(path.sep).join("/")
 }
 
 /** git's name for a file's contents (what the GitHub API calls its sha) */
