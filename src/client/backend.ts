@@ -15,12 +15,18 @@ export interface Version {
 }
 
 export interface Backend {
-  /** when the editor saves: a moment after typing stops (idle), or as the cursor leaves a block it changed, and ⌘S (leave) */
-  saveOn: "idle" | "leave"
+  /**
+   * when the editor saves: a moment after typing stops (idle); or only once
+   * you've published what it keeps meanwhile, a draft in this browser
+   * (publish: draft.ts, publish.ts)
+   */
+  saveOn: "idle" | "publish"
+  /** publish: where the note's committed (the dialog says), and so its draft's key */
+  target?: { repo: string; branch: string; path: string }
   /** the note's file as it is now */
   load(): Promise<Version>
-  /** writes `text` over the version `base` (its sha); else, the file changed since, the file as it is now */
-  save(text: string, base: string): Promise<{ sha: string } | { conflict: Version }>
+  /** writes `text` over the version `base` (its sha), as `message` (a commit's); else, the file changed since, the file as it is now */
+  save(text: string, base: string, message?: string): Promise<{ sha: string } | { conflict: Version }>
   /** the note rendered with `text`, or null when it can't be (a built site: its blocks show their markdown till it's deployed, hooks.learn) */
   render(text: string): Promise<string | null>
   /** editing's over, after its last save: whatever the page does next (dev: the page swapped in once) */

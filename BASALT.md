@@ -101,7 +101,7 @@ A page edits its own note where it is, the way a note edits in Obsidian's Live P
   - ↑ ↓ go line by line into a block and through it, keeping their place across the line.
   - A click on a block puts the cursor at that word; a click on a link still follows it, and a click on a control (a tab, a button, a player) still works it.
   - Enter goes on with the list or quote you're in, and `[[` completes a link to a note.
-  - ⌘F finds in the note (⌘K is still the site's search). ⌘S saves now.
+  - ⌘F finds in the note (⌘K is still the site's search). ⌘S saves now (on a built site, it opens the publish dialog).
 - **What's around the text.**
   - The title opens the note's frontmatter, and a click on a margin note or a sidenote in the margin opens its lines.
   - A `%%comment%%` is drawn as nothing, as on the page, until the cursor is in it.
@@ -126,9 +126,13 @@ The site has to be built from a git checkout of that repo. Whatever deploys the 
 
 - **Connecting, once.** The first ⌘E (or `?edit`) on a browser asks for a token, checks it against the repo, and keeps it in that browser's local storage, for that repo only. The pencil shows from then on. Readers never see the pencil, and never download the editor. A token that stops working (expired, revoked) is forgotten and asked for again.
   - Make it a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for that one repository, with **Contents: read and write** and nothing else.
-- **Saving.** A note is committed when you leave a block you changed (or ⌘S), not as you type, as `Edit <path>`. Until the deploy comes back, the blocks you changed show their markdown and the status in the corner counts the seconds. Once the page is deployed with your commit, they're drawn from it. A commit made elsewhere meanwhile isn't overwritten: theirs goes into the note around yours, and the note's committed again.
+- **A draft, till you publish.** Nothing is committed on its own: not as you type, not when you leave a block, not when you reload. What you've written is a draft, kept in that browser's local storage for that repo, branch and note, with the version of the note it began over. The blocks you changed show their markdown; the rest are drawn from the page. The corner says how many changes are unpublished.
+  - A reload, or coming back to the page, opens it editing again, the draft restored, and the corner says so. Going to another page keeps editing on, and the corner there links back to the page with the draft. Closing the tab keeps it too. Turning editing off keeps it for next time.
+- **Publishing.** ⌘S, or a click on the count in the corner, opens a dialog: the note's changes, marked as the history marks a commit's (added highlighted, removed struck through, on the markdown as it's written), the commit's message (`Edit <path>` to begin with), and Publish, Keep editing (or Esc) and Discard, which asks once more and then drops the draft, the note back as it's committed.
+  - Publish commits it. Until the deploy comes back, the blocks you changed show their markdown and the status in the corner counts the seconds. Once the page is deployed with your commit, they're drawn from it.
+  - A commit made elsewhere since the draft began isn't overwritten: the dialog reads the note from GitHub first, puts theirs into the note around yours, and says so; what it marks is only yours. One that lands while the dialog's open is merged the same way when you publish, and shown again for another Publish.
 
-The words are in `strings`: `edit`, `editing`, `editSaving`, `editPublishing`, `editDeploying`, `editLive`, `editFailed`, `editSlowDeploy`, `editConnect`, `editTokenHelp`, `editToken`, `editMakeToken`, `editCancel`, `editConnectButton`, `editTokenWrong`, `editCommit`.
+The words are in `strings`: `edit`, `editing`, `editSaving`, `editPublishing`, `editDeploying`, `editLive`, `editFailed`, `editSlowDeploy`, `editConnect`, `editTokenHelp`, `editToken`, `editMakeToken`, `editCancel`, `editConnectButton`, `editTokenWrong`, `editCommit`, `editDraft`, `editDraftElsewhere`, `editRestored`, `editKept`, `editNothing`, `editDiscarded`, `editPublishTitle`, `editPublishTo`, `editPublishMoved`, `editReading`, `editChanges`, `editMessage`, `editPublish`, `editKeepEditing`, `editDiscard`, `editDiscardSure`, `editDiscardNo`, `editDiscardYes`.
 
 ## History
 

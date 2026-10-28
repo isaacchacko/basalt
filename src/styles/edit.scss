@@ -2,6 +2,8 @@
 // is a CodeMirror editor where the block was, its markdown set in the page's
 // own type, quiet; everything else stays the page.
 
+@use "marks" as *;
+
 $mobile: "(max-width: 800px)";
 $narrow: "(max-width: 1055.98px)";
 
@@ -235,6 +237,60 @@ html[data-margin] article .edit-footnote {
     color: var(--darkgray);
   }
 
+  // a built site's unpublished changes: a click publishes them (or goes to the page that has some)
+  &[data-state="draft"] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    color: var(--darkgray);
+
+    > span {
+      padding-left: 0.75rem;
+      color: var(--gray);
+      white-space: nowrap;
+
+      // a phone's bar has room for the count alone
+      @media all and ($mobile) {
+        display: none;
+      }
+    }
+
+    > button,
+    > a {
+      padding: 0.3rem 0.75rem;
+      white-space: nowrap;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      pointer-events: auto;
+
+      &::before {
+        content: "";
+        display: inline-block;
+        width: 0.45rem;
+        height: 0.45rem;
+        margin-right: 0.45rem;
+        border-radius: 50%;
+        background: var(--tertiary);
+        vertical-align: 0.08em;
+      }
+
+      &:hover {
+        color: var(--dark);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--secondary);
+        outline-offset: 2px;
+      }
+    }
+  }
+
   // on a phone, in the bar across the top (sticky), between the site's name
   // and its buttons: over nothing of the page, wherever it's scrolled to
   @media all and ($mobile) {
@@ -438,6 +494,132 @@ html[data-margin] article .edit-footnote {
         background: var(--tertiary);
         color: var(--light);
       }
+    }
+  }
+}
+
+// ---------- publishing a built site's draft (client/publish.ts) ----------
+
+// the connect dialog's look (above), wider: the changes marked as a commit's
+// are in a history (_marks.scss), on the markdown as it's written
+.edit-publish {
+  width: min(44rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+
+  form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // the menu's a flex box: hidden (the second asking's up) is hidden still
+  [hidden] {
+    display: none !important;
+  }
+
+  .edit-publish-to {
+    color: var(--gray);
+    overflow-wrap: anywhere;
+  }
+
+  .edit-publish-moved {
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--tertiary);
+    border-radius: 4px;
+    background: var(--highlight);
+    color: var(--darkgray);
+  }
+
+  .edit-publish-diff {
+    flex: 0 1 auto;
+    min-height: 3rem;
+    max-height: 45vh;
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    overflow: auto;
+    border: 1px solid var(--lightgray);
+    border-radius: 6px;
+    color: var(--gray);
+    font-size: 0.9rem;
+    line-height: 1.55;
+
+    &[aria-busy] {
+      font-style: italic;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--secondary);
+      outline-offset: 2px;
+    }
+
+    p {
+      margin: 0 0 0.75rem;
+      color: var(--darkgray);
+      font-size: inherit;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .marks-skip {
+      color: var(--gray);
+      text-align: center;
+      letter-spacing: 0.2em;
+    }
+
+    @include marks;
+
+    .history-added {
+      box-shadow: none;
+      padding: 0 0.25rem;
+    }
+  }
+
+  menu {
+    // Discard on its own at the start, the way back and Publish at the end
+    .edit-publish-discard {
+      margin-right: auto;
+      border-color: transparent;
+      color: var(--basalt-removed, #c2283c);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--secondary);
+      outline-offset: 2px;
+    }
+  }
+
+  .edit-publish-sure {
+    margin-top: 0.25rem;
+
+    menu {
+      justify-content: flex-end;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .edit-publish-yes {
+      border-color: var(--basalt-removed, #c2283c);
+      background: var(--basalt-removed, #c2283c);
+      color: var(--light);
+    }
+  }
+
+  // on a phone: the buttons a row of their own each, the way back last
+  @media all and ($mobile) {
+    padding: 1rem;
+
+    menu button {
+      flex: 1 1 auto;
     }
   }
 }
