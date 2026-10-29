@@ -366,10 +366,19 @@ li.section-li {
       background-color: transparent;
     }
 
+    & > .desc > .description {
+      margin: 0.2em 0 0;
+      color: var(--darkgray);
+    }
+
     & .meta {
       margin: 0 1em 0 0;
       color: var(--gray);
       font-variant-numeric: tabular-nums;
+
+      &:empty {
+        margin: 0;
+      }
     }
   }
 }

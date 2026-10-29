@@ -2,20 +2,23 @@
 // Every note's page, every folder's page, and a redirect for each alias.
 //
 // A folder's page is its index.md (if it has one) above a list of what's in
-// it; a folder with no index.md still gets the list. Drafts and private notes
-// aren't published (layouts/notes.ts).
+// it, in the explorer's order; a folder with no index.md still gets the
+// list. Drafts and private notes aren't published (layouts/notes.ts).
 import { render } from "astro:content"
 import Page from "../layouts/Page.astro"
 import { words } from "../layouts/words"
+import { layout } from "../lib/config"
 import PageList from "basalt:components/PageList"
 import {
   aliasesOf,
+  arrange,
   dateOf,
   descriptionOf,
   entriesOf,
   findFolder,
   folders,
   hrefOf,
+  isDated,
   notes,
   paramOf,
   readingTimeOf,
@@ -66,7 +69,8 @@ let rendered: Awaited<ReturnType<typeof render>> | undefined
 let folderNode: TreeNode | undefined
 if (props.kind === "note") rendered = await render(props.note)
 if (props.kind !== "alias" && props.folder !== undefined) {
-  folderNode = findFolder(tree((await notes()).filter((n) => !n.id.startsWith("tags/"))), props.folder)
+  const root = tree((await notes()).filter((n) => !n.id.startsWith("tags/")))
+  folderNode = findFolder(arrange(root, (await layout()).explorer), props.folder)
 }
 const entries = folderNode ? entriesOf(folderNode) : []
 const t = await words()
@@ -96,7 +100,7 @@ const Content = rendered?.Content
       title={titleOf(props.note)}
       description={descriptionOf(props.note)}
       date={dateOf(props.note)}
-      dated={props.note.data.dated === true}
+      dated={isDated(props.note)}
       cssclasses={(props.note.data.cssclasses as string[] | undefined) ?? []}
       minutes={readingTimeOf(props.note)}
       tags={tagsOf(props.note)}
@@ -106,14 +110,14 @@ const Content = rendered?.Content
       {Content && <Content />}
       {folderNode && (
         <div class="page-listing" slot="listing">
-          <PageList entries={entries} />
+          <PageList entries={entries} ordered />
         </div>
       )}
     </Page>
   ) : (
     <Page slug={`${props.folder}/index`} title={folderNode?.name ?? props.folder.split("/").pop()!} meta={count} folder>
       <div class="page-listing" slot="listing">
-        <PageList entries={entries} />
+        <PageList entries={entries} ordered />
       </div>
     </Page>
   )

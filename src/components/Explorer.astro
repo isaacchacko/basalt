@@ -10,8 +10,8 @@
 // view's file ops (client/files.ts); a reader's page has no more than that.
 import ExplorerTree from "./ExplorerTree.astro"
 import { words } from "../layouts/words"
-import { dateOf, type TreeNode } from "../layouts/notes"
-import { layout, ordered } from "../lib/config"
+import { arrange, type TreeNode } from "../layouts/notes"
+import { layout } from "../lib/config"
 import { registry } from "../lib/registry"
 import { editTarget, repoPath } from "../lib/edit"
 import path from "node:path"
@@ -27,17 +27,7 @@ interface Props {
 }
 const { root, current, open = "collapsed", fixed = false, home } = Astro.props
 const { explorer } = await layout()
-// the tree comes sorted folders first, by name; a stable sort keeps that for
-// what the order doesn't list, or, in a folder listed by date, newest first
-const byName = ordered<TreeNode>(explorer.order, () => 0)
-const when = (n: TreeNode) => (n.note ? (dateOf(n.note)?.getTime() ?? -Infinity) : -Infinity)
-const byDate = ordered<TreeNode>(explorer.order, (a, b) => when(b) - when(a) || 0)
-const dated = new Set((explorer.byDate ?? []).map((f) => f.replace(/^\/+|\/+$/g, "")))
-const arrange = (n: TreeNode): TreeNode => ({
-  ...n,
-  children: [...n.children].sort(dated.has(n.slug) ? byDate : byName).map(arrange),
-})
-const tree = arrange(root)
+const tree = arrange(root, explorer)
 const t = await words()
 const { site } = registry()
 const target = editTarget(site)
