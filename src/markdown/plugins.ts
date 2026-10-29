@@ -38,6 +38,7 @@ import { rehypeMargin } from "./margin.ts"
 import { rehypeTabs } from "./tabs.ts"
 import { rehypeSealTranscludes, rehypeTables, rehypeTransclude, type Target } from "./transclude.ts"
 import { rehypeNoteLists } from "./notelist.ts"
+import { rehypePlaceless } from "./lines.ts"
 import type { TextTransform } from "./siteconfig.ts"
 
 export const basaltRemark: PluggableList = [
@@ -90,6 +91,8 @@ export const basaltRehype: PluggableList = [
   rehypeDiff,
   rehypeMermaid,
   [rehypePrettyCode, prettyCode],
+  // a block a plugin made of html, with no place of rehype-raw's guessing (lines.ts)
+  rehypePlaceless,
   rehypeRaw,
   // <copy>text</copy>, before links are made of what's in it
   rehypeCopy,

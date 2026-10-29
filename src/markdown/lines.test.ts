@@ -55,6 +55,8 @@ const expected: Record<string, string[]> = {
   "edit/blog/index.md": ["5", "7"],
   "edit/blog/crlf.md": ["5", "9-10", "12"],
   "edit/lists.md": "6-7 9 11-13 15 17-20 22 24-26 28".split(" "),
+  // a streak first: its figure is html a plugin made, with no place of its own
+  "edit/streaks.md": ["6-12", "14", "16-19"],
 }
 
 describe("every top-level block has the lines it's written on", () => {
