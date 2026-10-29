@@ -720,9 +720,11 @@ p > img + em {
   transform: translateY(-1rem);
 }
 
+// on the measure's left edge, as every other block is: auto margins would
+// centre it in a column wider than the measure
 hr {
   width: 100%;
-  margin: 2rem auto;
+  margin: 2rem 0;
   height: 1px;
   border: none;
   background-color: var(--lightgray);
