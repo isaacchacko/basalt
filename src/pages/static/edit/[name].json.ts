@@ -1,7 +1,7 @@
 // What a built site's page being edited needs to render its note in the
 // browser (markdown/browser/render.ts) that only the build knows: the site's
-// files, what a <note-list> lists, the songs looked up, the `ssr` islands as
-// rendered. Only for a site that edits on GitHub (lib/edit.ts).
+// files, what a <note-list> lists, the songs looked up, the users' days a
+// ```streak fetched, the `ssr` islands as rendered. Only for a site that edits on GitHub (lib/edit.ts).
 //
 //   /static/edit/site.json
 
@@ -24,7 +24,10 @@ export const GET: APIRoute = async () => {
   const { site, files } = registry()
   const target = editTarget(site)
   if (target?.kind !== "github") return new Response("{}")
-  const songs = path.join(site.work, "cache", "spotify.json")
+  const cached = (name: string) => {
+    const file = path.join(site.work, "cache", name)
+    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {}
+  }
   const islands: SiteFacts["islands"] = {}
   for (const note of await notes()) {
     const html = note.rendered?.html ?? ""
@@ -41,7 +44,8 @@ export const GET: APIRoute = async () => {
     own: sitePlugins,
     files: files.map((f) => ({ rel: f.rel, slug: f.slug, isNote: f.isNote, ...(f.isNote ? { repo: repoPath(target, f.abs) } : {}) })),
     listed: listed().map((n) => ({ ...n, date: n.date?.toISOString() })),
-    songs: fs.existsSync(songs) ? JSON.parse(fs.readFileSync(songs, "utf8")) : {},
+    songs: cached("spotify.json"),
+    streaks: cached("streaks.json"),
     islands,
   }
   return new Response(JSON.stringify(facts), { headers: { "content-type": "application/json" } })
