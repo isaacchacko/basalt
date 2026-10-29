@@ -34,8 +34,7 @@
         "examples/markdown/transclusion",
         "examples/markdown/gardens",
         "examples/embeds/web",
-        "examples/embeds/islands",
-        "examples/embeds/streaks"
+        "examples/embeds/islands"
       ]
     }
   }
