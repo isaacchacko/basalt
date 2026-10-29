@@ -84,6 +84,11 @@ test("the grid: a column a week to this one, Sunday on top, each day said", () =
   assert.match(html, /<div class="streak-stats">11 times in the last 2 weeks · current streak 9 days · longest 9 days<\/div><\/figure>$/)
 })
 
+test("what's left out is said under it", () => {
+  const html = streakHtml(parseStreak("2026-10-01\nweekz: 3\n<b>"), "2026-10-28")
+  assert.match(html, /<\/div><div class="streak-bad">Left out, not a date, a range or a key: <code>weekz: 3<\/code>, <code>&lt;b&gt;<\/code><\/div><\/figure>$/)
+})
+
 test("a user's grid: named and linked, and dated when it isn't today's", () => {
   const s = parseStreak("github: isaacchacko")
   const html = streakHtml(s, "2026-10-28", "en-US", { at: "2026-10-20", days: { "2026-10-19": 4 } })
