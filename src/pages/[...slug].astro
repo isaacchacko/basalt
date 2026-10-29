@@ -2,8 +2,8 @@
 // Every note's page, every folder's page, and a redirect for each alias.
 //
 // A folder's page is its index.md (if it has one) above a list of what's in
-// it, in the explorer's order; a folder with no index.md still gets the
-// list. Drafts and private notes aren't published (layouts/notes.ts).
+// it, in the explorer's order where the site set one for it, else newest
+// first; a folder with no index.md still gets the list. Drafts and private notes aren't published (layouts/notes.ts).
 import { render } from "astro:content"
 import Page from "../layouts/Page.astro"
 import { words } from "../layouts/words"
@@ -20,6 +20,7 @@ import {
   hrefOf,
   isDated,
   notes,
+  orders,
   paramOf,
   readingTimeOf,
   tagsOf,
@@ -67,10 +68,13 @@ export async function getStaticPaths() {
 const props = Astro.props as Props
 let rendered: Awaited<ReturnType<typeof render>> | undefined
 let folderNode: TreeNode | undefined
+let ordered = false
 if (props.kind === "note") rendered = await render(props.note)
 if (props.kind !== "alias" && props.folder !== undefined) {
+  const { explorer } = await layout()
   const root = tree((await notes()).filter((n) => !n.id.startsWith("tags/")))
-  folderNode = findFolder(arrange(root, (await layout()).explorer), props.folder)
+  folderNode = findFolder(arrange(root, explorer), props.folder)
+  ordered = orders(props.folder, explorer)
 }
 const entries = folderNode ? entriesOf(folderNode) : []
 const t = await words()
@@ -110,14 +114,14 @@ const Content = rendered?.Content
       {Content && <Content />}
       {folderNode && (
         <div class="page-listing" slot="listing">
-          <PageList entries={entries} ordered />
+          <PageList entries={entries} ordered={ordered} />
         </div>
       )}
     </Page>
   ) : (
     <Page slug={`${props.folder}/index`} title={folderNode?.name ?? props.folder.split("/").pop()!} meta={count} folder>
       <div class="page-listing" slot="listing">
-        <PageList entries={entries} ordered />
+        <PageList entries={entries} ordered={ordered} />
       </div>
     </Page>
   )

@@ -9,7 +9,7 @@ import FolderMark from "./FolderMark.astro"
 interface Props {
   entries: Entry[]
   limit?: number
-  /** keep the entries' order (a folder's), not newest first */
+  /** keep the entries' order (a folder's the site ordered), not newest first */
   ordered?: boolean
 }
 const { entries, limit, ordered = false } = Astro.props

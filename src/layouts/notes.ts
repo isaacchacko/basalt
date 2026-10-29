@@ -184,6 +184,18 @@ export function arrange(root: TreeNode, explorer: LayoutConfig["explorer"]): Tre
   return walk(root)
 }
 
+/**
+ * Whether a folder's page lists in the explorer's order: when the site set
+ * one for what's in it (`order` names an entry of it) or `byDate` names it.
+ * Otherwise its page lists newest first.
+ */
+export function orders(folder: string, explorer: LayoutConfig["explorer"]): boolean {
+  const trim = (s: string) => s.replace(/^\/+|\/+$/g, "").replace(/(^|\/)index$/, "")
+  const f = trim(folder)
+  const parentOf = (slug: string) => slug.split("/").slice(0, -1).join("/")
+  return (explorer.byDate ?? []).some((d) => trim(d) === f) || explorer.order.some((o) => parentOf(trim(o)) === f)
+}
+
 export function findFolder(root: TreeNode, folder: string): TreeNode | undefined {
   if (folder === "") return root
   let at: TreeNode | undefined = root
