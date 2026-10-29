@@ -11,8 +11,9 @@
 //                         2026-10-05..2026-10-12   each day of it, once
 //
 // and `title:` (over the grid; GitHub's and LeetCode's name theirs) and
-// `weeks:` (53, a year, GitHub's) set it out. A line that's none of these is a
-// warning, and left out. In Obsidian it's a code block, and reads as one.
+// `weeks:` (53, a year, GitHub's) set it out. A line that's none of these is
+// left out, and said so: a warning in the build, and under the grid, so it's
+// seen where it's written. In Obsidian it's a code block, and reads as one.
 //
 // A user's days are fetched at build time, with no key, and kept in the
 // site's cache (cache/streaks.json), as a song is (sound.ts). Unlike a song's
@@ -265,7 +266,10 @@ export function streakHtml(s: Streak, on: string, locale = "en-US", user?: Fetch
   const heading = title
     ? `<figcaption class="streak-title">${s.source ? `<a href="${escapeHtml(PROFILES[s.source.kind](s.source.user))}">${escapeHtml(title)}</a>` : escapeHtml(title)}</figcaption>`
     : ""
-  const figure = (inner: string) => `<figure class="streak"${kind ? ` data-streak="${kind}"` : ""}>${heading}${inner}</figure>`
+  const bad = s.bad.length
+    ? `<div class="streak-bad">Left out, not a date, a range or a key: ${s.bad.map((b) => `<code>${escapeHtml(b.text)}</code>`).join(", ")}</div>`
+    : ""
+  const figure = (inner: string) => `<figure class="streak"${kind ? ` data-streak="${kind}"` : ""}>${heading}${inner}${bad}</figure>`
   if (s.source && !user) return figure(`<div class="streak-missing">couldn’t reach ${NAMES[s.source.kind]}</div>`)
 
   const days: Days = { ...user?.days }
