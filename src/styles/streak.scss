@@ -12,9 +12,9 @@ figure.streak {
   --streak-3: color-mix(in srgb, var(--tertiary) 76%, var(--light));
   --streak-4: var(--tertiary);
 
+  // the measure's width (basalt.scss), as every block of the main content
   margin: 1.5rem 0;
   min-width: 0;
-  max-width: 100%;
 }
 
 .streak-title {
