@@ -14,6 +14,7 @@ import islandsCss from "../styles/islands.scss?url"
 import pdfCss from "../styles/pdf.scss?url"
 import soundCss from "../styles/sound.scss?url"
 import spotifyCss from "../styles/spotify.scss?url"
+import streakCss from "../styles/streak.scss?url"
 import tabsCss from "../styles/tabs.scss?url"
 import treeCss from "../styles/tree.scss?url"
 import viewerCss from "../styles/viewer.scss?url"
@@ -33,6 +34,7 @@ export const NOTE_SHEETS = {
   pdf: [pdfCss, /embed-pdf|class="pdf/],
   sound: [soundCss, /class="sound/],
   spotify: [spotifyCss, /class="basalt-song/],
+  streak: [streakCss, /class="streak/],
   tabs: [tabsCss, /class="tabs/],
   tree: [treeCss, /class="tree/],
   // what opens into the viewer: a picture, a diagram, a frame, a long code block
