@@ -30,6 +30,7 @@ import { remarkNote, rehypeLinks, rehypeNoteData } from "./frontmatter.ts"
 import { ofmText, rehypeMermaid, rehypeOfm, remarkOfm } from "./ofm.ts"
 import { remarkDiagrams } from "./diagrams.ts"
 import { remarkTree } from "./tree.ts"
+import { remarkStreaks } from "./streak.ts"
 import { rehypeEmbeds, remarkFileEmbeds } from "./embeds.ts"
 import { rehypeCodeTitles } from "./code.ts"
 import { rehypeIslands, remarkIslands } from "./islands.ts"
@@ -37,6 +38,7 @@ import { rehypeMargin } from "./margin.ts"
 import { rehypeTabs } from "./tabs.ts"
 import { rehypeSealTranscludes, rehypeTables, rehypeTransclude, type Target } from "./transclude.ts"
 import { rehypeNoteLists } from "./notelist.ts"
+import { rehypePlaceless } from "./lines.ts"
 import type { TextTransform } from "./siteconfig.ts"
 
 export const basaltRemark: PluggableList = [
@@ -44,6 +46,9 @@ export const basaltRemark: PluggableList = [
   [remarkDiagrams, { graph: true, graphviz: true, svg: true, math: true }],
   // ```tree, a directory drawn
   remarkTree,
+  // ```streak, days as GitHub draws contributions: a code block, before
+  // ofm and smartypants would read its lines as text
+  remarkStreaks,
   remarkOfm,
   // after ofm, whose arrows (-->) it would otherwise make dashes of
   remarkSmartypants,
@@ -86,6 +91,8 @@ export const basaltRehype: PluggableList = [
   rehypeDiff,
   rehypeMermaid,
   [rehypePrettyCode, prettyCode],
+  // a block a plugin made of html, with no place of rehype-raw's guessing (lines.ts)
+  rehypePlaceless,
   rehypeRaw,
   // <copy>text</copy>, before links are made of what's in it
   rehypeCopy,

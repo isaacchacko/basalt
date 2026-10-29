@@ -20,6 +20,10 @@
 //   an `ssr` island with props the build hasn't rendered: its module is
 //   bundled for node
 //
+//   a ```streak of a GitHub or LeetCode user the build hasn't fetched:
+//   their calendars can't be read from a browser either (a streak of the
+//   block's own days draws as it's typed)
+//
 // A site with markdown plugins of its own (basalt.config.ts) isn't rendered
 // here at all: they're its own code, for node.
 
@@ -41,6 +45,7 @@ import { useTargets, type Target } from "../transclude"
 import { useIslands } from "../islands"
 import { lookUpSongs, spotifyItem } from "../sound"
 import { spotifyUrl } from "../spotify"
+import { lookUpStreaks } from "../streak"
 import { basaltRehype, basaltRemark, basaltText, processorOptions, renderTime, targetOf, transformText, treeProcessor } from "../plugins"
 import { rehypeHeadingIds } from "./astro"
 import { files, wanted } from "./fs"
@@ -60,6 +65,7 @@ export interface Rendering {
 const ROOT = "/site"
 const SITE: Registry["site"] = { dir: ROOT, work: `${ROOT}/.basalt/astro`, config: { title: "", locale: "en-US", content: [], edit: true } }
 const SONGS = `${SITE.work}/cache/spotify.json`
+const STREAKS = `${SITE.work}/cache/streaks.json`
 const UNDRAWN = "basalt-undrawn"
 
 /** The site's notes, rendered here; null for a site that has plugins of its own. */
@@ -80,6 +86,8 @@ export function browserRenderer(facts: SiteFacts, read: Reader): ((slug: string,
 
   files.set(SONGS, JSON.stringify(facts.songs))
   lookUpSongs(false)
+  files.set(STREAKS, JSON.stringify(facts.streaks ?? {}))
+  lookUpStreaks(false)
   useIslands(async (_dir, name, props) => facts.islands[islandKey(name, JSON.stringify(props))] ?? `<${UNDRAWN}></${UNDRAWN}>`)
   const listed: Listed[] = facts.listed.map((n) => ({ ...n, date: n.date ? new Date(n.date) : undefined }))
 

@@ -27,6 +27,7 @@ import type { Element, Root } from "hast"
 import type { Root as Mdast } from "mdast"
 import type { VFile } from "vfile"
 import { visit } from "unist-util-visit"
+import { fromHtml } from "hast-util-from-html"
 import { lineMap } from "../lib/linemap.ts"
 import { editable } from "../lib/edit.ts"
 import { reg } from "./context.ts"
@@ -53,6 +54,27 @@ export function remarkSourceBlocks() {
     file.data.sourceBlocks = tree.children.flatMap((n) => {
       const p = n.position
       return p && !UNSEEN.has(n.type) ? [[p.start.line, p.end.line] as Lines] : []
+    })
+  }
+}
+
+/**
+ * A block a plugin made of html (a diagram's figure, a tree, a streak) has no
+ * place in the file. rehype-raw would give it the place of whatever it parsed
+ * last, so the first block of a page took a line it isn't on (the blank
+ * after the frontmatter) and kept it, with nothing before it to show the
+ * place wrong. Parsed here, just before rehype-raw, it has no place, and its
+ * lines are found as any block's made anew are (tagLines).
+ */
+export function rehypePlaceless() {
+  return (tree: Root) => {
+    tree.children = tree.children.flatMap((node) => {
+      if (node.type !== "raw" || node.position) return [node]
+      const parsed = fromHtml(node.value, { fragment: true })
+      visit(parsed, (n) => {
+        delete n.position
+      })
+      return parsed.children
     })
   }
 }

@@ -4,6 +4,7 @@
 
 import type { Listed } from "../notelist"
 import type { Track } from "../sound"
+import type { Fetched } from "../streak"
 
 export interface SiteFacts {
   title: string
@@ -16,6 +17,8 @@ export interface SiteFacts {
   listed: (Omit<Listed, "date"> & { date?: string })[]
   /** the songs looked up (sound.ts's cache), by id */
   songs: Record<string, Track>
+  /** the users' days fetched for ```streak blocks (streak.ts's cache), by "github:<user>" */
+  streaks: Record<string, Fetched>
   /** each `ssr` island as built: its markup, by islandKey */
   islands: Record<string, string>
 }
