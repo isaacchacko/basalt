@@ -1,6 +1,7 @@
 ---
-title: Web
-aliases: [web]
+title: From the web
+description: "Videos, songs, posts and pages, set into a note from a link."
+aliases: [web, examples/embeds/web]
 ---
 
 Paste a link to a video or a post as an image, `![](url)`, and Basalt sets it into the note as a player. Each one keeps a caption linking back to where it came from, so the note still makes sense in a feed reader or with embeds blocked.

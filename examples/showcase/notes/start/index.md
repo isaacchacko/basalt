@@ -1,46 +1,24 @@
 ---
 title: Start
+description: "Install Basalt, make a garden, and see it live in a minute."
 ---
 
-<island name="born">Basalt is young.</island> It publishes [Isaac Chacko's garden](https://isaacchacko.com) and this site, and it's [on GitHub](https://github.com/isaacchacko/basalt), though not yet on npm. This is how it works today.
+<island name="born">Basalt is young.</island> It publishes [Isaac Chacko's garden](https://isaacchacko.com) and this site. It needs [Node](https://nodejs.org) 22.18 or later.
 
-A garden is a folder. `basalt new` makes one:
+## A garden in three commands
 
 ```sh
+npm install --global @isaacchacko/basalt
 basalt new my-garden --title "My garden"
 basalt dev my-garden
 ```
 
-and serves it at `http://localhost:4321`, live. Open it, then open `my-garden/notes/index.md` in your editor. Every save shows up in the page you have open, in place.
+`basalt new` makes the folder, and `basalt dev` serves it at `http://localhost:4321`, live. Open that, then open `my-garden/notes/index.md` in your editor. Every save shows up in the page you have open, in place, in under a second, without losing your scroll.
 
-## What's in the folder
+Or write in the page itself: press ⌘E, and the page you're reading becomes its note, to edit where it is. See [[editing]].
 
-```
-my-garden/
-  basalt.json          its title, where it's published, where its notes are
-  notes/               your markdown
-  styles/custom.scss   your look, over Basalt's
-  islands/             live components, if you want any
-  components/          your own version of any part of the page
-```
+## Then
 
-`basalt.json` holds the few things Basalt needs to know:
+Write notes in `notes/`, link them with `[[their names]]`, and see [[writing]] for everything a note can hold. When it's ready, `basalt build my-garden` makes the site, for any host: see [[publishing]].
 
-```json
-{
-  "title": "My garden",
-  "baseUrl": "garden.example.com",
-  "content": [{ "from": "notes" }, { "from": "../writing", "to": "blog" }],
-  "theme": { "colors": { "lightMode": { "tertiary": "#c8482b" } } }
-}
-```
-
-`content` can gather notes from several folders, such as an Obsidian vault and a folder of drafts, into one garden.
-
-## What a page shows
-
-A note opts into the side content's extras in its frontmatter: a table of contents with `toc: true`, the graph of its links with `graph: true`, and the notes that link to it with `backlinks: true`. A garden that wants them everywhere sets them in `basalt.json`'s `layout`. `draft: true` and `private: true` keep a note off the site.
-
-## Publishing
-
-`basalt build my-garden` writes the whole site, as plain files, to `my-garden/.basalt/astro/dist`. Any static host can serve it. `basalt check my-garden` builds it and lists any broken links, missing pictures and embeds, each with the note it's in.
+To work on Basalt itself, clone [it](https://github.com/isaacchacko/basalt), `npm install`, and run `node bin/basalt.mjs` in place of `basalt`.

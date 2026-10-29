@@ -1,6 +1,7 @@
 ---
 title: Media
-aliases: [media]
+description: "Pictures, video, sound and PDFs, each in the right frame and full screen on a click."
+aliases: [media, examples/media]
 ---
 
 Put a file in your notes folder and embed it with `![[name]]`. Basalt works out what it is and gives it the right frame. Click any picture on this page and it grows out of the page to fill the screen. There you can zoom, pan, and step through every picture on the page with the arrow keys, or swipe on a phone.

@@ -1,6 +1,7 @@
 ---
 title: Trees
-aliases: [trees]
+description: "A folder, written as you'd sketch it and drawn with folds and icons."
+aliases: [trees, examples/trees]
 toc: true
 ---
 
@@ -16,10 +17,13 @@ showcase/
     clock.ts
   notes/
     index.md             # the home page
-    [[start|start.md]]   # a name can link to a note
-    [[examples/index|examples]]/
+    [[start/index|start]]/        # a name can link to a note
+    [[writing/index|writing]]/
       diagrams.md
       trees.md           # this page
+      … 12 more
+    editing/…
+    publishing/…
     files/
       sieve.py
       euclid.csv

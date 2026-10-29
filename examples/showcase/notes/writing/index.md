@@ -1,9 +1,9 @@
 ---
-title: Markdown
+title: Writing
+description: "What markdown becomes in Basalt: each page shows a feature, then the markdown that makes it."
+aliases: [examples, examples/markdown, examples/embeds]
 ---
 
-What plain markdown becomes: remarks in the margin, code and data from files, and notes inside notes.
+Basalt reads the markdown Obsidian writes: `[[links]]`, `![[embeds]]`, callouts, footnotes, frontmatter. A vault you already have works as it is. What's new is what the page does with it.
 
-Text meant to be copied, like an address or a command, is copied by clicking it: `<copy>hello@basalt.isaacchacko.com</copy>` gives <copy>hello@basalt.isaacchacko.com</copy>, and `<copy value="npx basalt dev">the dev server</copy>` copies <copy value="npx basalt dev">the dev server</copy>'s command without showing it.
-
-Lists hang on round dots in the accent. A site can make them hexagons, like basalt's columns, with `"theme": { "bullets": "hexagon" }` in its `basalt.json`, or anything else with the `--basalt-bullet-*` properties.
+Each page here shows one thing, made with the markdown it explains. Open the source toggle, `</>` at the foot of the navbar, to see any page as it's written.
