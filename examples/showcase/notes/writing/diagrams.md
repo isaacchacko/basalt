@@ -1,6 +1,7 @@
 ---
 title: Diagrams
-aliases: [diagrams]
+description: "Graphs, flowcharts, sequences and SVG, written as text and drawn for you."
+aliases: [diagrams, examples/diagrams]
 toc: true
 graph: true
 backlinks: true
@@ -46,20 +47,6 @@ sequenceDiagram
   page-->>you: same scroll, new words
 ```
 
-## Math
-
-Inline, like $e^{i\pi} + 1 = 0$, or set on its own line with `$$`:
-
-$$
-\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
-$$
-
-GitHub's ` ```math ` blocks work too:
-
-```math
-\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
-```
-
 ## SVG
 
 An ` ```svg ` block is drawn as it's written:
@@ -71,7 +58,7 @@ An ` ```svg ` block is drawn as it's written:
 </svg>
 ```
 
-Click any of these to see it full screen.
+Click any of these to see it full screen. Math is written as text too: see [[math]].
 
 ## A typo
 

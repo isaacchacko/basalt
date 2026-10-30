@@ -8,6 +8,7 @@ import { fromHtml } from "hast-util-from-html"
 import { toString } from "hast-util-to-string"
 import { remove } from "./prune"
 import { registry } from "../lib/registry"
+import { ordered, type LayoutConfig } from "../lib/config"
 import {
   getAllSegmentPrefixes,
   simplifySlug,
@@ -62,6 +63,9 @@ export function tagsOf(note: Note): string[] {
   if (!Array.isArray(t)) return []
   return [...new Set(t.map((x) => slugTag(String(x).trim().replace(/^#/, ""))).filter(Boolean))]
 }
+
+/** A note whose frontmatter gives its date, which `layout.components.meta: "dated"` shows. */
+export const isDated = (note: Note) => (note.data as Data).dated === true
 
 export function descriptionOf(note: Note): string | undefined {
   const d = (note.data as Data).description
@@ -165,6 +169,33 @@ export function tree(all: Note[]): TreeNode {
   return root
 }
 
+/**
+ * The tree in the explorer's order, which a folder's page lists in too: the
+ * entries `order` names first, then, in a folder `byDate` names, the rest
+ * newest first, else as they come (folders first, by name).
+ */
+export function arrange(root: TreeNode, explorer: LayoutConfig["explorer"]): TreeNode {
+  // a stable sort keeps the tree's own order for what the order doesn't list
+  const byName = ordered<TreeNode>(explorer.order, () => 0)
+  const when = (n: TreeNode) => (n.note ? (dateOf(n.note)?.getTime() ?? -Infinity) : -Infinity)
+  const byDate = ordered<TreeNode>(explorer.order, (a, b) => when(b) - when(a) || 0)
+  const dated = new Set((explorer.byDate ?? []).map((f) => f.replace(/^\/+|\/+$/g, "")))
+  const walk = (n: TreeNode): TreeNode => ({ ...n, children: [...n.children].sort(dated.has(n.slug) ? byDate : byName).map(walk) })
+  return walk(root)
+}
+
+/**
+ * Whether a folder's page lists in the explorer's order: when the site set
+ * one for what's in it (`order` names an entry of it) or `byDate` names it.
+ * Otherwise its page lists newest first.
+ */
+export function orders(folder: string, explorer: LayoutConfig["explorer"]): boolean {
+  const trim = (s: string) => s.replace(/^\/+|\/+$/g, "").replace(/(^|\/)index$/, "")
+  const f = trim(folder)
+  const parentOf = (slug: string) => slug.split("/").slice(0, -1).join("/")
+  return (explorer.byDate ?? []).some((d) => trim(d) === f) || explorer.order.some((o) => parentOf(trim(o)) === f)
+}
+
 export function findFolder(root: TreeNode, folder: string): TreeNode | undefined {
   if (folder === "") return root
   let at: TreeNode | undefined = root
@@ -199,25 +230,30 @@ export function ancestry(root: TreeNode, slug: string): TreeNode[] {
   return chain
 }
 
-/** A folder's entries for its listing page: its notes and subfolders, newest first. */
+/** An entry in a list of notes (a folder's page, a tag's). */
 export interface Entry {
   slug: string
   title: string
+  description?: string
   date?: Date
+  /** a date its frontmatter gives, for `layout.components.meta: "dated"` */
+  dated: boolean
   tags: string[]
   isFolder: boolean
 }
 
+/** A folder's entries for its page: its notes and subfolders, in the folder's order. */
 export function entriesOf(folder: TreeNode): Entry[] {
-  const newest = (n: TreeNode): Date | undefined => {
-    const dates = [n.note && dateOf(n.note), ...n.children.map(newest)].filter(Boolean) as Date[]
-    return dates.sort((a, b) => b.getTime() - a.getTime())[0]
-  }
-  return folder.children.map((c) =>
-    c.isFolder
-      ? { slug: c.slug, title: c.name, date: newest(c), tags: [], isFolder: true }
-      : { slug: c.slug, title: titleOf(c.note!), date: dateOf(c.note!), tags: tagsOf(c.note!), isFolder: false },
-  )
+  const newest = (n: TreeNode): Note | undefined =>
+    [n.note, ...n.children.map(newest)]
+      .filter((x): x is Note => !!x && !!dateOf(x))
+      .sort((a, b) => dateOf(b)!.getTime() - dateOf(a)!.getTime())[0]
+  return folder.children.map((c) => {
+    if (!c.isFolder) return toEntry(c.note!)
+    const latest = newest(c)
+    const description = c.note && descriptionOf(c.note)
+    return { slug: c.slug, title: c.name, description, date: latest && dateOf(latest), dated: !!latest && isDated(latest), tags: [], isFolder: true }
+  })
 }
 
 /** Quartz's order: folders first, then newest first, then by title. */
@@ -230,7 +266,15 @@ export function byDate(a: Entry, b: Entry): number {
 }
 
 export function toEntry(note: Note): Entry {
-  return { slug: note.id, title: titleOf(note), date: dateOf(note), tags: tagsOf(note), isFolder: false }
+  return {
+    slug: note.id,
+    title: titleOf(note),
+    description: descriptionOf(note),
+    date: dateOf(note),
+    dated: isDated(note),
+    tags: tagsOf(note),
+    isFolder: false,
+  }
 }
 
 // ---------- tags ----------

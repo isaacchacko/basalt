@@ -1,6 +1,7 @@
 ---
 title: Islands
-aliases: [islands]
+description: "Live components in a still page, swapped in as you edit them."
+aliases: [islands, examples/embeds/islands]
 ---
 
 An island is a component, written in Preact, React or plain JavaScript, that comes alive in an otherwise still page. Put it in your site's `islands/` folder and place it in any note with a tag. Edit its file while the page is open and it's swapped in place, keeping its state.

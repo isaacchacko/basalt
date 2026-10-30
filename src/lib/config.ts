@@ -66,8 +66,8 @@ export interface LayoutConfig {
     order: string[]
     /**
      * Folders whose entries list newest first, by their notes' dates (the
-     * undated after, by name), the way a folder's own page lists them:
-     * ["blog"]. Entries `order` lists still come first.
+     * undated after, by name), here and on the folder's own page: ["blog"].
+     * Entries `order` lists still come first.
      */
     byDate?: string[]
   }

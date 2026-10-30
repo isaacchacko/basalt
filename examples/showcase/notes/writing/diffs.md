@@ -1,6 +1,7 @@
 ---
 title: Diffs
-aliases: [diffs]
+description: "A change, shown the way a code review shows it."
+aliases: [diffs, examples/markdown/diffs]
 ---
 
 A change, shown the way a code review shows it: paste a git diff into a ```` ```diff ```` block, or embed a `.diff` or `.patch` file, and each removed line is on red and each added one on green, with its old and new line numbers. The code inside is highlighted in its own language, and inside a changed line, the words that changed are marked.

@@ -1,6 +1,7 @@
 ---
 title: Margin notes
-aliases: [secondary, margin]
+description: "Sidenotes, margin notes and previews of linked notes, each beside the line it's about."
+aliases: [secondary, margin, examples/markdown/margin]
 ---
 
 A Basalt page keeps its remarks in the side content, beside the line they belong to, the way Edward Tufte's books do and the [Tufte CSS](https://edwardtufte.github.io/tufte-css/) that brought them to the web. The argument runs down the main content and the remarks that help with it sit alongside, where your eye already is.
@@ -34,7 +35,7 @@ When notes would overlap, they're set one under the next. A sentence that cites 
 
 ## Pointing at things
 
-The side content also shows what you're pointing at, one thing at a time. Hover a link to another note, like [[transclusion]] or the [[diagrams#graphviz|graphviz section]] of another page, and its opening appears beside the line. Move away and it goes. A link out of the garden, like [Quartz](https://quartz.jzhao.xyz), says where it leads.
+The side content also shows what you're pointing at, one thing at a time. Hover a link to another note, like [[transclusion]] or the [[diagrams#a flowchart|flowchart section]] of another page, and its opening appears beside the line. Move away and it goes. A link out of the garden, like [Quartz](https://quartz.jzhao.xyz), says where it leads.
 
 Anything with a tooltip shows it there too, instead of in a small box under the pointer. <abbr title="Obsidian Flavored Markdown, the markdown Obsidian writes">OFM</abbr> is an abbreviation, and <span title="anything with a title shows it in the side content">this sentence has a title</span>.
 

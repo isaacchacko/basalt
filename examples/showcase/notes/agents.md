@@ -1,5 +1,7 @@
 ---
-title: Agents
+title: For agents
+description: "The dev server says when a save is live and what broke, so an agent can write a garden and know."
+aliases: [agents]
 ---
 
 Basalt is made to be built by an agent as well as by hand. An agent can write a note, save it, and know for certain whether its change reached the page or what broke.

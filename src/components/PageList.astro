@@ -1,15 +1,21 @@
 ---
-// A list of notes (a folder's, a tag's): the date, the title, its tags.
+// A list of notes (a folder's, a tag's): the date, the title and its
+// description, its tags. Dates show as a page's own do (`layout.components.meta`).
 import type { Entry } from "../layouts/notes"
 import { byDate, formatDate, hrefOf } from "../layouts/notes"
+import { layout } from "../lib/config"
 import FolderMark from "./FolderMark.astro"
 
 interface Props {
   entries: Entry[]
   limit?: number
+  /** keep the entries' order (a folder's the site ordered), not newest first */
+  ordered?: boolean
 }
-const { entries, limit } = Astro.props
-let list = [...entries].sort(byDate)
+const { entries, limit, ordered = false } = Astro.props
+const { meta } = (await layout()).components
+const shows = (e: Entry) => !!e.date && (meta === "dated" ? e.dated : meta)
+let list = ordered ? [...entries] : [...entries].sort(byDate)
 if (limit) list = list.slice(0, limit)
 ---
 
@@ -18,7 +24,7 @@ if (limit) list = list.slice(0, limit)
     list.map((e) => (
       <li class="section-li">
         <div class="section">
-          <p class="meta">{e.date && <time datetime={e.date.toISOString()}>{formatDate(e.date)}</time>}</p>
+          <p class="meta">{shows(e) && <time datetime={e.date!.toISOString()}>{formatDate(e.date!)}</time>}</p>
           <div class="desc">
             <h3>
               <a href={hrefOf(e.isFolder ? `${e.slug}/index` : e.slug)} class="internal" data-slug={e.isFolder ? `${e.slug}/index` : e.slug}>
@@ -26,6 +32,7 @@ if (limit) list = list.slice(0, limit)
                 {e.title}
               </a>
             </h3>
+            {e.description && <p class="description">{e.description}</p>}
           </div>
           <ul class="tags">
             {e.tags.map((tag) => (

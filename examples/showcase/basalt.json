@@ -1,7 +1,7 @@
 {
   "title": "Basalt",
   "baseUrl": "basalt.isaacchacko.com",
-  "description": "Publish your notes as a site that reads like a good textbook.",
+  "description": "Publish your notes as a site that reads like a good textbook, and edit them in place.",
   "content": [
     {
       "from": "notes",
@@ -23,19 +23,36 @@
       "folderDefaultState": "open",
       "order": [
         "start",
+        "writing",
+        "editing",
+        "publishing",
         "agents",
-        "examples",
-        "examples/markdown",
-        "examples/diagrams",
-        "examples/media",
-        "examples/embeds",
-        "examples/markdown/margin",
-        "examples/markdown/files",
-        "examples/markdown/transclusion",
-        "examples/markdown/gardens",
-        "examples/embeds/web",
-        "examples/embeds/islands"
+        "start/folder",
+        "start/settings",
+        "start/look",
+        "start/cli",
+        "writing/margin",
+        "writing/text",
+        "writing/links",
+        "writing/files",
+        "writing/diffs",
+        "writing/diagrams",
+        "writing/math",
+        "writing/trees",
+        "writing/media",
+        "writing/web",
+        "writing/islands",
+        "writing/streaks",
+        "writing/gardens",
+        "editing/local",
+        "editing/github",
+        "editing/history",
+        "editing/explorer",
+        "publishing/hosting",
+        "publishing/password",
+        "publishing/sharing"
       ]
     }
-  }
+  },
+  "history": true
 }

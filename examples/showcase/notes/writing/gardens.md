@@ -1,7 +1,8 @@
 ---
 title: Gardens
+description: "What a garden is: the note the links page embeds in pieces."
+aliases: [gardens, examples/markdown/gardens]
 tags: [gardens]
-aliases: [gardens]
 ---
 
 A note other notes on this site embed pieces of: see [[transclusion]].

@@ -149,6 +149,12 @@ html[data-margin="inline"] article {
       background 0.2s ease,
       box-shadow 0.2s ease;
 
+    // arriving is the page's: a note the editor hid (its block open, or not
+    // drawn till it's scrolled to) comes back where it was, without arriving again
+    :root[data-editing] & {
+      animation: none;
+    }
+
     p {
       margin: 0 0 0.4rem;
       line-height: inherit;
