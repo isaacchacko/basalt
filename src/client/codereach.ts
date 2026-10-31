@@ -1,9 +1,11 @@
 // Code wider than the main content: pointing at it, it reaches into the side
 // content for as much more of its width as it needs (and the side column has
-// room for), over whatever is there, and draws back when the pointer leaves.
+// room for), over whatever is there, and draws back a moment after the pointer
+// leaves, so a pointer that overshoots its controls can come back to them.
 // Only with a side column beside the text, and a mouse.
 
 const SIDE_PAD = 16
+const OVERSHOOT_GRACE_MS = 400
 
 /**
  * Where the block's right edge is at rest (even mid-way back from a reach),
@@ -64,7 +66,7 @@ export function startCodeReach(signal: AbortSignal, root: ParentNode = document)
     block.addEventListener(
       "mouseleave",
       () => {
-        back = window.setTimeout(() => block.classList.remove("is-reaching"), 150)
+        back = window.setTimeout(() => block.classList.remove("is-reaching"), OVERSHOOT_GRACE_MS)
       },
       { signal },
     )

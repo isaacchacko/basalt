@@ -731,6 +731,7 @@ function addExpands(root: ParentNode, signal: AbortSignal) {
   for (const el of root.querySelectorAll<HTMLElement>(targets)) {
     if (el.querySelector(":scope > .viewer-expand") || el.closest(ELSEWHERE)) continue
     const b = button("viewer-expand", "full screen", ICON("expand"))
+    b.removeAttribute("title")
     b.addEventListener(
       "click",
       (e) => {
