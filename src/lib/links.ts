@@ -60,6 +60,28 @@ const EXTERNAL_ICON: Element = {
   ],
 }
 
+/** a 24px outline glyph in the text's ink, as Basalt's other icons are drawn */
+const glyph = (className: string, paths: string[]): Element => ({
+  type: "element",
+  tagName: "svg",
+  properties: {
+    "aria-hidden": "true",
+    className: [className],
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+  },
+  children: paths.map((d) => ({ type: "element", tagName: "path", properties: { d }, children: [] })),
+})
+const FILE_ICON = glyph("file-name-icon", ["M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", "M14 2v4a2 2 0 0 0 2 2h4"])
+// FolderMark.astro's
+const FOLDER_ICON = glyph("file-name-icon", [
+  "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z",
+])
+
 /**
  * Marks every link internal (with the slug it goes to) or external (with an
  * icon), resolves internal hrefs and the srcs of images, video, audio and
@@ -101,7 +123,14 @@ export function crawlLinks(tree: Root, from: FullSlug, allSlugs: FullSlug[]): Fu
         node.children[0].type === "text" &&
         !node.children[0].value.startsWith("#")
       ) {
-        node.children[0].value = path.basename(node.children[0].value)
+        const written = node.children[0].value
+        node.children[0].value = path.basename(written)
+        // a file's name written down, [[margin.md]] or [[start/]], reads as one, by its glyph
+        const glyph = written.endsWith("/") ? FOLDER_ICON : path.extname(written) ? FILE_ICON : undefined
+        if (glyph) {
+          classes.push("file-name")
+          node.children.unshift(structuredClone(glyph))
+        }
       }
     }
 

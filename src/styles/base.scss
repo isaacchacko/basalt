@@ -116,6 +116,13 @@ a {
     }
   }
 
+  &.file-name .file-name-icon {
+    height: 0.85em;
+    width: 0.85em;
+    margin-right: 0.2em;
+    vertical-align: -0.05em;
+  }
+
   &.external .external-icon {
     height: 1ex;
     margin: 0 0.15em;

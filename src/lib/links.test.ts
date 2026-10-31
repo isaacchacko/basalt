@@ -2,7 +2,8 @@ import "../markdown/test-hooks.ts"
 import test, { describe } from "node:test"
 import assert from "node:assert"
 import type { FullSlug } from "./path.ts"
-const { resolveLink, hrefOf } = await import("./links.ts")
+import type { Element, Root } from "hast"
+const { resolveLink, hrefOf, crawlLinks } = await import("./links.ts")
 
 const slugs = ["index", "margin", "sources/garden-ideas", "blog/index", "blog/a-post", "assets/card.png", "a/dup", "b/dup"] as FullSlug[]
 const from = (s: string) => s as FullSlug
@@ -34,5 +35,20 @@ describe("links", () => {
     assert.strictEqual(hrefOf("blog/index"), "/blog/")
     assert.strictEqual(hrefOf("index"), "/")
     assert.strictEqual(hrefOf("sources/garden-ideas"), "/sources/garden-ideas")
+  })
+
+  test("a file's name written down reads as one: its glyph before it", () => {
+    const link = (href: string, text: string): Element => ({
+      type: "element",
+      tagName: "a",
+      properties: { href },
+      children: [{ type: "text", value: text }],
+    })
+    const links = [link("margin.md", "margin.md"), link("blog/", "blog/"), link("margin", "margin"), link("margin", "Margin notes")]
+    crawlLinks({ type: "root", children: links } as Root, from("index"), slugs)
+    const glyphs = links.map((a) => (a.children[0] as Element).properties?.className)
+    assert.deepStrictEqual(glyphs, [["file-name-icon"], ["file-name-icon"], undefined, undefined])
+    assert.deepStrictEqual(links.map((a) => (a.properties.className as string[]).includes("file-name")), [true, true, false, false])
+    assert.strictEqual((links[1].children[1] as { value: string }).value, "blog")
   })
 })
