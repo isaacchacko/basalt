@@ -5,7 +5,11 @@ description: Markdown in, a website that reads like a good math textbook out, an
 
 **Basalt turns a folder of markdown into a website that reads like a good textbook, and edits in place, like Obsidian.**[^this] Your notes, links and pictures as they are, published with their remarks in the margin.
 
-**[[start|Start →]]** &nbsp; or <copy value="npm install --global @isaacchacko/basalt">copy the install command</copy>
+```sh
+npm install --global @isaacchacko/basalt
+```
+
+**[[start|→ Start]]**
 
 ## Remarks beside their lines
 
