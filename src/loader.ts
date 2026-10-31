@@ -25,13 +25,18 @@ import { resolveFile } from "./markdown/embeds"
 import { nativeImport, siteModules } from "./markdown/siteconfig"
 import { begin, end, lineOf, noteFailed, noteGone, noteWarned, bus, type Problem } from "./integrations/bus"
 
-// a change to Basalt's markdown code (or a site's own plugins, and the
-// modules they import) re-renders every note, not just the ones whose text
-// changed
+// a change to Basalt's markdown code (and the lib it uses, like links.ts), or
+// to a site's own plugins and the modules they import, re-renders every note,
+// not just the ones whose text changed
 function codeDigest(siteDir: string): string {
-  const dir = path.join(path.dirname(new URL(import.meta.url).pathname), "markdown")
+  const src = path.dirname(new URL(import.meta.url).pathname)
   const files = [
-    ...fs.readdirSync(dir).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).map((f) => path.join(dir, f)),
+    ...["markdown", "lib"].flatMap((dir) =>
+      fs
+        .readdirSync(path.join(src, dir))
+        .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+        .map((f) => path.join(src, dir, f)),
+    ),
     path.join(siteDir, "basalt.config.ts"),
     ...siteModules(),
   ]
