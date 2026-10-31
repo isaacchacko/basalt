@@ -9,7 +9,6 @@ import { historyOn } from "../lib/history"
 import { strings, type StringKey } from "../lib/strings"
 import { notes } from "../layouts/notes"
 import { words } from "../layouts/words"
-import "../styles/history.scss"
 const t = await words()
 const { site } = registry()
 const any = (await notes()).some((n) => historyOn(site, n.data as Record<string, unknown>))

@@ -1,18 +1,5 @@
 // A diff (src/markdown/diff.ts).
 
-// shared with trees' marks
-:root {
-  --basalt-added: #217a46;
-  --basalt-removed: #c2283c;
-  --basalt-changed: #9a6a00;
-}
-
-:root[saved-theme="dark"] {
-  --basalt-added: #63d69a;
-  --basalt-removed: #ff8a97;
-  --basalt-changed: #f0c35e;
-}
-
 figure.diff {
   // mixed into the paper, so the block stays opaque when it reaches
   --diff-line: 9%;

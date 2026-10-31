@@ -49,6 +49,20 @@
   color-scheme: dark;
 }
 
+// what's added, removed and changed: a diff's rows, a tree's marks, a note's
+// history, a publish's changes
+:root {
+  --basalt-added: #217a46;
+  --basalt-removed: #c2283c;
+  --basalt-changed: #9a6a00;
+}
+
+:root[saved-theme="dark"] {
+  --basalt-added: #63d69a;
+  --basalt-removed: #ff8a97;
+  --basalt-changed: #f0c35e;
+}
+
 
 :root {
   // how soft a variable face's corners are, where it has the axis (Fraunces'

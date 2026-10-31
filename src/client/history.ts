@@ -13,6 +13,7 @@
 // exclude each other: ⌘E or the pencil comes back to now first.
 
 import { startContent } from "./content"
+import { needSheets } from "./sheets"
 
 interface Commit {
   sha: string
@@ -211,6 +212,8 @@ async function turn(want: boolean) {
   }
   const k = kept()
   if (!k.pages.includes(slug)) keep({ pages: [...k.pages, slug] })
+  await needSheets(["history"])
+  if (on || article() !== art) return
   const timeline = timelineOf(slug)
   // in the navbar, where its explorer is (history.scss hides that)
   const nav = document.querySelector(".sidebar.left")

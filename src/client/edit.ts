@@ -13,6 +13,7 @@
 // it was left, reloaded or come back to.
 
 import { draftKey, draftStore } from "./draft"
+import { NOTE_SHEET_NAMES, needSheets } from "./sheets"
 
 const root = document.documentElement
 let editor: Promise<typeof import("./editor")> | undefined
@@ -39,8 +40,12 @@ function sync() {
 /** the explorer's file ops (files.ts), in editing view: loaded with the editor */
 const files = () => import("./files")
 
+/** the editor's own styles, and every note's, since what's written may come to need any of them */
+const sheets = (doc?: Document) => needSheets(["edit", ...NOTE_SHEET_NAMES], doc)
+
 async function toggle(on = !root.hasAttribute("data-editing")) {
   if (!article()) return
+  if (on) await sheets()
   const { setEditing } = await load()
   await setEditing(on)
   sync()
@@ -67,6 +72,7 @@ document.addEventListener(
 )
 
 document.addEventListener("astro:before-swap", (e) => {
+  if (root.hasAttribute("data-editing")) void sheets(e.newDocument)
   e.newDocument.documentElement.toggleAttribute("data-editing", root.hasAttribute("data-editing"))
   e.newDocument.documentElement.toggleAttribute("data-edit-connected", root.hasAttribute("data-edit-connected"))
 })

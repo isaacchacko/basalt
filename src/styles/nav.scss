@@ -258,6 +258,23 @@ $semiBoldWeight: 600;
   display: none;
 }
 
+// a built site's pencil, once this browser can commit to its repository
+.edit-toggle[data-edit-mode="github"] {
+  display: none;
+}
+
+:root[data-edit-connected] .edit-toggle[data-edit-mode="github"] {
+  display: grid;
+}
+
+// the explorer's file ops (client/files.ts) are made only in editing view, and
+// shown only in it (edit.scss)
+.files-bar,
+.files-more,
+.files-add {
+  display: none;
+}
+
 .source-toggle,
 .history-toggle,
 .edit-toggle {

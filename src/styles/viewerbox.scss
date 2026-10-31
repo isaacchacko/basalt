@@ -1,0 +1,209 @@
+// The viewer's box (viewer.scss, src/client/viewer.ts): the dialog a picture
+// opens into, full screen. Linked when it first opens.
+
+$viewer-ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+
+dialog.basalt-viewer {
+  // the whole viewport, as the page dimming rather than a box on top of it
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  color: var(--darkgray);
+  background: color-mix(in srgb, var(--light) 96%, transparent);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+
+  &[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  &::backdrop {
+    background: transparent;
+  }
+  &[data-pointer] .viewer-close:focus-visible {
+    outline: none;
+  }
+
+  .viewer-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.6rem 0.75rem;
+    z-index: 2;
+  }
+  .viewer-count {
+    padding-left: 0.5rem;
+    font-family: var(--bodyFont);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--gray);
+  }
+  .viewer-spacer {
+    flex: 1;
+  }
+
+  .viewer-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    // room on every side: a tall picture never touches the screen's foot,
+    // nor its caption under it
+    margin: 0 clamp(1rem, 5vw, 4.5rem) 1.5rem;
+    overflow: hidden;
+    touch-action: none;
+    cursor: zoom-out;
+  }
+
+  .viewer-leaving {
+    pointer-events: none;
+  }
+  .viewer-media,
+  .viewer-leaving {
+    grid-area: 1 / 1;
+    display: block;
+    max-width: none;
+    margin: 0;
+    border-radius: 3px;
+    transform-origin: center;
+    user-select: none;
+    // a page may give its images content-visibility: auto, which would let the
+    // browser skip laying out a just-opened image, so it measures as 0 wide
+    content-visibility: visible;
+    cursor: zoom-in;
+
+    &[data-kind="image"] {
+      // a faint ring, so a dark screenshot keeps its edges
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--darkgray) 14%, transparent),
+        0 18px 50px rgb(0 0 0 / 0.16);
+    }
+    &[data-kind="svg"] svg text:not([fill]) {
+      fill: currentColor;
+    }
+    &[data-kind="svg"] svg :is(rect, polygon, circle, path) {
+      filter: none !important;
+    }
+    &[data-kind="svg"] svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+    }
+    // code: the block itself, at a reading size, scrolling inside the stage
+    &[data-kind="code"] {
+      overflow: auto;
+      box-sizing: border-box;
+      border: 1px solid var(--lightgray);
+      border-radius: 8px;
+      background: var(--light);
+      cursor: auto;
+      touch-action: pan-x pan-y;
+      overscroll-behavior: contain;
+
+      pre {
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+      }
+      pre > code {
+        font-size: 0.95rem;
+        line-height: 1.65;
+      }
+    }
+    &[data-kind="frame"] {
+      border: 1px solid var(--lightgray);
+      border-radius: 8px;
+      background: white;
+      cursor: auto;
+    }
+    // a live embed (a ```graph, a pdf), itself, filling its place in the stage
+    &[data-kind="live"] {
+      cursor: auto;
+      user-select: auto;
+      touch-action: none;
+
+      & > figure {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        margin: 0;
+      }
+      // the viewer has its own caption and its own close
+      & > figure > figcaption,
+      .viewer-expand {
+        display: none;
+      }
+      .graph-embed,
+      .pdf-viewer {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: auto !important;
+        background: var(--light);
+      }
+      .pdf-stage {
+        box-shadow: none !important;
+      }
+    }
+  }
+  &[data-zoomed="true"] .viewer-media {
+    cursor: grab;
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  .viewer-prev,
+  .viewer-next {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    z-index: 2;
+  }
+  .viewer-prev {
+    left: 0.75rem;
+  }
+  .viewer-next {
+    right: 0.75rem;
+  }
+
+  .viewer-caption {
+    margin: 0 auto;
+    padding: 0 1rem 1.1rem;
+    max-width: 40em;
+    text-align: center;
+    font-family: var(--titleFont);
+    font-style: italic;
+    font-size: 0.98rem;
+    line-height: 1.45;
+    color: var(--darkgray);
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .viewer-stage {
+      margin: 0 0 1rem;
+    }
+    .viewer-prev,
+    .viewer-next {
+      display: none;
+    }
+  }
+}
+
+html[data-viewer] {
+  overflow: hidden;
+}
+

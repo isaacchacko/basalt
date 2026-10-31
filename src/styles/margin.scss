@@ -3,6 +3,18 @@
 
 $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 
+// what everything in the side content keeps from the column's right edge (previews.scss too)
+:root {
+  --side-inset: 0.8rem;
+}
+
+// [data-secondary] content waits, unshown, for its parent to be hovered and
+// shown in the margin (previews.ts). !important: a site's styles may give it a
+// display of its own
+body [data-secondary] {
+  display: none !important;
+}
+
 .margin {
   position: relative;
   min-width: 0;

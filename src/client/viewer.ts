@@ -8,6 +8,7 @@
 // of its preview in the side content if that's showing (previews.ts), else
 // out of the link. Without this script an image is an image, a diagram is a
 // diagram, and a link to a picture is a link.
+import { needSheets } from "./sheets"
 import {
   EASE,
   PATHS,
@@ -181,6 +182,8 @@ export async function openViewer(
   current?.close(true)
   const all = opener.only ? [opener.only] : items()
   if (!all.length) return
+  // what opens it may be on any page: a graph's node, a preview
+  await needSheets(["viewer", "viewerbox"])
   let index = Math.max(
     0,
     all.findIndex((i) => i.origin === start || i.origin.contains(start)),
