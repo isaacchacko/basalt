@@ -4,7 +4,7 @@
 // searches inside one page, and "@here query" the page you're on: each
 // result is a passage, and choosing one scrolls to it and marks it. The
 // index is built from /static/contentIndex.json the first time search opens.
-import { adoptSheets } from "./sheets"
+import { adoptSheets, needSheets } from "./sheets"
 
 interface Details {
   slug: string
@@ -307,7 +307,8 @@ function setup() {
     searchType = "basic"
     root.classList.remove("search-open")
   }
-  function show(type: SearchType) {
+  async function show(type: SearchType) {
+    await needSheets(["searchbox"])
     searchType = type
     container!.classList.add("active")
     root.classList.add("search-open")
@@ -519,13 +520,13 @@ function setup() {
       // open, a second ⌘F is the browser's
       if (isOpen()) return
       e.preventDefault()
-      show("basic")
+      void show("basic")
       return
     }
     if (mod && key === "k") {
       e.preventDefault()
       if (isOpen()) return hide()
-      show(e.shiftKey ? "tags" : "basic")
+      void show(e.shiftKey ? "tags" : "basic")
       if (e.shiftKey) bar!.value = "#"
       return
     }
@@ -571,14 +572,14 @@ function setup() {
   }
 
   document.addEventListener("keydown", onKey, { signal })
-  button.addEventListener("click", () => show("basic"), { signal })
+  button.addEventListener("click", () => void show("basic"), { signal })
   // the search glyph in the navbar's tray (it persists across pages, so delegated)
   document.addEventListener(
     "click",
     (e) => {
       if (!(e.target as Element).closest?.(".nav-search")) return
       ;(document.activeElement as HTMLElement | null)?.blur()
-      show("basic")
+      void show("basic")
     },
     { signal },
   )

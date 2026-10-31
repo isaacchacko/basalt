@@ -25,14 +25,13 @@ import { canDrawCards } from "../lib/socialimage"
 import { slugifyFilePath, type FilePath } from "../lib/path"
 import { blobSha, editTarget, repoPath, serving } from "../lib/edit"
 import { historyOn } from "../lib/history"
-// KaTeX's own stylesheet and fonts, the installed version rehype-katex renders
-// with: only on a page with math (about 8 KB, gzipped, its fonts' faces most of it)
-import katexCss from "katex/dist/katex.min.css?url"
+// stylesheets only some notes need (KaTeX's, a tree's, a diff's): linked only
+// from the pages whose note has them
+import { NOTE_SHEETS } from "../client/sheets"
 import "../styles/base.scss"
 import "../styles/basalt.scss"
 import "../styles/print.scss"
 import "../styles/themed.scss"
-import "../styles/gardengraph.scss"
 import "../styles/nav.scss"
 import "../styles/search.scss"
 import "../styles/source.scss"
@@ -104,7 +103,10 @@ const image =
           ? "/og/index.png"
           : undefined
       : undefined
-const hasMath = !!note?.rendered?.html.includes('class="katex')
+const html = note?.rendered?.html ?? ""
+// a note that takes in others may have anything they have; one being served
+// can be given anything as it's written
+const linked = Object.entries(NOTE_SHEETS).filter(([, [, has]]) => serving() || html.includes('class="transclude') || has.test(html))
 // a note's page edits in place (client/editor.ts): while serving, or built with "edit"
 // (an empty note has no body in the store, but a file, empty, all the same)
 const noteFile = note && registry().bySlug.get(note.id as never)
@@ -130,7 +132,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
 <html lang={site.config.locale}>
   <head>
     <Head title={title} description={description} path={path} noindex={noindex} image={image} />
-    {hasMath && <link rel="stylesheet" href={katexCss} data-basalt-sheet="katex" />}
+    {linked.map(([name, [href]]) => <link rel="stylesheet" href={href} data-basalt-sheet={name} />)}
   </head>
   <body data-slug={slug}>
     <div id="quartz-root" class="page">

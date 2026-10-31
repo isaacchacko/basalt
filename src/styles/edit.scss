@@ -1,20 +1,12 @@
 // Editing a page in place (client/edit.ts, client/editor.ts): the open block
 // is a CodeMirror editor where the block was, its markdown set in the page's
-// own type, quiet; everything else stays the page.
+// own type, quiet; everything else stays the page. Linked when editing starts
+// (client/sheets.ts); the pencil's own styles are the navbar's (nav.scss).
 
 @use "marks" as *;
 
 $mobile: "(max-width: 800px)";
 $narrow: "(max-width: 1055.98px)";
-
-// a built site's pencil, once this browser can commit to its repository
-.edit-toggle[data-edit-mode="github"] {
-  display: none;
-}
-
-:root[data-edit-connected] .edit-toggle[data-edit-mode="github"] {
-  display: grid;
-}
 
 // ---------- the note, as one document ----------
 
@@ -634,13 +626,6 @@ html[data-margin] article .edit-footnote {
 }
 
 // ---------- the explorer's file ops, in editing view (client/files.ts) ----------
-
-// the controls are made only in editing view, and shown only in it
-.files-bar,
-.files-more,
-.files-add {
-  display: none;
-}
 
 :root[data-editing] .explorer[data-edit-files] {
   // the bar at the top: a new note, a new folder, in the folder of the page you're on

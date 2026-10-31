@@ -6,6 +6,7 @@
 // the first time it's asked for.
 
 import type { FileKind } from "./graphdraw"
+import { needSheets } from "./sheets"
 
 type Index = Record<string, { title?: string; links?: string[]; files?: string[] }>
 type Note = { id: string; title: string; links: string[]; files: string[] }
@@ -46,7 +47,7 @@ const keepWant = (on: boolean) => {
 let open: (() => void) | null = null
 
 async function show() {
-  const [{ draw, neighbourhood, kindOf, kindColour, isFile, FILE }, all] = await Promise.all([import("./graphdraw"), load()])
+  const [{ draw, neighbourhood, kindOf, kindColour, isFile, FILE }, all] = await Promise.all([import("./graphdraw"), load(), needSheets(["gardengraph"])])
   const dialog = document.createElement("dialog")
   dialog.className = "garden-graph"
   dialog.setAttribute("aria-label", "the garden, as a graph")

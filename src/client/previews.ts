@@ -21,7 +21,7 @@
 import { enhanceCopy, isDark, isImageLink, themedPair } from "./embeds"
 import { isBeside, levelWith, lineOf, onPage } from "./margin"
 import { clipsOf } from "./sound"
-import { adoptSheets } from "./sheets"
+import { adoptSheets, needSheets } from "./sheets"
 
 const SHOW_MS = 90
 const HIDE_MS = 420
@@ -406,7 +406,7 @@ onPage((signal) => {
     if (!content) return
     hide()
     const item = marked(content)
-    const node = await item.build().catch(() => null)
+    const [node] = await Promise.all([item.build().catch(() => null), needSheets(["previews"])])
     if (!node || signal.aborted) return
     pinned = trigger
     trigger.setAttribute("aria-expanded", "true")
@@ -465,7 +465,7 @@ onPage((signal) => {
     wanted = item.key
     clearTimeout(showTimer)
     showTimer = setTimeout(async () => {
-      const node = await item.build().catch(() => null)
+      const [node] = await Promise.all([item.build().catch(() => null), needSheets(["previews"])])
       if (wanted !== item.key || signal.aborted) return
       if (!node) return hide()
       if (shown) leave(shown.node)

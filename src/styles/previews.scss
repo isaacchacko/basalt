@@ -1,13 +1,8 @@
 // What's hovered, in the margin (src/client/previews.ts): a note's preview, a
 // tooltip or a marked card, level with its line, over the notes there (which
-// fade out while it's there).
+// fade out while it's there). Linked with the first one (client/sheets.ts).
 
 $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
-
-// what everything in the side content keeps from the column's right edge (margin.scss too)
-:root {
-  --side-inset: 0.8rem;
-}
 
 .margin-hover {
   position: absolute;
@@ -240,12 +235,6 @@ $ease: cubic-bezier(0.2, 0.7, 0.1, 1);
   font-size: 0.85rem;
   line-height: 1.4;
   color: var(--gray);
-}
-
-// [data-secondary] content waits, unshown, for its parent to be hovered.
-// !important: a site's styles may give it a display of its own
-body [data-secondary] {
-  display: none !important;
 }
 
 // a tooltip: its words, beside what it's about, with an ember rule in the gutter
