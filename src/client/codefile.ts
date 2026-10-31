@@ -1,6 +1,6 @@
 // Every code block's controls, inside its border: in its title bar if it has
-// one, else in its top right corner. Each control's label shows beside it in
-// the bar, never as a title, which previews.ts would show in the side content.
+// one, else in its top right corner. They're named for screen readers only: no
+// title, which previews.ts would show in the side content, and no label on hover.
 import { PATHS, icon } from "./embeds"
 import { openCode } from "./viewer"
 import { markMore } from "./codereach"
@@ -74,21 +74,7 @@ export function startCodeControls(signal: AbortSignal, root: ParentNode = docume
 
     for (const button of actions.querySelectorAll<HTMLElement>(".code-file-action, .code-action")) {
       button.classList.add("code-action")
-      if (button.title) {
-        button.dataset.label = button.title
-        button.removeAttribute("title")
-      }
-      const show = () =>
-        showLabel(button.dataset.done ? "copied" : (button.dataset.label ?? button.getAttribute("aria-label") ?? ""))
-      // a frame later, so moving between controls doesn't flicker the label
-      const hide = () =>
-        requestAnimationFrame(() => {
-          if (!actions.matches(":hover, :has(:focus-visible)")) showLabel("")
-        })
-      button.addEventListener("pointerenter", show, { signal })
-      button.addEventListener("focus", show, { signal })
-      button.addEventListener("pointerleave", hide, { signal })
-      button.addEventListener("blur", hide, { signal })
+      button.removeAttribute("title")
     }
 
     // measured against the block at rest: reaching into the side content, it may fit
