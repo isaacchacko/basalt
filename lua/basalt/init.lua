@@ -7,6 +7,9 @@
 --
 --   require("basalt").setup({ key = "<leader>B" })
 --
+-- With lazy.nvim, `keys = { "<leader>B" }` in its spec loads it on that key,
+-- from anywhere: on a note, the note's site; elsewhere, the one Neovim's in.
+--
 -- :BasaltToggle serves or stops the site, :BasaltOpen opens the page.
 
 local M = {}
@@ -30,6 +33,16 @@ local function siteOf(buf)
   local file = vim.api.nvim_buf_get_name(buf)
   if file == "" then return nil end
   local found = vim.fs.find("basalt.json", { upward = true, path = vim.fs.dirname(file) })[1]
+  return found and vim.fs.dirname(found)
+end
+
+-- the site the key is for: the current note's, else the one Neovim was started in (or just under it)
+local function here()
+  local site = siteOf(0)
+  if site then return site end
+  local cwd = vim.fn.getcwd()
+  local found = vim.fs.find("basalt.json", { upward = true, path = cwd })[1]
+    or vim.fs.find(function(name, dir) return name == "basalt.json" and vim.fs.dirname(dir) == cwd end, { path = cwd, limit = 1 })[1]
   return found and vim.fs.dirname(found)
 end
 
@@ -128,13 +141,13 @@ function M.stop(site)
 end
 
 function M.toggle()
-  local site = siteOf(0)
-  if not site then return say("no basalt.json above this file", vim.log.levels.WARN) end
+  local site = here()
+  if not site then return say("no basalt.json above this file, or here", vim.log.levels.WARN) end
   if served[site] then M.stop(site) else M.start(site) end
 end
 
 function M.open()
-  local s = served[siteOf(0) or ""]
+  local s = served[here() or ""]
   if not s then return say("not serving this site (" .. opts.key .. ")", vim.log.levels.WARN) end
   vim.ui.open(s.url)
 end
