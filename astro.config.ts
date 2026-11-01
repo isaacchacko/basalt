@@ -10,7 +10,7 @@ import { useTargets } from "./src/markdown/transclude"
 import { vitePlugins } from "./src/lib/vite"
 import { agentApi } from "./src/integrations/agent"
 import { passwordGate } from "./src/integrations/password"
-import { editInPlace } from "./src/integrations/edit"
+import { noteHistory } from "./src/integrations/history"
 
 const site = loadSite(siteDir())
 // Basalt itself, wherever it's run from: a site's root is its own .basalt
@@ -32,8 +32,8 @@ export default defineConfig({
   // JSX is only in .tsx and .jsx (islands): left to its default, the preset runs
   // Babel over every .ts and .js outside node_modules, Basalt's own client code
   // included, which is ~0.6 s of every build
-  // editInPlace first: it says which command is running, which the rest reads (lib/edit.ts)
-  integrations: [editInPlace(renderNote), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
+  // noteHistory first: it says which command is running, which the rest reads (serving, lib/site.ts)
+  integrations: [noteHistory(renderNote), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
   markdown: {
     syntaxHighlight,
     // unified's PluggableList and Astro's plugin types describe the same thing

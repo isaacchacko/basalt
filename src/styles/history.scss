@@ -10,8 +10,8 @@ $desktop: "(min-width: 1056px)";
 // ---------- the timeline, in the explorer's place ----------
 
 // the navbar (nav.scss) holds it where its explorer was: the same column,
-// width and scroll; the explorer comes back when it's off (or while editing)
-:root[data-history]:not([data-editing]) .sidebar.left > .explorer {
+// width and scroll; the explorer comes back when it's off
+:root[data-history] .sidebar.left > .explorer {
   display: none;
 }
 
@@ -19,18 +19,18 @@ $desktop: "(min-width: 1056px)";
   display: none;
 }
 
-:root[data-history]:not([data-editing]) .history-timeline {
+:root[data-history] .history-timeline {
   display: flex;
 }
 
 // on a wide screen the navbar stays open while it's on, as if hovered
 // (nav.scss: $open), so the dates are there as the note is read
 @media all and ($desktop) {
-  :root[data-history]:not([data-editing]) .page > #quartz-body {
+  :root[data-history] .page > #quartz-body {
     --nav-width: 300px;
   }
 
-  :root[data-history]:not([data-editing]) .page > #quartz-body > .sidebar.left {
+  :root[data-history] .page > #quartz-body > .sidebar.left {
     &:not([data-nav="bar"]) {
       border-right-color: var(--lightgray);
     }
@@ -49,7 +49,7 @@ $desktop: "(min-width: 1056px)";
 
 // below it, the bar across the top makes a second row for it
 @media all and ($narrow) {
-  :root[data-history]:not([data-editing]) .page > #quartz-body > .sidebar.left {
+  :root[data-history] .page > #quartz-body > .sidebar.left {
     flex-wrap: wrap;
   }
 }

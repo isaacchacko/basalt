@@ -24,7 +24,6 @@
       "order": [
         "start",
         "writing",
-        "editing",
         "publishing",
         "agents",
         "start/folder",
@@ -44,12 +43,9 @@
         "writing/islands",
         "writing/streaks",
         "writing/gardens",
-        "editing/local",
-        "editing/github",
-        "editing/history",
-        "editing/explorer",
         "publishing/hosting",
         "publishing/password",
+        "publishing/history",
         "publishing/sharing"
       ]
     }

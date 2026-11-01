@@ -15,8 +15,6 @@ basalt dev my-garden
 
 `basalt new` makes the folder, and `basalt dev` serves it at `http://localhost:4321`, live. Open that, then open `my-garden/notes/index.md` in your editor. Every save shows up in the page you have open, in place, in under a second, without losing your scroll.
 
-Or write in the page itself: press ⌘E, and the page you're reading becomes its note, to edit where it is. See [[editing]].
-
 ## Then
 
 Write notes in `notes/`, link them with `[[their names]]`, and see [[writing]] for everything a note can hold. When it's ready, `basalt build my-garden` makes the site, for any host: see [[publishing]].

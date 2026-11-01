@@ -1,7 +1,6 @@
 // Basalt's own markdown plugins, in order, and what the rest of a note's
 // rendering is made of: everything index.ts puts together with a site's own
-// plugins, and nothing that needs node, so a page being edited renders a note
-// with the very same plugins in the browser (browser/render.ts).
+// plugins.
 
 import type { PluggableList } from "unified"
 import { unified } from "unified"

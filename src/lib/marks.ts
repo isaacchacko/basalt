@@ -1,10 +1,7 @@
 // What changed between two renderings of a note, marked in the newer one:
 // added text in <ins>, removed text in <del>, a block wholly added or removed
 // classed history-added or history-removed. A note's history marks each
-// commit's changes this way (history.ts); the editor marks a draft's before
-// it's published (client/publish.ts), on its markdown (textMarked).
-//
-// No node imports: the browser uses it too.
+// commit's changes this way (history.ts).
 
 import type { Element, ElementContent, Root, RootContent, Text } from "hast"
 import { fromHtml } from "hast-util-from-html"
@@ -418,47 +415,4 @@ function inline(old: Element, now: Element): Element {
   const out = rewrite(now)
   if (left.length) out.children.push(...left.flatMap(del))
   return out
-}
-
-const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-
-/** a text as a rendering of itself: each run of lines between blank ones a block, its lines as written */
-function asWritten(text: string): string {
-  const lines = lf(text).split("\n")
-  const out: string[] = []
-  for (let i = 0; i < lines.length; i++) {
-    if (!lines[i].trim()) continue
-    let j = i
-    while (j + 1 < lines.length && lines[j + 1].trim()) j++
-    out.push(`<p data-src="${i + 1}-${j + 1}">${escape(lines.slice(i, j + 1).join("\n"))}</p>`)
-    i = j
-  }
-  return out.join("\n")
-}
-
-/**
- * The markdown `now`, with what changed since `was` marked as a commit's
- * changes are: only the blocks that changed (runs of lines between blank
- * ones), and a <p class="marks-skip"> where blocks that didn't are left out.
- * Empty when nothing changed.
- */
-export function textMarked(was: string, now: string): string {
-  const all = fromHtml(marked(was, asWritten(was), now, asWritten(now)), { fragment: true })
-  const changed = (n: RootContent) =>
-    n.type === "element" && ([n.properties?.className].flat().some((k) => k === "history-added" || k === "history-removed") || /<(ins|del)>/.test(toHtml(n)))
-  const blocks = all.children.filter((n) => n.type === "element")
-  const kept: RootContent[] = []
-  const skip = (): Element => ({ type: "element", tagName: "p", properties: { className: ["marks-skip"] }, children: [{ type: "text", value: "⋯" }] })
-  let left = false
-  for (const n of blocks) {
-    if (!changed(n)) left = true
-    else {
-      if (left) kept.push(skip())
-      kept.push(n)
-      left = false
-    }
-  }
-  if (!kept.length) return ""
-  if (left) kept.push(skip())
-  return toHtml({ type: "root", children: kept })
 }

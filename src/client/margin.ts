@@ -176,23 +176,9 @@ export function levelWith(item: HTMLElement, line: Line, column: DOMRect): numbe
 
 export const isBeside = () => document.documentElement.dataset.margin === "beside"
 
-/**
- * The element before a note, as the page has it: in a note being edited
- * (editor.ts), a block is drawn in a box of its own, so the one before the
- * first in a box is the last of the box drawn before it.
- */
-function before(note: HTMLElement): Element | null {
-  if (note.previousElementSibling || !note.parentElement?.classList.contains("edit-drawn")) return note.previousElementSibling
-  for (let at = note.parentElement.previousElementSibling; at; at = at.previousElementSibling) {
-    if (at.classList.contains("edit-gap")) continue
-    return at.classList.contains("edit-drawn") ? at.lastElementChild : at
-  }
-  return null
-}
-
 /** The line a margin item belongs to. */
 function anchorOf(note: HTMLElement): Line {
-  const prev = before(note)
+  const prev = note.previousElementSibling
   // a sidenote: the line its number is on, measured from the text before the number
   if (note.classList.contains("sidenote") && prev?.matches("sup")) return lineBefore(prev)
   // a block aside: the first line of the block before it
@@ -210,12 +196,8 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string) {
   return node
 }
 
-/** a margin copy's note, in the text: what a click on the copy edits (client/editor.ts) */
-export const noteOf = new WeakMap<HTMLElement, HTMLElement>()
-
 function copyOf(note: HTMLElement): HTMLElement {
   const copy = note.cloneNode(true) as HTMLElement
-  noteOf.set(copy, note)
   copy.classList.add("in-margin")
   copy.classList.remove("open")
   copy.removeAttribute("id")
@@ -284,9 +266,8 @@ const startMargin = onPage((signal) => {
     const column = margin.getBoundingClientRect()
 
     // blocks wide enough to reach into the margin: nothing sits beside them
-    // (a note being edited has its blocks drawn in its editor, editor.ts)
-    // (and a version of it shown, its blocks in their own, history.ts)
-    const blocked: [number, number][] = [...article.querySelectorAll(":scope > :not(.edit-doc, .history-version), :scope > .edit-doc .edit-drawn > *, :scope > .history-version > *")]
+    // (a version of the note shown has its blocks in their own, history.ts)
+    const blocked: [number, number][] = [...article.querySelectorAll(":scope > :not(.history-version), :scope > .history-version > *")]
       .map((c) => c.getBoundingClientRect())
       .filter((r) => r.height && r.right > column.left + 4)
       .map((r) => [r.top - column.top - BLOCKED_ABOVE, r.bottom - column.top + BLOCKED_BELOW])
@@ -319,10 +300,9 @@ const startMargin = onPage((signal) => {
       notesAt.push([top - GAP, top + height + GAP])
       lowest = Math.max(lowest, top + height)
     }
-    // a note not in the page has no line to be beside: its block is open in the editor (editor.ts), or
-    // not drawn in it yet (still the page's own, hidden, till it's scrolled to)
-    // (or the page's own, hidden under a version of it shown, history.ts)
-    const drawn = article.querySelector(":scope > .edit-doc, :scope > .history-version")
+    // a note not in the page has no line to be beside: the page's own, hidden
+    // under a version of it shown (history.ts)
+    const drawn = article.querySelector(":scope > .history-version")
     for (const { note, copy } of copies) copy.hidden = !note.isConnected || (!!drawn && !drawn.contains(note))
     const wants = copies.map(({ note, copy }) => (copy.hidden ? 0 : levelWith(copy, anchorOf(note), column)))
     const deferred: number[] = []
@@ -448,5 +428,5 @@ const startMargin = onPage((signal) => {
   })
 })
 
-// a note being edited has blocks drawn anew (editor.ts): its notes are those now
+// a version of the note shown has blocks drawn anew (history.ts): its notes are those now
 document.addEventListener("basalt:drawn", () => startMargin())

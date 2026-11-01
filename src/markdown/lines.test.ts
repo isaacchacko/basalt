@@ -1,6 +1,6 @@
-// Where each block of a page is in its note's file (lines.ts), on whole notes
-// rendered the way Astro renders them: the test site, and test/fixtures/edit,
-// a block of every kind Basalt draws. Each note lists the lines of its
+// Where each block of a note is in its text (lines.ts), on whole notes
+// rendered the way a past version is (lib/history.ts): the test site, and
+// test/fixtures/kinds, a block of every kind Basalt draws. Each note lists the lines of its
 // top-level blocks in order ("7" for one line, "18-20" for several), as
 // they're written in the file, frontmatter and comments and all.
 import "./test-hooks.ts"
@@ -17,15 +17,19 @@ const { visit } = await import("unist-util-visit")
 const { tagLines, unsaved } = await import("./lines.ts")
 
 const serving = process.env.BASALT_COMMAND
-const sites = { site: path.resolve("test/fixtures/site"), edit: path.resolve("test/fixtures/edit") }
+const sites = { site: path.resolve("test/fixtures/site"), kinds: path.resolve("test/fixtures/kinds") }
 
-async function page(site: string, rel: string, command = "dev"): Promise<Root> {
+/** the note rendered as a version of itself (its own text, unsaved), or `served`, as its page is */
+async function page(site: string, rel: string, served = false): Promise<Root> {
   process.env.BASALT_SITE = site
-  process.env.BASALT_COMMAND = command
+  process.env.BASALT_COMMAND = "dev"
+  const abs = path.join(site, "notes", rel)
+  if (!served) unsaved.set(abs, fs.readFileSync(abs, "utf8"))
   try {
     refreshRegistry()
-    return fromHtml((await renderFile(path.join(site, "notes", rel))).code, { fragment: true })
+    return fromHtml((await renderFile(abs)).code, { fragment: true })
   } finally {
+    unsaved.delete(abs)
     if (serving === undefined) delete process.env.BASALT_COMMAND
     else process.env.BASALT_COMMAND = serving
   }
@@ -49,12 +53,12 @@ const expected: Record<string, string[]> = {
   "site/tabs.md": "5-18 20 22-23".split(" "),
   "site/transclusion.md": "5 7 9 11 13 15 17 19 21 23 25 27 29 31 33 35 37 39 41".split(" "),
   "site/web.md": "5 7 9 11 13 15 17 19 21 23 25 27 29 31 33 35 37 39 41 43".split(" "),
-  "edit/index.md": "7 14 16 18-20 22-23 25-26 28-29 31-32 34-35 37 39 41-43 45-47 49-52 54-58 60 62-64 66 68 70-72 74 76 78-79 81 83-86".split(" "),
-  "edit/blog/first.md": ["6"],
-  "edit/blog/second.md": ["1", "3"],
-  "edit/blog/index.md": ["5", "7"],
-  "edit/blog/crlf.md": ["5", "9-10", "12"],
-  "edit/lists.md": "6-7 9 11-13 15 17-20 22 24-26 28".split(" "),
+  "kinds/index.md": "7 14 16 18-20 22-23 25-26 28-29 31-32 34-35 37 39 41-43 45-47 49-52 54-58 60 62-64 66 68 70-72 74 76 78-79 81 83-86".split(" "),
+  "kinds/blog/first.md": ["6"],
+  "kinds/blog/second.md": ["1", "3"],
+  "kinds/blog/index.md": ["5", "7"],
+  "kinds/blog/crlf.md": ["5", "9-10", "12"],
+  "kinds/lists.md": "6-7 9 11-13 15 17-20 22 24-26 28".split(" "),
 }
 
 describe("every top-level block has the lines it's written on", () => {
@@ -87,15 +91,15 @@ describe("footnotes", () => {
   })
 
   test("a footnote over two lines", async () => {
-    const { lis, sides } = notes(await page(sites.edit, "index.md"))
+    const { lis, sides } = notes(await page(sites.kinds, "index.md"))
     assert.deepStrictEqual(lis, { one: "83", two: "85-86" })
     assert.deepStrictEqual(sides, { one: "83", two: "85-86" })
   })
 })
 
-test("a built site without \"edit\" has no data-src", async () => {
+test("a page as it's served has no data-src", async () => {
   let tagged = 0
-  visit(await page(sites.edit, "index.md", "build"), "element", (el: Element) => {
+  visit(await page(sites.kinds, "index.md", true), "element", (el: Element) => {
     if (el.properties.dataSrc !== undefined) tagged++
   })
   assert.strictEqual(tagged, 0)
@@ -139,7 +143,7 @@ describe("tagLines", () => {
   })
 })
 
-describe("text typed but not saved (editing in place renders it, integrations/edit.ts)", () => {
+describe("a text that isn't the file's (a past version, lib/history.ts)", () => {
   /** the note rendered from `text` instead of its file, the way astro.config's renderNote does */
   async function renderText(site: string, rel: string, text: string) {
     process.env.BASALT_SITE = site
@@ -169,7 +173,7 @@ describe("text typed but not saved (editing in place renders it, integrations/ed
     }
   }
 
-  test("lines are counted in the text typed, not the file on disk", async () => {
+  test("lines are counted in the text, not the file on disk", async () => {
     // two paragraphs typed after the frontmatter, a comment and a callout further down
     const file = fs.readFileSync(path.join(sites.site, "notes", "tabs.md"), "utf8")
     const typed = file.replace("---\n\n", "---\n\nTyped first.\n\nTyped second, %%hidden%%.\n\n")
@@ -179,17 +183,17 @@ describe("text typed but not saved (editing in place renders it, integrations/ed
   })
 
   test("a block deleted in the text: the rest move up", async () => {
-    const file = fs.readFileSync(path.join(sites.edit, "notes", "index.md"), "utf8")
+    const file = fs.readFileSync(path.join(sites.kinds, "notes", "index.md"), "utf8")
     const typed = file.replace("## A heading\n\n", "")
-    const got = spans(await renderText(sites.edit, "index.md", typed))
+    const got = spans(await renderText(sites.kinds, "index.md", typed))
     // the first paragraph stays at 7; "### A smaller one" moves from 16 up to 14
     assert.strictEqual(got[0], "7")
     assert.strictEqual(got[1], "14")
   })
 
-  test("once rendered, the file's own lines are used again", async () => {
+  test("once rendered, the page as it's served has none again", async () => {
     const { unsaved: left } = await import("./lines.ts")
     assert.strictEqual(left.size, 0)
-    assert.deepStrictEqual(spans(await page(sites.site, "tabs.md")), expected["site/tabs.md"])
+    assert.ok(spans(await page(sites.site, "tabs.md", true)).every((s) => s === "no data-src"))
   })
 })

@@ -8,9 +8,8 @@
 // page" for every page that has a history, as this browser remembers.
 //
 // A version is drawn in the article, over its own blocks (hidden), and its
-// parts started there (content.ts), as the editor draws blocks (editor.ts);
-// the margin takes its notes from it (margin.ts). Editing and a version
-// exclude each other: ⌘E or the pencil comes back to now first.
+// parts started there (content.ts); the margin takes its notes from it
+// (margin.ts).
 
 import { startContent } from "./content"
 import { needSheets } from "./sheets"
@@ -258,7 +257,7 @@ document.addEventListener("click", (e) => {
 })
 
 document.addEventListener("keydown", (e) => {
-  if (!on || e.metaKey || e.ctrlKey || e.altKey || root.hasAttribute("data-editing")) return
+  if (!on || e.metaKey || e.ctrlKey || e.altKey) return
   const t = e.target as HTMLElement
   if (t.closest?.("input, textarea, select, [contenteditable]:not([contenteditable=false])")) return
   const across = getComputedStyle(on.timeline).flexDirection === "row"
@@ -272,13 +271,6 @@ document.addEventListener("keydown", (e) => {
     void show(null)
   }
 })
-
-// editing is of the note as it is: a version shown goes first (before edit.ts hears of it)
-const now = () => {
-  if (on?.at) void show(null)
-}
-addEventListener("keydown", (e) => (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e" && now(), true)
-addEventListener("click", (e) => (e.target as Element).closest?.(".edit-toggle") && now(), true)
 
 document.addEventListener("astro:before-swap", () => {
   on?.started?.abort()

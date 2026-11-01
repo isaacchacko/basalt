@@ -1,5 +1,5 @@
-// A note's text rendered as its page renders it, whatever the text is: saved
-// or not (editing in place), or as it was at a commit (a note's history). The
+// A note's text rendered as its page renders it, whatever the text is: as
+// saved, or as it was at a commit (a note's history). The
 // same plugins Astro renders the site with (astro.config.ts takes `rehype`
 // from here), the note's lines named as the file's (lines.ts, `unsaved`).
 

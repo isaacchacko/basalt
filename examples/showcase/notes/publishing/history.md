@@ -4,7 +4,7 @@ description: "Every commit that touched a note, on a timeline, and the note as i
 aliases: [history]
 ---
 
-A note's page shows its history. Click the clock in the navbar's tray, beside the pencil: try it on this page. The explorer gives its place to a timeline, a date for each commit that touched the note, newest first, its message on hover.
+A note's page shows its history. Click the clock in the navbar's tray: try it on this page. The explorer gives its place to a timeline, a date for each commit that touched the note, newest first, its message on hover.
 
 ## A version
 

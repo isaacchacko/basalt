@@ -92,64 +92,11 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 - **Media opens full screen** in one viewer: images, diagrams and frames, with zoom, pan, swipe, ←/→ and pinch.
 - **PDFs** open in Basalt's own viewer, with a text layer, a page that fits the screen in full screen, and "open in the browser's viewer" at the current page.
 
-## Editing in place
-
-A page edits its own note where it is, the way a note edits in Obsidian's Live Preview. The note becomes one document you write in, and every block the cursor isn't in is drawn exactly as the page draws it. The block the cursor's in shows its markdown, the lines it's written on, in the page's own type. Nothing moves when editing starts: each block is where it was on the page.
-
-- **On and off.** ⌘E (Obsidian's key), or the pencil in the navbar's tray, or `?edit` in the url (for a phone). It stays on from page to page until it's turned off. A page without a note of its own (a tag's, a folder's without an `index.md`) has nothing to edit.
-- **Writing.** Arrows, selection, undo and redo, copy and paste all run across the whole note.
-  - ↑ ↓ go line by line into a block and through it, keeping their place across the line.
-  - A click on a block puts the cursor at that word; a click on a link still follows it, and a click on a control (a tab, a button, a player) still works it.
-  - Enter goes on with the list or quote you're in, and `[[` completes a link to a note.
-  - ⌘F finds in the note (⌘K is still the site's search). ⌘S saves now (on a built site, it opens the publish dialog).
-- **What's around the text.**
-  - The title opens the note's frontmatter, and a click on a margin note or a sidenote in the margin opens its lines. The page's title, and the tab's, follow the frontmatter's as you type it.
-  - A `%%comment%%` is drawn as nothing, as on the page, until the cursor is in it.
-  - The note's pieces keep running while you write: islands, tabs, players, diagrams and code's controls.
-- **Every block.** Headings, lists and tasks, callouts (folded ones too), tabs, code, code files, diffs, trees, diagrams, math, tables, pictures and other embeds, embedded notes (an embed opens as its `![[…]]`), islands, note lists, sounds, copy, raw html and footnotes each open as the lines they came from. A file with Windows line endings keeps them.
-
-**While serving** (`basalt dev`), the note saves to its file a moment after you stop typing, and the dev server renders what you typed with the site's own markdown (`POST /__basalt/render`), so a block you leave is drawn with your change straight away. The page isn't swapped in while you write; turning editing off swaps it in once. A file changed elsewhere meanwhile (in your editor, by an agent) isn't overwritten: their change goes into the note as you have it, around what you've typed. The dev server only takes writes from the site's own pages (`PUT /__basalt/source`, JSON, with the `x-basalt-edit` header, from its own origin), and only to the site's notes.
-
-**A built site** edits through GitHub, with a top-level `"edit"`:
-
-```json
-{ "edit": true }
-{ "edit": { "repo": "me/garden", "branch": "main" } }
-```
-
-`true` takes the repo and branch the site is built from:
-- in a GitHub Action, `GITHUB_REPOSITORY` and `GITHUB_REF_NAME`;
-- on Vercel, `VERCEL_GIT_REPO_OWNER`/`VERCEL_GIT_REPO_SLUG` and `VERCEL_GIT_COMMIT_REF`;
-- otherwise, git's `origin` and the branch checked out (else `main`).
-
-The site has to be built from a git checkout of that repo. Whatever deploys the site from the repo (a GitHub Action, Vercel, Netlify) deploys the edit.
-
-- **Connecting, once.** The first ⌘E (or `?edit`) on a browser asks for a token, checks it against the repo, and keeps it in that browser's local storage, for that repo only. The pencil shows from then on. Readers never see the pencil, and never download the editor. A token that stops working (expired, revoked) is forgotten and asked for again.
-  - Make it a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) for that one repository, with **Contents: read and write** and nothing else.
-- **A draft, till you publish.** Nothing is committed on its own: not as you type, not when you leave a block, not when you reload. What you've written is a draft, kept in that browser's local storage for that repo, branch and note, with the version of the note it began over. The corner says how many changes are unpublished.
-  - A reload, or coming back to the page, opens it editing again, the draft restored, and the corner says so. Going to another page keeps editing on, and the corner there links back to the page with the draft. Closing the tab keeps it too. Turning editing off keeps it for next time.
-- **Drawn as you write.** A block you leave is drawn with your change straight away, published or not: the page renders what you typed with Basalt's own markdown, in the browser. It's loaded the first time editing starts, so readers never download it. What only the build knows comes with the site, in `/static/edit/site.json`: its files, what a note list lists, the songs it looked up, the islands it rendered with `ssr`. A note you embed is read from the repo, and a code file you embed from the site.
-  - A block that can't be drawn in the browser shows its markdown, and says it's drawn once it's published: a song (a `<sound spotify>` or a `[[spotify:…]]` card) the build hasn't looked up, since Spotify's pages can't be read from a browser, and an `ssr` island with props the build hasn't rendered.
-  - A site with markdown plugins of its own (`basalt.config.ts`) isn't rendered in the browser, since they're its code, for node: there, the blocks you changed show their markdown till the deploy of your commit comes back.
-- **Publishing.** ⌘S, or a click on the count in the corner, opens a dialog: the note's changes, marked as the history marks a commit's (added highlighted, removed struck through, on the markdown as it's written), the commit's message (`Edit <path>` to begin with), and Publish, Keep editing (or Esc) and Discard, which asks once more and then drops the draft, the note back as it's committed.
-  - Publish commits it. Until the deploy comes back, the status in the corner counts the seconds. Turning editing off then shows the page as deployed, and again once your commit's deploy is in.
-  - A commit made elsewhere since the draft began isn't overwritten: the dialog reads the note from GitHub first, puts theirs into the note around yours, and says so; what it marks is only yours. One that lands while the dialog's open is merged the same way when you publish, and shown again for another Publish.
-
-**The explorer manages the notes**, in editing view, the way Obsidian's file explorer does. A reader never sees any of it, and never downloads it.
-
-- **New note, new folder.** The two buttons at the explorer's top make one in the folder of the page you're on; a folder's + makes a note in it; a right click on the explorer's empty space makes one at the top. You name it where it'll be (Enter, or Esc to leave it), and a new note opens in the editor at once. A new folder is one with its `index.md`, so it has a page of its own.
-- **Rename, move, delete.** A right click on a note or folder (a long press on a phone), or its ⋯ on hover or focus, has Rename (named in place), Move to… (a folder, found by typing), and Delete (asked once more; a folder goes with everything in it). Dragging a note or folder onto a folder moves it there, onto the explorer's empty space to the top. By keyboard: the menu key or ⇧F10 opens the menu, F2 renames, Delete deletes; the menu goes by the arrow keys.
-- **Links go along.** A rename or a move asks whether to update the links to it that would point to nothing, listing the notes they're in: every `[[wikilink]]` and `![[embed]]`, its heading and alias kept, written the way it was (a name alone where that's still enough, else the path). Links in code are left alone, and so is a link that still gets there.
-- **While serving**, each is done to the site's files at once (`POST /__basalt/files`, from the site's own pages only, as edits are, and only inside its folders of notes, never over a file that's there), and the explorer and the page follow once the site's built.
-- **On a built site**, each joins the draft: the explorer shows it where it'd be, marked unpublished, and the corner counts it with the note's changes. A new note is edited on a page of its own till it's deployed. The publish dialog lists what's done to the files, and the links it takes along, above the note's changes, and Publish commits it all as one commit (through GitHub's Git Data API: the same token). A commit made elsewhere meanwhile is read in and shown again, as a note's is; something that can't be done any more (a note made where one is now) is said, and isn't published. Discard drops it all.
-
-The words are in `strings`: `edit`, `editing`, `editSaving`, `editPublishing`, `editDeploying`, `editLive`, `editFailed`, `editSlowDeploy`, `editConnect`, `editTokenHelp`, `editToken`, `editMakeToken`, `editCancel`, `editConnectButton`, `editTokenWrong`, `editCommit`, `editDraft`, `editDraftElsewhere`, `editRestored`, `editKept`, `editNothing`, `editDiscarded`, `editPublishTitle`, `editPublishTo`, `editPublishMoved`, `editReading`, `editChanges`, `editMessage`, `editPublish`, `editKeepEditing`, `editDiscard`, `editDiscardSure`, `editDiscardNo`, `editDiscardYes`, `editUndrawn`; and the explorer's, `editFileNewNote`, `editFileNewFolder`, `editFileNewIn`, `editFileMore`, `editFileRename`, `editFileMove`, `editFileDelete`, `editFileName`, `editFileBad`, `editFileTaken`, `editFileMoveTitle`, `editFileMoveFind`, `editFileTop`, `editFileDeleteTitle`, `editFileDeleteFolder`, `editFileDeleteDev`, `editFileDeleteGitHub`, `editFileLinksTitle`, `editFileLinks`, `editFileLinksIn`, `editFileLinksYes`, `editFileLinksNo`, `editFileCreated`, `editFileWas`, `editFileGone`, `editFileDeploying`, `editFileFailed`, `editPublishFiles`, `editFileOpCreate`, `editFileOpRename`, `editFileOpMove`, `editFileOpDelete`, `editFileOpLinks`, `editFileOpCant`, `editFileWhyExists`, `editFileWhyMissing`, `editFileWhyPath`, `editFileCommitMore`, `editReadingFiles`.
-
 ## History
 
 A note's page shows its history: every commit that touched its file, on a timeline, and the note as it was at each, with what that commit changed marked in the page itself.
 
-- **On and off.** The clock beside the pencil in the navbar's tray. The navbar's explorer gives its place to the timeline, in the same column, the navbar held open while it's on: a dot and a date for each commit that touched the note (a rename followed back to the file it was), newest first, the commit's message on hover. Below desktop width, where the navbar is the bar across the top, the timeline takes the menu's place in that bar, its dates in a row that scrolls sideways. It's on for the page you turned it on for; "Every page" keeps it on from page to page. The browser remembers which.
+- **On and off.** The clock in the navbar's tray. The navbar's explorer gives its place to the timeline, in the same column, the navbar held open while it's on: a dot and a date for each commit that touched the note (a rename followed back to the file it was), newest first, the commit's message on hover. Below desktop width, where the navbar is the bar across the top, the timeline takes the menu's place in that bar, its dates in a row that scrolls sideways. It's on for the page you turned it on for; "Every page" keeps it on from page to page. The browser remembers which.
 - **A version.** A click on a date shows the note as it was at that commit, rendered as its page renders it, with what the commit added highlighted and what it took away struck through, word by word in a block that changed, whole for a block added or removed. A footnote is known by its name: one put in before others marks its reference and its note, and the others it renumbers are as they were. Its changes are against the commit before it that touched the note. "Plain" shows the version without them. ↑ and ↓ (or j and k; ← and → on a phone) step from commit to commit, Esc comes back to now, and `?at=<commit>` in the url opens that version. Margin notes follow the version shown. Editing is of the note as it is: ⌘E or the pencil comes back to now first.
 - **Where.** While serving, every note has its history, unless `basalt.json` says `"history": false`. A built site has it with `"history": true`. A note's frontmatter `history: true` or `false` decides for that note either way.
 
@@ -186,7 +133,7 @@ The words are in `strings`: `history`, `historyTitle`, `historyNow`, `historyClo
 - `src/layouts/`, `src/components/`, `src/pages/`: the page and its routes.
 - `src/client/`: the browser side (margin, previews, viewer, pdf, islands, search, nav).
 - `src/integrations/agent.ts`: the agent API and hot swap.
-- `src/markdown/lines.ts`, `src/lib/linemap.ts`: the lines each block is written on. `src/client/editor.ts` edits a note in place, as one CodeMirror document; `src/client/backend.ts` is where it saves and renders: the dev server (`src/integrations/edit.ts`), or GitHub for a built site (`src/client/github.ts`). `src/client/content.ts` starts a page's parts (islands, tabs, diagrams, players) in the page or in a block drawn anew.
+- `src/markdown/lines.ts`, `src/lib/linemap.ts`: the lines each block of a version is written on, which pair it with the version before (`src/lib/marks.ts`). `src/client/content.ts` starts a page's parts (islands, tabs, diagrams, players) in the page or in a version drawn anew.
 - `src/lib/history.ts`: a note's history (its commits from `src/lib/gitdates.ts`'s one git log, a version rendered by `src/markdown/rendernote.ts` and its changes marked); `src/lib/deepen.ts` fetches a build's shallow clone whole; `src/integrations/history.ts` and `src/pages/static/history/` answer for it while serving and built; `src/client/history.ts` is the timeline.
 - `src/integrations/password.ts`, `src/lib/gate.ts`: a site behind a password (Vercel's Build Output API, and the middleware in it).
 - `bin/basalt.mjs`: the CLI.

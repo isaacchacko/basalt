@@ -58,7 +58,7 @@ Every word Basalt puts on a page (the explorer's title, "min read", the search b
 ## The rest
 
 - `theme`: colours, type and bullets: [[look]].
-- `edit`, `history`: [[github|editing a built site]], and each note's [[history]].
+- `history`: each note's [[history]].
 - `password`: [[password|a site behind a password]].
 - `analytics`, `layout.socialImages`, `layout.feed`: [[sharing|where it's shared]].
 

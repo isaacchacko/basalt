@@ -1,8 +1,8 @@
 // A page's content, started: the viewer, pdfs, islands, code's controls,
 // tabs, diagrams. Each part starts on a page (astro:page-load) and stops when
 // it goes (its AbortSignal aborts on astro:before-swap); and on whatever's
-// drawn anew inside one (a block of a note being edited, editor.ts), which
-// starts it in that block alone.
+// drawn anew inside one (a version of the note, history.ts), which starts it
+// in that alone.
 
 import { startEmbeds } from "./embeds"
 import { startViewer } from "./viewer"

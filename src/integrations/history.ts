@@ -6,16 +6,21 @@
 //
 // 404 for a note whose history is off. Read only: it says no more than the
 // repository does to whoever can reach the dev server.
+//
+// It also tells Basalt's build-time code which command is running (serving, lib/site.ts).
 
 import fs from "node:fs"
 import path from "node:path"
 import { execFileSync } from "node:child_process"
 import type { IncomingMessage, ServerResponse } from "node:http"
+import type { AstroIntegration } from "astro"
 import { parseFrontmatter } from "@astrojs/markdown-remark"
 import { loadSite, walkSite } from "../lib/site"
 import { commitsFor, historyOn, versionAt, type Version } from "../lib/history"
 import { forgetGitDates, topOf } from "../lib/gitdates"
-import type { RenderNote } from "./edit"
+
+/** a note's text rendered as its page's note would be: its html, blocks marked with data-src (markdown/lines.ts) */
+export type RenderNote = (abs: string, text: string) => Promise<string>
 
 // a version doesn't change: each is rendered once
 const versions = new Map<string, Version>()
@@ -27,6 +32,24 @@ function reply(res: ServerResponse, status: number, body: unknown) {
   res.setHeader("Content-Type", "application/json")
   res.setHeader("Cache-Control", "no-store")
   res.end(JSON.stringify(body))
+}
+
+export function noteHistory(render: RenderNote): AstroIntegration {
+  return {
+    name: "basalt-history",
+    hooks: {
+      "astro:config:setup": ({ command }) => {
+        process.env.BASALT_COMMAND = command
+      },
+      "astro:server:setup": ({ server }) => {
+        server.middlewares.use((req, res, next) => {
+          const url = new URL(req.url ?? "/", "http://basalt")
+          if (url.pathname === "/__basalt/history") void answerHistory(req, res, url, render).catch((err: Error) => reply(res, 500, { error: err.message }))
+          else next()
+        })
+      },
+    },
+  }
 }
 
 export async function answerHistory(req: IncomingMessage, res: ServerResponse, url: URL, render: RenderNote) {

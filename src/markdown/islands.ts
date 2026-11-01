@@ -164,15 +164,6 @@ export const ssr = (props) => island.default ? renderToString(h(island.default, 
   return (await ssrCache.get(key)!)(props)
 }
 
-type RenderIsland = (dir: string, name: string, props: object) => Promise<string>
-
-let ssrIsland: RenderIsland = renderIsland
-
-/** How an `ssr` island is rendered: from its module, or (a note rendered in the browser) as the build rendered it. */
-export function useIslands(fn: RenderIsland) {
-  ssrIsland = fn
-}
-
 /** `<island .../>`: html has no self-closing custom elements, and it would swallow the rest of the note. */
 export function remarkIslands() {
   return (tree: MdRoot) => {
@@ -267,7 +258,7 @@ export function rehypeIslands() {
       if (p.ssr !== undefined) {
         node.properties.dataIslandSsr = "true"
         jobs.push(
-          ssrIsland(dir, name, props).then((html) => {
+          renderIsland(dir, name, props).then((html) => {
             node.children = fromHtml(html, { fragment: true }).children as ElementContent[]
           }),
         )
