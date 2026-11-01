@@ -20,12 +20,12 @@ It needs `curl`, and Basalt itself: the garden's own, when its `package.json` ha
 
 ## Use it
 
-Press `<leader>B`, and the garden is served, as `basalt dev` would: the one the note you're on is in (the nearest `basalt.json` above it), or, from the dashboard or any buffer that isn't a file, the one Neovim was started in, or just under it. Open the page, and type.
+Press `<leader>B`, and the garden is served, as `basalt dev` would: the one the note you're on is in (the nearest `basalt.json` above it), or, from the dashboard or any buffer that isn't a file, the one Neovim was started in, or just under it. Your browser opens on the note's page (the home page, off a note). Open the page, and type.
 
 - **As you type.** A moment after you stop, the page has what you wrote: a paragraph, a highlight, an aside in the margin, a diagram. It swaps in where it is, keeping your scroll.
 - **Saving is yours.** The file on disk is only written by `:w`. Write the buffer, read it again with `:e!`, undo back to what's saved, or close it, and the page goes back to the file.
 - **Every note you've changed.** Each changed buffer in the garden is shown, and a note that embeds or lists one shows it too.
-- `<leader>B` again stops the server. `:BasaltToggle` does the same, and `:BasaltOpen` opens the page.
+- `<leader>B` again stops the server. `:BasaltToggle` does the same, and `:BasaltOpen` opens the page again.
 
 ## Settings
 
@@ -34,6 +34,7 @@ opts = {
   key = "<leader>B",   -- serve or stop (false: no key)
   cmd = { "basalt" },  -- how basalt is run (unset: the garden's own)
   debounce = 150,      -- ms of quiet, then it's sent
+  open = true,         -- serving opens the note's page
 }
 ```
 
