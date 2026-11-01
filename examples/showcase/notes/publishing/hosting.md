@@ -41,4 +41,4 @@ jobs:
       - uses: actions/deploy-pages@v4
 ```
 
-`fetch-depth: 0` gives the build the whole of git, for each note's dates and [[history]].
+`fetch-depth: 0` gives the build the whole of git, for each note's dates.

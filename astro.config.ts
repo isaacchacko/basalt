@@ -5,12 +5,11 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadSite, siteDir } from "./src/lib/site"
 import { processorOptions, remarkPlugins, renderTarget, syntaxHighlight } from "./src/markdown"
-import { rehype, renderNote } from "./src/markdown/rendernote"
+import { rehype } from "./src/markdown/rehype"
 import { useTargets } from "./src/markdown/transclude"
 import { vitePlugins } from "./src/lib/vite"
 import { agentApi } from "./src/integrations/agent"
 import { passwordGate } from "./src/integrations/password"
-import { noteHistory } from "./src/integrations/history"
 import { editorBuffers } from "./src/integrations/buffer"
 
 const site = loadSite(siteDir())
@@ -33,8 +32,8 @@ export default defineConfig({
   // JSX is only in .tsx and .jsx (islands): left to its default, the preset runs
   // Babel over every .ts and .js outside node_modules, Basalt's own client code
   // included, which is ~0.6 s of every build
-  // noteHistory first: it says which command is running, which the rest reads (serving, lib/site.ts)
-  integrations: [noteHistory(renderNote), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), editorBuffers(), passwordGate()],
+  // editorBuffers first: it says which command is running, which the rest reads (serving, lib/site.ts)
+  integrations: [editorBuffers(), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
   markdown: {
     syntaxHighlight,
     // unified's PluggableList and Astro's plugin types describe the same thing

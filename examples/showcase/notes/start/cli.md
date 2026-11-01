@@ -24,4 +24,4 @@ basalt help [topic]                      # the commands, or a part of the manual
 - `basalt check` builds, then lists notes that failed, broken links, missing embeds and unknown islands, each with its file and line, and notes nothing links to. `--json` gives the same as JSON.
 - `basalt status` and `basalt wait` are for [[agents]], or anyone who wants to know a save has landed.
 - `basalt example graph` prints the markdown for a graph, ready to paste, and `basalt example graph margin` the same graph in the margin. Any component goes in either place; `basalt example margin` says how the margin works, and `basalt example` lists them all.
-- `basalt help` lists the commands and the parts of [BASALT.md](https://github.com/isaacchacko/basalt/blob/main/BASALT.md), Basalt's manual; `basalt help history` prints the part on history.
+- `basalt help` lists the commands and the parts of [BASALT.md](https://github.com/isaacchacko/basalt/blob/main/BASALT.md), Basalt's manual; `basalt help writing` prints the part on writing.

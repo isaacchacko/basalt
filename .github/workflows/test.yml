@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # git dates and edit targets read the history
+          # git dates read the repository's log
           fetch-depth: 0
       - uses: actions/setup-node@v6
         with:

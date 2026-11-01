@@ -46,10 +46,8 @@
         "writing/gardens",
         "publishing/hosting",
         "publishing/password",
-        "publishing/history",
         "publishing/sharing"
       ]
     }
-  },
-  "history": true
+  }
 }
