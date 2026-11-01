@@ -11,6 +11,7 @@ import { vitePlugins } from "./src/lib/vite"
 import { agentApi } from "./src/integrations/agent"
 import { passwordGate } from "./src/integrations/password"
 import { noteHistory } from "./src/integrations/history"
+import { editorBuffers } from "./src/integrations/buffer"
 
 const site = loadSite(siteDir())
 // Basalt itself, wherever it's run from: a site's root is its own .basalt
@@ -33,7 +34,7 @@ export default defineConfig({
   // Babel over every .ts and .js outside node_modules, Basalt's own client code
   // included, which is ~0.6 s of every build
   // noteHistory first: it says which command is running, which the rest reads (serving, lib/site.ts)
-  integrations: [noteHistory(renderNote), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), passwordGate()],
+  integrations: [noteHistory(renderNote), preact({ compat: true, include: [/\.[jt]sx$/] }), agentApi(), editorBuffers(), passwordGate()],
   markdown: {
     syntaxHighlight,
     // unified's PluggableList and Astro's plugin types describe the same thing

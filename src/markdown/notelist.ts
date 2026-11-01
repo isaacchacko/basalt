@@ -7,7 +7,6 @@
 // `tag="x"` lists a tag's notes instead. Each note's title, date and tags come
 // from its frontmatter, read here, since this note renders on its own.
 
-import fs from "node:fs"
 import type { Element, ElementContent, Root } from "hast"
 import { SKIP, visit } from "unist-util-visit"
 import { parseFrontmatter } from "@astrojs/markdown-remark"
@@ -16,6 +15,7 @@ import { hrefOf } from "../lib/links.ts"
 import { reg } from "./context.ts"
 import { datesOf } from "../lib/gitdates.ts"
 import { sourceDirs } from "../lib/site.ts"
+import { readNote } from "../lib/buffers.ts"
 
 export interface Listed {
   slug: FullSlug
@@ -35,7 +35,7 @@ export function listed(): Listed[] {
   return reg()
     .files.filter((f) => f.isNote)
     .map((f) => {
-      const raw = fs.readFileSync(f.abs, "utf8")
+      const raw = readNote(f.abs)
       const fm = parseFrontmatter(raw).frontmatter as Record<string, unknown>
       const tags = fm.tags ?? fm.tag
       return {
