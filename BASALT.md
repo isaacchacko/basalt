@@ -54,8 +54,11 @@ basalt wait [dir]                        # block until your newest save is live 
            [--file <path>] [--since <ms>] [--after <buildId>] [--timeout <s>]
 basalt stop [dir]
 basalt logs [dir] [--raw]                # the dev server's log, as plain lines
+basalt example [component] [place]       # how to write a graph, a tree, …, and where it goes
 basalt help [topic]                      # a section of this file
 ```
+
+`basalt example graph` prints the markdown for a graph, ready to paste, with what else it can do; `basalt example graph margin` prints the same graph in the margin, beside the paragraph before it. Any component goes in any place (`main`, the default, or `margin`), in either order. `basalt example margin` says how the margin works (asides, sidenotes, figures), and `basalt example` alone lists every component.
 
 Several sites can be served at once from one Basalt.
 

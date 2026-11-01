@@ -9,6 +9,7 @@
 //   basalt wait [dir] [--file <path>] [--since <ms>] [--after <buildId>] [--timeout <s>]
 //                                            block until a build with your save in it is done
 //   basalt stop [dir] | logs [dir] [--raw]
+//   basalt example [component] [place]       how to write a graph, a tree, …, in the main content or the margin
 //   basalt help [topic]                      BASALT.md, or its section on a topic ("agents", "writing", ...)
 //
 // <dir> defaults to the current folder. Every site gets its own Astro root
@@ -37,7 +38,7 @@ for (let i = 0; i < rest.length; i++) {
   if (rest[i].startsWith("--")) flags[rest[i].slice(2)] = rest[i + 1] === undefined || rest[i + 1].startsWith("--") ? true : rest[++i]
   else positional.push(rest[i])
 }
-const dir = path.resolve(command === "help" ? "." : (positional[0] ?? "."))
+const dir = path.resolve(command === "help" || command === "example" ? "." : (positional[0] ?? "."))
 const work = path.join(dir, ".basalt", "astro")
 const named = positional[0] ?? "."
 
@@ -247,7 +248,7 @@ function help() {
   const doc = fs.readFileSync(path.join(basalt, "BASALT.md"), "utf8")
   const topic = positional[0]
   if (!topic) {
-    console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 16).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"))
+    console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 17).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"))
     const sections = [...doc.matchAll(/^## (.+)$/gm)].map((m) => m[1])
     return console.log(`\nbasalt help <topic>, from BASALT.md: ${sections.map((s) => s.toLowerCase()).join(", ")}`)
   }
@@ -340,6 +341,13 @@ switch (command) {
     console.log(JSON.stringify(body, null, 2))
     // 0: live; 1: built, with errors; 2: timed out
     process.exit(code === 504 || body.timedOut ? 2 : body.state === "ready" ? 0 : 1)
+  }
+  case "example": {
+    const { example } = await import("./examples.mjs")
+    const { text, error } = example(positional)
+    if (error) fail(error)
+    console.log(text)
+    break
   }
   case "help":
     help()
