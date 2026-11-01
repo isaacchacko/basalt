@@ -13,14 +13,14 @@ Write in Neovim, and the page beside it keeps up with what you type, saved or no
 With [lazy.nvim](https://lazy.folke.io):
 
 ```lua
-{ "isaacchacko/basalt", ft = "markdown", opts = {} }
+{ "isaacchacko/basalt", ft = "markdown", keys = { "<leader>B" }, cmd = { "BasaltToggle", "BasaltOpen" }, opts = {} }
 ```
 
 It needs `curl`, and Basalt itself: the garden's own, when its `package.json` has `@isaacchacko/basalt`, else `basalt` on your PATH, else it runs it from npm.
 
 ## Use it
 
-Open a note, press `<leader>B`, and the garden it's in (the nearest `basalt.json` above it) is served, as `basalt dev` would. Open the page, and type.
+Press `<leader>B`, and the garden is served, as `basalt dev` would: the one the note you're on is in (the nearest `basalt.json` above it), or, from the dashboard or any buffer that isn't a file, the one Neovim was started in, or just under it. Open the page, and type.
 
 - **As you type.** A moment after you stop, the page has what you wrote: a paragraph, a highlight, an aside in the margin, a diagram. It swaps in where it is, keeping your scroll.
 - **Saving is yours.** The file on disk is only written by `:w`. Write the buffer, read it again with `:e!`, undo back to what's saved, or close it, and the page goes back to the file.

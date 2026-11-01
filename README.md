@@ -23,7 +23,7 @@ It's set the way [Edward Tufte](https://www.edwardtufte.com/) sets his books, wi
 ![Neovim beside the page: <leader>B serves the garden, and the page takes each line as it's typed, before :w](https://raw.githubusercontent.com/isaacchacko/basalt/main/docs/neovim.gif)
 
 ```lua
-{ "isaacchacko/basalt", ft = "markdown", opts = {} }   -- lazy.nvim
+{ "isaacchacko/basalt", ft = "markdown", keys = { "<leader>B" }, cmd = { "BasaltToggle", "BasaltOpen" }, opts = {} }   -- lazy.nvim
 ```
 
 `<leader>B` serves the garden the note is in, and the page shows what you type as you type it; `:w` still writes the file, and nothing else does. See [In Neovim](https://basalt.isaacchacko.com/start/neovim).
