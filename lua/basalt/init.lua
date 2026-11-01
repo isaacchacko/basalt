@@ -18,7 +18,7 @@ local M = {}
 local defaults = {
   -- serves the site the current note is in, or stops it
   key = "<leader>B",
-  -- basalt itself; unset, the site's own (its node_modules), else the PATH's, else npm's
+  -- basalt itself; unset, npm's newest
   cmd = nil,
   -- how long typing pauses before the page is sent what's typed
   debounce = 150,
@@ -57,12 +57,9 @@ local function portOf(site)
   return ok and dev.port or nil
 end
 
--- how basalt is run for a site: as set, else the version the site has installed, else whatever there is
-local function cmdFor(site)
-  if opts.cmd then return vim.deepcopy(opts.cmd) end
-  local own = site .. "/node_modules/.bin/basalt"
-  if vim.fn.executable(own) == 1 then return { own } end
-  return vim.fn.executable("basalt") == 1 and { "basalt" } or { "npx", "-y", "@isaacchacko/basalt" }
+-- how basalt is run: as set, else npm's newest (a server of an older one is replaced, bin/basalt.mjs)
+local function cmdFor()
+  return opts.cmd and vim.deepcopy(opts.cmd) or { "npx", "-y", "@isaacchacko/basalt@latest" }
 end
 
 local function say(msg, level) vim.notify("basalt: " .. msg, level or vim.log.levels.INFO) end
@@ -152,7 +149,7 @@ end
 function M.start(site)
   local note = vim.api.nvim_buf_get_name(0)
   say("serving " .. vim.fn.fnamemodify(site, ":~") .. "…")
-  vim.system(vim.list_extend(cmdFor(site), { "dev", site }), { text = true }, function(r)
+  vim.system(vim.list_extend(cmdFor(), { "dev", site }), { text = true }, function(r)
     vim.schedule(function()
       local url = (r.stdout or ""):match("https?://[%w%.:]+")
       local port = portOf(site)
@@ -170,7 +167,7 @@ function M.stop(site)
   for buf in pairs(sent) do
     if siteOf(buf) == site then sent[buf] = nil end
   end
-  vim.system(vim.list_extend(cmdFor(site), { "stop", site }), { text = true }, vim.schedule_wrap(function() say("stopped " .. vim.fn.fnamemodify(site, ":~")) end))
+  vim.system(vim.list_extend(cmdFor(), { "stop", site }), { text = true }, vim.schedule_wrap(function() say("stopped " .. vim.fn.fnamemodify(site, ":~")) end))
 end
 
 function M.toggle()

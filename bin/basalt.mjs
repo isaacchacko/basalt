@@ -186,7 +186,27 @@ function scaffold() {
 }
 
 /** Astro prints a JSON line about the background server; say it plainly, with Basalt's commands */
+/** The version of Basalt a running dev server was started from, when it isn't this one's (the root links to its package.json). */
+function olderServer() {
+  if (!port()) return null
+  const read = (file) => {
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8")).version
+    } catch {
+      return null
+    }
+  }
+  const running = read(path.join(work, "package.json"))
+  return running && running !== read(path.join(basalt, "package.json")) ? running : null
+}
+
 function dev() {
+  // a server of another Basalt is stopped first: this one serves in its place
+  const older = olderServer()
+  if (older) {
+    console.log(`The dev server was Basalt ${older}'s: serving with ${JSON.parse(fs.readFileSync(path.join(basalt, "package.json"), "utf8")).version} instead`)
+    run(["dev", "stop"], "ignore")
+  }
   // in the background, always: Astro backgrounds itself only for an agent, and
   // for a person it would serve in the foreground, its output piped away here
   const result = run(["dev", "--background", "--json", ...(flags.port ? ["--port", String(flags.port)] : [])], ["ignore", "pipe", "inherit"])
