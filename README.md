@@ -12,6 +12,7 @@ It's set the way [Edward Tufte](https://www.edwardtufte.com/) sets his books, wi
 - **Screenshots that follow the theme:** save `shot.dark.png` beside `shot.png`, and the page shows whichever matches its theme
 - **Pictures written as text:** graphs, flowcharts, sequences and math
 - **Live components** in a still page, swapped in as you edit them
+- **Live from Neovim:** `<leader>B` serves the site, and the page shows what you type before you save ([the plugin](BASALT.md#in-neovim))
 - **Saves that land in place,** in under a second, keeping your scroll
 - **Built for agents:** the dev server says when a change is live, and what broke
 - **Cards for where it's shared:** each note's own picture for links to it, in the site's colours

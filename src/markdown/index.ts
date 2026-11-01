@@ -19,9 +19,9 @@
 // Notes with `draft: true` or `private: true` render as usual, with
 // data.draft / data.private set: the page route leaves them out.
 
-import fs from "node:fs"
 import type { PluggableList } from "unified"
 import { registry } from "../lib/registry"
+import { readNote, stampOf } from "../lib/buffers.ts"
 import { siteDir, type SiteFile } from "../lib/site"
 import type { FullSlug } from "../lib/path"
 import { useRegistry } from "./context.ts"
@@ -56,15 +56,15 @@ let ownTree: ReturnType<typeof treeProcessor> | undefined
 
 const targets = new Map<string, { stamp: number; target: Promise<Target | undefined> }>()
 
-/** A note rendered on its own (its embeds left as they are), cached until its file changes. */
+/** A note rendered on its own (its embeds left as they are), cached until its text changes. */
 export async function renderTarget(slug: FullSlug): Promise<Target | undefined> {
   const file = registry().bySlug.get(slug)
   if (!file?.isNote) return undefined
-  const stamp = fs.statSync(file.abs).mtimeMs
+  const stamp = stampOf(file.abs)
   const cached = targets.get(file.abs)
   if (cached && cached.stamp === stamp) return cached.target
   ownTree ??= treeProcessor(remarkPlugins, [...basaltRehype, ...site.rehypePlugins])
-  const target = targetOf(ownTree, slug, file.abs, transformNote(fs.readFileSync(file.abs, "utf8"), file))
+  const target = targetOf(ownTree, slug, file.abs, transformNote(readNote(file.abs), file))
   targets.set(file.abs, { stamp, target })
   return target
 }

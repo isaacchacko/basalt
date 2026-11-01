@@ -18,6 +18,7 @@ import { parseFrontmatter } from "@astrojs/markdown-remark"
 import { refreshRegistry, registry } from "./lib/registry"
 import { linkOne, linkPublic, sourceDirs, type SiteFile } from "./lib/site"
 import { datesOf } from "./lib/gitdates"
+import { readNote, stampOf } from "./lib/buffers"
 import { textTransforms } from "./markdown"
 import { findIslands } from "./markdown/islands"
 import { resolveFile } from "./markdown/embeds"
@@ -149,17 +150,17 @@ export function basaltLoader(): Loader {
       }
       /** renders a note (if it changed): whether the store changed */
       const sync = async (file: SiteFile, force = false): Promise<boolean> => {
-        const raw = fs.readFileSync(file.abs, "utf8")
+        const raw = readNote(file.abs)
         const existing = store.get(file.slug)
         // the notes it embeds are part of it (the store skips an unchanged digest)
         const embeds = ((existing?.data.transcludes as string[] | undefined) ?? [])
           .map((slug) => reg.bySlug.get(slug as never))
-          .map((f) => (f && fs.existsSync(f.abs) ? fs.statSync(f.abs).mtimeMs : 0))
+          .map((f) => (f ? stampOf(f.abs) : 0))
         // and a note that embeds or lists others depends on which are broken
         // (they're missing from it), and a list on every note's frontmatter
         const others = /!\[\[|<note-list\b/.test(raw) ? [...bus().noteErrors.keys()].sort().join(",") : ""
         const listed = /<note-list\b/.test(raw)
-          ? reg.files.filter((f) => f.isNote && f !== file).map((f) => fs.statSync(f.abs, { throwIfNoEntry: false })?.mtimeMs ?? 0).join(",")
+          ? reg.files.filter((f) => f.isNote && f !== file).map((f) => stampOf(f.abs)).join(",")
           : ""
         // and on the files its islands read: a change there is a change to it
         const read = islandData(raw)
@@ -232,7 +233,7 @@ export function basaltLoader(): Loader {
         // which notes' frontmatter doesn't parse, first: the notes that embed
         // or list them depend on it
         for (const f of notes) {
-          const raw = fs.readFileSync(f.abs, "utf8")
+          const raw = readNote(f.abs)
           try {
             parseFrontmatter(raw)
           } catch (err) {
