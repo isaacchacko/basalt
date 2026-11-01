@@ -13,6 +13,7 @@ basalt status [dir]                      # what the dev server is doing
 basalt wait [dir]                        # wait until your newest save is live
 basalt logs [dir] [--raw]                # the dev server's log
 basalt stop [dir]
+basalt example [component] [place]       # how to write a graph, a tree, …, in the text or the margin
 basalt help [topic]                      # the commands, or a part of the manual
 ```
 
@@ -22,4 +23,5 @@ basalt help [topic]                      # the commands, or a part of the manual
 - `basalt build` exits 1 when a note doesn't build, naming its file and line. The rest of the site is still built.
 - `basalt check` builds, then lists notes that failed, broken links, missing embeds and unknown islands, each with its file and line, and notes nothing links to. `--json` gives the same as JSON.
 - `basalt status` and `basalt wait` are for [[agents]], or anyone who wants to know a save has landed.
+- `basalt example graph` prints the markdown for a graph, ready to paste, and `basalt example graph margin` the same graph in the margin. Any component goes in either place; `basalt example margin` says how the margin works, and `basalt example` lists them all.
 - `basalt help` lists the commands and the parts of [BASALT.md](https://github.com/isaacchacko/basalt/blob/main/BASALT.md), Basalt's manual; `basalt help history` prints the part on history.

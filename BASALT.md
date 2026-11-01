@@ -97,7 +97,7 @@ A page opts into the margin's extras in its frontmatter: `toc: true`, `graph: tr
 
 ## In Neovim
 
-The plugin in this repository serves the site you're writing in from Neovim, and while it's served, the page shows what you type as you type it, before you `:w`:
+The plugin in this repository serves the site you're writing in from Neovim, and while it's served, the page shows what you type as you type it, before you `:w` ([see it](https://basalt.isaacchacko.com/start/neovim)):
 
 ```lua
 -- lazy.nvim

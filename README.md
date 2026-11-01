@@ -18,6 +18,16 @@ It's set the way [Edward Tufte](https://www.edwardtufte.com/) sets his books, wi
 - **Cards for where it's shared:** each note's own picture for links to it, in the site's colours
 - **Light pages,** about a third of Quartz's weight, and [measured against it](https://github.com/isaacchacko/basalt/blob/main/BENCHMARKS.md) on a real site
 
+## In Neovim
+
+![Neovim beside the page: <leader>B serves the garden, and the page takes each line as it's typed, before :w](https://raw.githubusercontent.com/isaacchacko/basalt/main/docs/neovim.gif)
+
+```lua
+{ "isaacchacko/basalt", ft = "markdown", opts = {} }   -- lazy.nvim
+```
+
+`<leader>B` serves the garden the note is in, and the page shows what you type as you type it; `:w` still writes the file, and nothing else does. See [In Neovim](https://basalt.isaacchacko.com/start/neovim).
+
 ## Start
 
 Basalt needs Node 22.18 or later.
