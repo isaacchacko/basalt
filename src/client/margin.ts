@@ -202,13 +202,6 @@ function copyOf(note: HTMLElement): HTMLElement {
   copy.classList.remove("open")
   copy.removeAttribute("id")
   copy.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"))
-  // a note of a past version (history.ts): its changes marked as the text's are, and
-  // the note itself added or taken away with its block
-  if (note.closest(".history-version")) {
-    copy.classList.add("history-note")
-    const block = note.closest(".history-added, .history-removed")
-    if (block) copy.classList.add(block.classList.contains("history-added") ? "history-added" : "history-removed")
-  }
   // not aria-hidden: beside the text the copy is the only one there is (the
   // note in the text is display: none), and inline the margin's layer is
   return copy
@@ -266,8 +259,7 @@ const startMargin = onPage((signal) => {
     const column = margin.getBoundingClientRect()
 
     // blocks wide enough to reach into the margin: nothing sits beside them
-    // (a version of the note shown has its blocks in their own, history.ts)
-    const blocked: [number, number][] = [...article.querySelectorAll(":scope > :not(.history-version), :scope > .history-version > *")]
+    const blocked: [number, number][] = [...article.children]
       .map((c) => c.getBoundingClientRect())
       .filter((r) => r.height && r.right > column.left + 4)
       .map((r) => [r.top - column.top - BLOCKED_ABOVE, r.bottom - column.top + BLOCKED_BELOW])
@@ -300,10 +292,8 @@ const startMargin = onPage((signal) => {
       notesAt.push([top - GAP, top + height + GAP])
       lowest = Math.max(lowest, top + height)
     }
-    // a note not in the page has no line to be beside: the page's own, hidden
-    // under a version of it shown (history.ts)
-    const drawn = article.querySelector(":scope > .history-version")
-    for (const { note, copy } of copies) copy.hidden = !note.isConnected || (!!drawn && !drawn.contains(note))
+    // a note not in the page has no line to be beside
+    for (const { note, copy } of copies) copy.hidden = !note.isConnected
     const wants = copies.map(({ note, copy }) => (copy.hidden ? 0 : levelWith(copy, anchorOf(note), column)))
     const deferred: number[] = []
     copies.forEach(({ note, copy }, i) => {
@@ -324,7 +314,7 @@ const startMargin = onPage((signal) => {
 
     // each resting part takes the first room the notes leave, from the note's
     // first line down: not beside its title
-    const first = drawn ?? article.firstElementChild ?? article
+    const first = article.firstElementChild ?? article
     const start = Math.max(0, Math.round(first.getBoundingClientRect().top - column.top))
     margin.style.setProperty("--resting-start", `${start}px`)
     const avoid = [...blocked, ...taken]
@@ -428,5 +418,3 @@ const startMargin = onPage((signal) => {
   })
 })
 
-// a version of the note shown has blocks drawn anew (history.ts): its notes are those now
-document.addEventListener("basalt:drawn", () => startMargin())

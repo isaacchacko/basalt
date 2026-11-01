@@ -25,8 +25,6 @@ export interface SiteConfig {
   icon?: string
   locale: string
   content: { from: string; to?: string }[]
-  /** whether its notes' pages show their history (lib/history.ts): while serving unless false, built only when true */
-  history?: boolean
 }
 
 export interface Site {
@@ -51,7 +49,7 @@ export function siteDir(): string {
   return path.resolve(process.env.BASALT_SITE ?? "examples/showcase")
 }
 
-/** `basalt dev`, as against a build (set by integrations/history.ts) */
+/** `basalt dev`, as against a build (set by integrations/buffer.ts) */
 export const serving = () => process.env.BASALT_COMMAND === "dev"
 
 export function loadSite(dir = siteDir()): Site {
@@ -64,7 +62,6 @@ export function loadSite(dir = siteDir()): Site {
     icon: typeof raw.icon === "string" && raw.icon.trim() ? raw.icon.trim() : undefined,
     locale: raw.locale ?? "en-US",
     content: Array.isArray(raw.content) ? raw.content : [{ from: "notes" }],
-    history: typeof raw.history === "boolean" ? raw.history : undefined,
   }
   return { dir, config, work: path.join(dir, ".basalt", "astro") }
 }

@@ -78,12 +78,11 @@ export function renderNoteLists(root: Root, locale = "en-US", all: () => Listed[
     if (node.tagName !== "note-list") return
     const p = node.properties
     // a list on a line of its own is in a paragraph, which a list can't be in:
-    // it takes the paragraph's place (and its lines, lines.ts)
+    // it takes the paragraph's place
     const alone =
       parent?.type === "element" &&
       parent.tagName === "p" &&
       parent.children.every((c) => c === node || (c.type === "text" && !c.value.trim()))
-    if (alone && parent.properties.dataSrc !== undefined) p.dataSrc = parent.properties.dataSrc
     notes ??= all()
     const time = (f: Listed) => f.date?.getTime() ?? 0
     const chosen = notesFor(p, notes).sort((a, b) => time(b) - time(a))
@@ -111,12 +110,11 @@ export function renderNoteLists(root: Root, locale = "en-US", all: () => Listed[
       )
     }
     node.tagName = "div"
-    // and the lines it's written on (lines.ts)
-    node.properties = { className: ["note-list-block"], ...(p.dataSrc !== undefined && { dataSrc: p.dataSrc }) }
+    node.properties = { className: ["note-list-block"] }
     node.children = children
     if (alone) {
       parent.tagName = "div"
-      parent.properties = { className: ["note-list-block"], ...(p.dataSrc !== undefined && { dataSrc: p.dataSrc }) }
+      parent.properties = { className: ["note-list-block"] }
       parent.children = children
       return SKIP
     }

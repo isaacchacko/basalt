@@ -27,7 +27,6 @@ import type { FullSlug } from "../lib/path"
 import { useRegistry } from "./context.ts"
 import { useTargets, type Target } from "./transclude.ts"
 import { loadSiteMarkdown, type TextTransform } from "./siteconfig.ts"
-import { rehypeSourceLines, remarkSourceBlocks } from "./lines.ts"
 import { basaltRehype, basaltRemark, basaltText, renderTime, targetOf, transformText, treeProcessor } from "./plugins.ts"
 
 export { processorOptions, syntaxHighlight } from "./plugins.ts"
@@ -39,11 +38,8 @@ const site = await loadSiteMarkdown(siteDir())
 
 export const textTransforms: TextTransform[] = [...basaltText, ...site.textTransforms]
 
-// the blocks the markdown was parsed into, first, before any plugin moves them (lines.ts)
-export const remarkPlugins: PluggableList = [remarkSourceBlocks, ...basaltRemark, ...site.remarkPlugins]
-// the lines each block came from, last of the note's own (lines.ts): not on
-// a note embedded in another (treeProcessor)
-export const rehypePlugins: PluggableList = [...basaltRehype, ...site.rehypePlugins, rehypeSourceLines, ...renderTime]
+export const remarkPlugins: PluggableList = [...basaltRemark, ...site.remarkPlugins]
+export const rehypePlugins: PluggableList = [...basaltRehype, ...site.rehypePlugins, ...renderTime]
 
 // ---------- another note's tree, for transclusion ----------
 

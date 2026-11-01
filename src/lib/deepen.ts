@@ -1,5 +1,5 @@
-// A build's clone with all its history, so a note's history (history.ts) and
-// the day it was written (gitdates.ts) go back to its first commit. Hosts
+// A build's clone with all its history, so the day a note was written
+// (gitdates.ts) goes back to its first commit. Hosts
 // clone shallow: Vercel the last 10 commits, with no remote to fetch more
 // from; a GitHub Action the last one. So a shallow clone is fetched whole,
 // from its own remote if it has one, else from the repository Vercel says it

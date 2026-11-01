@@ -8,6 +8,8 @@
 // serving, only a note of the site's, and only from a client that isn't a web
 // page: JSON with the x-basalt-buffer header, which another site can't send
 // without asking first (CORS), and turned away if it says where it came from.
+//
+// It also tells Basalt's build-time code which command is running (serving, lib/site.ts).
 
 import fs from "node:fs"
 import path from "node:path"
@@ -20,6 +22,9 @@ export function editorBuffers(): AstroIntegration {
   return {
     name: "basalt-buffer",
     hooks: {
+      "astro:config:setup": ({ command }) => {
+        process.env.BASALT_COMMAND = command
+      },
       "astro:server:setup": ({ server }) => {
         server.middlewares.use((req, res, next) => {
           if (new URL(req.url ?? "/", "http://basalt").pathname !== "/__basalt/buffer") return next()

@@ -57,10 +57,6 @@ A Preact, React or plain JavaScript component, placed in a note with a tag, and 
 
 <island name="counter" start="3" ssr></island>
 
-## Every version of a note
-
-The clock in the navbar shows a note's history: each commit that touched it, on a timeline, and the page as it was, with what changed marked. Try it on this page. [[history.md]]
-
 ## Built for agents
 
 A save lands in the open page in well under a second, keeping your scroll. The dev server says when a change is live, and what broke, in the file it's in, so an agent can write a garden and know. [[agents.md]]

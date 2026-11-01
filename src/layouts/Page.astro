@@ -24,7 +24,6 @@ import { highlightSource } from "../markdown/source"
 import { canDrawCards } from "../lib/socialimage"
 import { slugifyFilePath, type FilePath } from "../lib/path"
 import { serving } from "../lib/site"
-import { historyOn } from "../lib/history"
 // stylesheets only some notes need (KaTeX's, a tree's, a diff's): linked only
 // from the pages whose note has them
 import { NOTE_SHEETS } from "../client/sheets"
@@ -107,8 +106,6 @@ const html = note?.rendered?.html ?? ""
 // a note that takes in others may have anything they have; one being served
 // can be given anything as it's written
 const linked = Object.entries(NOTE_SHEETS).filter(([, [, has]]) => serving() || html.includes('class="transclude') || has.test(html))
-// a note's history (client/history.ts): where it's read from, while serving or built
-const history = note?.body !== undefined && historyOn(site, note.data as Record<string, unknown>) ? { "data-history": serving() ? "dev" : "built" } : {}
 const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.replace(/\/$/, "") || "/"
 ---
 
@@ -144,7 +141,7 @@ const path = slug === "404" ? "/404" : `/${slug.replace(/(^|\/)index$/, "")}`.re
               {layout.components.tags && <TagList tags={tags} />}
             </div>
           </div>
-          <article class:list={["popover-hint", ...cssclasses]} {...history}>
+          <article class:list={["popover-hint", ...cssclasses]}>
             <slot />
           </article>
           <slot name="listing" />
