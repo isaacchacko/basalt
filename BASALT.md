@@ -104,7 +104,7 @@ The plugin in this repository serves the site you're writing in from Neovim, and
 { "isaacchacko/basalt", ft = "markdown", opts = {} }
 ```
 
-`<leader>B` (`key` in `opts`) runs `basalt dev` for the site the current note is in (the nearest `basalt.json` above it), and again stops it; `:BasaltToggle` does the same and `:BasaltOpen` opens the page. While it's served, each changed note's buffer goes to the dev server a moment after you stop typing (`debounce`, 150 ms), and the open page swaps it in. The file on disk isn't touched: `:w` writes it as ever, and once the buffer's written, read again or closed (or undone back to what's saved, or Neovim quits), the page is the file's again. `basalt` comes from the PATH, else npm (`cmd` in `opts`).
+`<leader>B` (`key` in `opts`) runs `basalt dev` for the site the current note is in (the nearest `basalt.json` above it), and again stops it; `:BasaltToggle` does the same and `:BasaltOpen` opens the page. While it's served, each changed note's buffer goes to the dev server a moment after you stop typing (`debounce`, 150 ms), and the open page swaps it in. The file on disk isn't touched: `:w` writes it as ever, and once the buffer's written, read again or closed (or undone back to what's saved, or Neovim quits), the page is the file's again. `basalt` is the site's own (its `node_modules`), else the PATH's, else npm's (`cmd` in `opts` to choose).
 
 The dev server takes a buffer at `PUT /__basalt/buffer` (`{ file, text }`, the note's path absolute or from the site's folder) and drops it at `DELETE /__basalt/buffer` (`{ file }`), JSON with the `x-basalt-buffer: 1` header and no `Origin`, so a web page can't send one. Either is a save like any other for `basalt wait` and the status. Any editor can send the same.
 

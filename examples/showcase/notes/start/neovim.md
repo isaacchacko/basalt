@@ -16,7 +16,7 @@ With [lazy.nvim](https://lazy.folke.io):
 { "isaacchacko/basalt", ft = "markdown", opts = {} }
 ```
 
-It needs `curl`, and Basalt itself: `basalt` on your PATH (`npm install --global @isaacchacko/basalt`), or else it runs it from npm.
+It needs `curl`, and Basalt itself: the garden's own, when its `package.json` has `@isaacchacko/basalt`, else `basalt` on your PATH, else it runs it from npm.
 
 ## Use it
 
@@ -32,7 +32,7 @@ Open a note, press `<leader>B`, and the garden it's in (the nearest `basalt.json
 ```lua
 opts = {
   key = "<leader>B",   -- serve or stop (false: no key)
-  cmd = { "basalt" },  -- how basalt is run
+  cmd = { "basalt" },  -- how basalt is run (unset: the garden's own)
   debounce = 150,      -- ms of quiet, then it's sent
 }
 ```
