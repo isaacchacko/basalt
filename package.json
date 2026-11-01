@@ -1,6 +1,6 @@
 {
   "name": "@isaacchacko/basalt",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Markdown in, a website that reads like a good math textbook out: remarks in the margin, one viewer for every picture, saves that land in place.",
   "type": "module",
   "license": "MIT",
