@@ -10,7 +10,8 @@
 -- With lazy.nvim, `keys = { "<leader>B" }` in its spec loads it on that key,
 -- from anywhere: on a note, the note's site; elsewhere, the one Neovim's in.
 --
--- :BasaltToggle serves or stops the site, :BasaltOpen opens the page.
+-- :BasaltToggle serves or stops the site, and serving opens the page of the note
+-- you're on (`open = false` not to); :BasaltOpen opens it again.
 
 local M = {}
 
@@ -21,6 +22,8 @@ local defaults = {
   cmd = nil,
   -- how long typing pauses before the page is sent what's typed
   debounce = 150,
+  -- serving opens the page of the note you're on (the home page, off a note)
+  open = true,
 }
 local opts = defaults
 
@@ -111,6 +114,34 @@ local function dropped(buf)
   send(buf, true)
 end
 
+-- a slug's segment, as Basalt makes it (lib/path.ts)
+local function sluggify(segment)
+  return (segment:gsub("%s", "-"):gsub("&", "-and-"):gsub("%%", "-percent"):gsub("[?#]", ""))
+end
+
+-- where a note's page is on its site: its path in the site's tree (basalt.json's content), as a link
+local function pageOf(site, file)
+  local f = file ~= "" and io.open(site .. "/basalt.json")
+  if not f then return "/" end
+  local ok, config = pcall(vim.json.decode, f:read("*a"))
+  f:close()
+  local content = ok and type(config.content) == "table" and config.content or { { from = "notes" } }
+  for _, c in ipairs(content) do
+    local root = vim.fs.normalize(vim.fn.fnamemodify(site .. "/" .. (c.from or "notes"), ":p")):gsub("/$", "")
+    if vim.startswith(vim.fs.normalize(file), root .. "/") and file:match("%.md$") then
+      local to = (c.to or ""):gsub("^/+", ""):gsub("/+$", "")
+      local rel = vim.fs.normalize(file):sub(#root + 2):gsub("%.md$", "")
+      local parts = vim.tbl_map(sluggify, vim.split((to ~= "" and to .. "/" or "") .. rel, "/"))
+      if parts[#parts] == "index" or parts[#parts] == "_index" then
+        parts[#parts] = nil
+        return #parts == 0 and "/" or "/" .. table.concat(parts, "/") .. "/"
+      end
+      return "/" .. table.concat(parts, "/")
+    end
+  end
+  return "/"
+end
+
 -- every changed note of the site, sent as it is now
 local function sendAll(site)
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -119,6 +150,7 @@ local function sendAll(site)
 end
 
 function M.start(site)
+  local note = vim.api.nvim_buf_get_name(0)
   say("serving " .. vim.fn.fnamemodify(site, ":~") .. "…")
   vim.system(vim.list_extend(cmdFor(site), { "dev", site }), { text = true }, function(r)
     vim.schedule(function()
@@ -128,6 +160,7 @@ function M.start(site)
       served[site] = { url = url or ("http://localhost:" .. port), port = port }
       say("serving at " .. served[site].url)
       sendAll(site)
+      if opts.open then vim.ui.open(served[site].url .. pageOf(site, note)) end
     end)
   end)
 end
@@ -149,7 +182,7 @@ end
 function M.open()
   local s = served[here() or ""]
   if not s then return say("not serving this site (" .. opts.key .. ")", vim.log.levels.WARN) end
-  vim.ui.open(s.url)
+  vim.ui.open(s.url .. pageOf(here(), vim.api.nvim_buf_get_name(0)))
 end
 
 function M.setup(user)
