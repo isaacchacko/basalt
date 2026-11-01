@@ -140,9 +140,9 @@ export const components = {
     notes: ["`value=` copies something other than what it shows."],
   },
   "note-list": {
-    about: "a folder's newest notes, listed",
-    markdown: '<note-list folder="blog" limit="4"></note-list>',
-    notes: [],
+    about: "a folder's newest notes, listed: \"recent writing\"",
+    markdown: '## Recent writing\n\n<note-list folder="blog" limit="4" more="all of it"></note-list>',
+    notes: ["Each entry is its date, then its title. With more notes than `limit`, `more=` labels a link to the folder's page (else \"see N more\")."],
   },
   text: {
     about: "marks in the text: highlights, tags, comments, links",

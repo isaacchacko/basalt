@@ -218,6 +218,12 @@ article .note-list {
     gap: 0.5rem;
     margin: 0.25rem 0;
   }
+
+  // the title, in its column with a date or without: its underline as long as it is, not the row
+  li > a {
+    grid-column: 2;
+    justify-self: start;
+  }
 }
 
 .note-list-date {
