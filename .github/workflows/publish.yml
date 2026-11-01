@@ -28,3 +28,16 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm publish --access public
+      # what's built with Basalt (the garden, isaacchacko.com, design) builds
+      # again with this release, once npm serves it: each Vercel project's
+      # deploy hook, one a line, in the CONSUMER_DEPLOY_HOOKS secret
+      - name: What's built with Basalt deploys again
+        env:
+          HOOKS: ${{ secrets.CONSUMER_DEPLOY_HOOKS }}
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          for i in $(seq 60); do
+            [ "$(npm view @isaacchacko/basalt@latest version --prefer-online 2>/dev/null)" = "$version" ] && break
+            sleep 10
+          done
+          for hook in $HOOKS; do curl -fsS -X POST "$hook" > /dev/null && echo "one deploying again"; done

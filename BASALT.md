@@ -62,6 +62,10 @@ basalt help [topic]                      # a section of this file
 
 Several sites can be served at once from one Basalt.
 
+`basalt dev` on a site already served by another version of Basalt stops that server and serves it again with this one.
+
+A release redeploys what's built with Basalt: the publish workflow, once npm serves the new version, calls each Vercel deploy hook in the `CONSUMER_DEPLOY_HOOKS` secret (one a line). A site that installs `@isaacchacko/basalt@latest` when it builds is then on it.
+
 ## Writing
 
 Obsidian-flavoured markdown:
@@ -104,7 +108,7 @@ The plugin in this repository serves the site you're writing in from Neovim, and
 { "isaacchacko/basalt", ft = "markdown", keys = { "<leader>B" }, cmd = { "BasaltToggle", "BasaltOpen" }, opts = {} }
 ```
 
-`<leader>B` (`key` in `opts`) runs `basalt dev` for the site the current note is in (the nearest `basalt.json` above it; on a buffer that isn't a file, the site Neovim was started in, or just under it), and again stops it; serving opens the page of the note you're on in your browser (the home page, off a note; `open = false` not to). `:BasaltToggle` does the same as the key, and `:BasaltOpen` opens the page again. While it's served, each changed note's buffer goes to the dev server a moment after you stop typing (`debounce`, 150 ms), and the open page swaps it in. The file on disk isn't touched: `:w` writes it as ever, and once the buffer's written, read again or closed (or undone back to what's saved, or Neovim quits), the page is the file's again. `basalt` is the site's own (its `node_modules`), else the PATH's, else npm's (`cmd` in `opts` to choose).
+`<leader>B` (`key` in `opts`) runs `basalt dev` for the site the current note is in (the nearest `basalt.json` above it; on a buffer that isn't a file, the site Neovim was started in, or just under it), and again stops it; serving opens the page of the note you're on in your browser (the home page, off a note; `open = false` not to). `:BasaltToggle` does the same as the key, and `:BasaltOpen` opens the page again. While it's served, each changed note's buffer goes to the dev server a moment after you stop typing (`debounce`, 150 ms), and the open page swaps it in. The file on disk isn't touched: `:w` writes it as ever, and once the buffer's written, read again or closed (or undone back to what's saved, or Neovim quits), the page is the file's again. It runs Basalt's newest release, `npx @isaacchacko/basalt@latest` (`cmd` in `opts` for another).
 
 The dev server takes a buffer at `PUT /__basalt/buffer` (`{ file, text }`, the note's path absolute or from the site's folder) and drops it at `DELETE /__basalt/buffer` (`{ file }`), JSON with the `x-basalt-buffer: 1` header and no `Origin`, so a web page can't send one. Either is a save like any other for `basalt wait` and the status. Any editor can send the same.
 

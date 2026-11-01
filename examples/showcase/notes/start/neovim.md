@@ -16,7 +16,7 @@ With [lazy.nvim](https://lazy.folke.io):
 { "isaacchacko/basalt", ft = "markdown", keys = { "<leader>B" }, cmd = { "BasaltToggle", "BasaltOpen" }, opts = {} }
 ```
 
-It needs `curl`, and Basalt itself: the garden's own, when its `package.json` has `@isaacchacko/basalt`, else `basalt` on your PATH, else it runs it from npm.
+It needs `curl` and `npx`: it runs Basalt's newest release from npm, and a server of an older one is replaced.
 
 ## Use it
 
@@ -32,7 +32,7 @@ Press `<leader>B`, and the garden is served, as `basalt dev` would: the one the 
 ```lua
 opts = {
   key = "<leader>B",   -- serve or stop (false: no key)
-  cmd = { "basalt" },  -- how basalt is run (unset: the garden's own)
+  cmd = { "basalt" },  -- how basalt is run (unset: npm's newest)
   debounce = 150,      -- ms of quiet, then it's sent
   open = true,         -- serving opens the note's page
 }
