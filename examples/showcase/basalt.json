@@ -30,6 +30,7 @@
         "start/settings",
         "start/look",
         "start/cli",
+        "start/neovim",
         "writing/margin",
         "writing/text",
         "writing/links",

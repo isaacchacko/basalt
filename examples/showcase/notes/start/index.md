@@ -13,7 +13,7 @@ basalt new my-garden --title "My garden"
 basalt dev my-garden
 ```
 
-`basalt new` makes the folder, and `basalt dev` serves it at `http://localhost:4321`, live. Open that, then open `my-garden/notes/index.md` in your editor. Every save shows up in the page you have open, in place, in under a second, without losing your scroll.
+`basalt new` makes the folder, and `basalt dev` serves it at `http://localhost:4321`, live. Open that, then open `my-garden/notes/index.md` in your editor. Every save shows up in the page you have open, in place, in under a second, without losing your scroll. In Neovim, [[neovim|the plugin]] shows what you type before you save.
 
 ## Then
 
