@@ -1,10 +1,8 @@
 // Which lines of one text are which lines of another: a line diff (Myers'),
-// read as a map. Editing in place uses it both ways round: a note's page was
-// made from its text after textTransforms (which add and remove lines), and
-// the page's blocks are named by the lines of the file as written; and a page
-// open while its file changes has its blocks moved to where they are now.
-//
-// No node imports: the browser uses it too (client/editor.ts).
+// read as a map. A note's page is made from its text after textTransforms
+// (which add and remove lines), and its blocks are named by the lines of the
+// text as written (markdown/lines.ts); a note's history pairs one version's
+// lines with the one's before it (marks.ts).
 
 /** The lines a and b have in common, as [index in a, index in b], in order. */
 export function commonLines(a: string[], b: string[]): [number, number][] {

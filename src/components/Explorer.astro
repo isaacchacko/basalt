@@ -5,16 +5,10 @@
 // it's a drawer behind the menu button.
 // Entries the site's `layout.explorer.order` lists come first; in a folder
 // `layout.explorer.byDate` lists, the rest go newest first.
-// On a site whose pages edit, each entry carries its file's path, and the
-// explorer where the folders of notes are in the repository, for editing
-// view's file ops (client/files.ts); a reader's page has no more than that.
 import ExplorerTree from "./ExplorerTree.astro"
 import { words } from "../layouts/words"
 import { arrange, type TreeNode } from "../layouts/notes"
 import { layout } from "../lib/config"
-import { registry } from "../lib/registry"
-import { editTarget, repoPath } from "../lib/edit"
-import path from "node:path"
 
 interface Props {
   root: TreeNode
@@ -29,19 +23,9 @@ const { root, current, open = "collapsed", fixed = false, home } = Astro.props
 const { explorer } = await layout()
 const tree = arrange(root, explorer)
 const t = await words()
-const { site } = registry()
-const target = editTarget(site)
-const roots =
-  target?.kind === "github"
-    ? site.config.content.map(({ from, to = "" }) => ({ to: to.replace(/^\/+|\/+$/g, ""), repo: repoPath(target, path.resolve(site.dir, from)) }))
-    : undefined
-const files = target && {
-  "data-edit-files": target.kind,
-  ...(target.kind === "github" ? { "data-edit-repo": target.repo, "data-edit-branch": target.branch, "data-edit-roots": JSON.stringify(roots) } : {}),
-}
 ---
 
-<div class:list={["explorer", { "explorer-fixed": fixed }]} data-collapsed={open} {...files}>
+<div class:list={["explorer", { "explorer-fixed": fixed }]} data-collapsed={open}>
   <button type="button" class="explorer-toggle mobile-explorer" data-mobile="true" aria-controls="explorer-content" aria-label={t("menu")}>
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide-menu">
       <line x1="4" x2="20" y1="12" y2="12"></line>
@@ -70,7 +54,7 @@ const files = target && {
           </li>
         )
       }
-      <ExplorerTree nodes={tree.children} current={current} open={open} paths={!!target} />
+      <ExplorerTree nodes={tree.children} current={current} open={open} />
       <li class="overflow-end"></li>
     </ul>
   </div>

@@ -20,8 +20,6 @@ if (import.meta.hot) {
 
   let latest = 0
   import.meta.hot.on("basalt:swap", async () => {
-    // a page being edited is drawn by its editor (editor.ts), which swaps it in once it's done
-    if (document.documentElement.hasAttribute("data-editing")) return
     const mine = ++latest
     // Astro's error page doesn't come: the overlay says what's wrong, and this page stays
     const doc = await fetchPage()

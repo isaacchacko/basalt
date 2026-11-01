@@ -25,8 +25,6 @@ export interface SiteConfig {
   icon?: string
   locale: string
   content: { from: string; to?: string }[]
-  /** pages that edit their notes in place once built, committing to GitHub (edit.ts); a top-level "edit" */
-  edit?: true | { repo?: string; branch?: string }
   /** whether its notes' pages show their history (lib/history.ts): while serving unless false, built only when true */
   history?: boolean
 }
@@ -53,6 +51,9 @@ export function siteDir(): string {
   return path.resolve(process.env.BASALT_SITE ?? "examples/showcase")
 }
 
+/** `basalt dev`, as against a build (set by integrations/history.ts) */
+export const serving = () => process.env.BASALT_COMMAND === "dev"
+
 export function loadSite(dir = siteDir()): Site {
   const file = path.join(dir, "basalt.json")
   const raw = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {}
@@ -63,7 +64,6 @@ export function loadSite(dir = siteDir()): Site {
     icon: typeof raw.icon === "string" && raw.icon.trim() ? raw.icon.trim() : undefined,
     locale: raw.locale ?? "en-US",
     content: Array.isArray(raw.content) ? raw.content : [{ from: "notes" }],
-    edit: raw.edit === true || (raw.edit && typeof raw.edit === "object") ? raw.edit : undefined,
     history: typeof raw.history === "boolean" ? raw.history : undefined,
   }
   return { dir, config, work: path.join(dir, ".basalt", "astro") }

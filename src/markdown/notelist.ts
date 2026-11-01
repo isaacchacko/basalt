@@ -111,7 +111,7 @@ export function renderNoteLists(root: Root, locale = "en-US", all: () => Listed[
       )
     }
     node.tagName = "div"
-    // and the lines it's written on, for editing in place (lines.ts)
+    // and the lines it's written on (lines.ts)
     node.properties = { className: ["note-list-block"], ...(p.dataSrc !== undefined && { dataSrc: p.dataSrc }) }
     node.children = children
     if (alone) {

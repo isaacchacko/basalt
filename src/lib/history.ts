@@ -17,8 +17,7 @@ import { execFileSync } from "node:child_process"
 import { commitsOf, topOf, type Commit } from "./gitdates.ts"
 import { marked } from "./marks.ts"
 import { deepen } from "./deepen.ts"
-import { serving } from "./edit.ts"
-import { sourceDirs, type Site } from "./site.ts"
+import { serving, sourceDirs, type Site } from "./site.ts"
 
 /** a built site's history of a note: its newest commits, no more */
 export const MOST = 100

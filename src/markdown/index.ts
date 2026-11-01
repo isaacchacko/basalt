@@ -38,8 +38,6 @@ useRegistry(registry)
 const site = await loadSiteMarkdown(siteDir())
 
 export const textTransforms: TextTransform[] = [...basaltText, ...site.textTransforms]
-/** whether the site has markdown plugins of its own (its basalt.config.ts): the browser hasn't them */
-export const sitePlugins = !!(site.textTransforms.length + site.remarkPlugins.length + site.rehypePlugins.length)
 
 // the blocks the markdown was parsed into, first, before any plugin moves them (lines.ts)
 export const remarkPlugins: PluggableList = [remarkSourceBlocks, ...basaltRemark, ...site.remarkPlugins]

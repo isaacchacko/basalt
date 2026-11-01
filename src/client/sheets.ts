@@ -1,7 +1,7 @@
 // Stylesheets only some pages need, so a page of prose loads none of them:
 // what a note has (KaTeX's, a tree's, a diff's) is linked from the pages whose
-// note has it (layouts/Page.astro), and what opens over a page (the editor, a
-// note's history, ⌘G's graph, the viewer, a preview, search) is linked when
+// note has it (layouts/Page.astro), and what opens over a page (a note's
+// history, ⌘G's graph, the viewer, a preview, search) is linked when
 // it opens. Each link is marked data-basalt-sheet with its name. Content taken
 // from another page (a preview, a search passage) brings its sheets along.
 
@@ -17,7 +17,6 @@ import spotifyCss from "../styles/spotify.scss?url"
 import tabsCss from "../styles/tabs.scss?url"
 import treeCss from "../styles/tree.scss?url"
 import viewerCss from "../styles/viewer.scss?url"
-import editCss from "../styles/edit.scss?url"
 import historyCss from "../styles/history.scss?url"
 import gardenGraphCss from "../styles/gardengraph.scss?url"
 import previewsCss from "../styles/previews.scss?url"
@@ -43,7 +42,6 @@ export const NOTE_SHEETS = {
 
 const SHEETS: Record<string, string> = {
   ...Object.fromEntries(Object.entries(NOTE_SHEETS).map(([name, [href]]) => [name, href])),
-  edit: editCss,
   history: historyCss,
   gardengraph: gardenGraphCss,
   previews: previewsCss,
@@ -51,9 +49,7 @@ const SHEETS: Record<string, string> = {
   viewerbox: viewerboxCss,
 }
 
-export type SheetName = keyof typeof NOTE_SHEETS | "edit" | "history" | "gardengraph" | "previews" | "searchbox" | "viewerbox"
-/** every sheet a note can have: what's being written may come to have any of them */
-export const NOTE_SHEET_NAMES = Object.keys(NOTE_SHEETS) as SheetName[]
+export type SheetName = keyof typeof NOTE_SHEETS | "history" | "gardengraph" | "previews" | "searchbox" | "viewerbox"
 
 /** The `<link>` of sheet `name` in `doc`, made if it hasn't one; resolves once it applies. */
 function linkSheet(name: string, href: string, doc: Document): Promise<void> {

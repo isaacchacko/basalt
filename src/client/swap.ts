@@ -1,7 +1,6 @@
 // A newer version of the page you're on, swapped in where it is: the way a
 // navigation swaps pages, with the scroll and the #part kept and no arrival.
-// The dev server's saves come in this way (hotswap.ts), and so does the page
-// once editing it is done (editor.ts).
+// The dev server's saves come in this way (hotswap.ts).
 
 declare global {
   interface Window {

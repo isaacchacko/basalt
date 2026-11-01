@@ -1,9 +1,8 @@
-// Where each block of a note's page is in its file, for editing the page in
-// place (client/editor.ts): data-src="<first line>-<last line>", counted from
-// 1 in the file as written, on every top-level block, every footnote and every
-// sidenote. Only while serving, or for a site with "edit" (lib/edit.ts), or
-// for a text rendered that isn't the file's (`unsaved`: what's typed, a past
-// version, lib/history.ts).
+// Where each block of a note is in its text, for pairing a version's blocks
+// with the one's before it (lib/history.ts): data-src="<first line>-<last line>",
+// counted from 1 in the text as written, on every top-level block, every
+// footnote and every sidenote. Only for a text rendered that isn't the file's
+// (`unsaved`: a past version); a page as it's served has none.
 //
 // A note is parsed after its textTransforms, which add and take away lines (a
 // callout's title gets one after it, a %%comment%% goes), so the lines it was
@@ -19,17 +18,13 @@
 // that gave it the wrong node's place).
 //
 // Last of the note's own plugins: a note embedded in this one comes in after
-// (transclude.ts), with its own file's lines, inside .transclude, which the
-// editor knows to look past.
+// (transclude.ts), with its own file's lines, inside .transclude.
 
-import fs from "node:fs"
 import type { Element, Root } from "hast"
 import type { Root as Mdast } from "mdast"
 import type { VFile } from "vfile"
 import { visit } from "unist-util-visit"
 import { lineMap } from "../lib/linemap.ts"
-import { editable } from "../lib/edit.ts"
-import { reg } from "./context.ts"
 
 type Lines = [number, number]
 type Positioned = { position?: { start: { line: number; column: number }; end: { line: number; column: number } } }
@@ -57,19 +52,14 @@ export function remarkSourceBlocks() {
   }
 }
 
-/** a note's text being rendered that isn't its file's (what's typed, integrations/edit.ts; a past version, lib/history.ts) */
+/** a note's text being rendered that isn't its file's (a past version, lib/history.ts) */
 export const unsaved = new Map<string, string>()
 
 export function rehypeSourceLines() {
   return (tree: Root, file: VFile) => {
     if (!file.path) return
-    let raw = unsaved.get(file.path)
-    if (raw === undefined && !editable(reg().site)) return
-    try {
-      raw ??= fs.readFileSync(file.path, "utf8")
-    } catch {
-      return
-    }
+    const raw = unsaved.get(file.path)
+    if (raw === undefined) return
     tagLines(tree, String(file.value), raw, file.data.sourceBlocks)
   }
 }

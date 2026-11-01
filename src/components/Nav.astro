@@ -5,7 +5,7 @@
 // ember for the page you're on), or with `layout.nav: "chevron"` one chevron
 // halfway down; reach into the strip (or tab into it, or tap it) and after a
 // beat it slides out over the page. Open, it has the mark and the site's
-// title, the explorer, and a bottom tray with the theme, source, history and edit toggles (and, on a
+// title, the explorer, and a bottom tray with the theme, source and history toggles (and, on a
 // screen without a keyboard, search). Below desktop width it's a bar across
 // the top instead.
 //
@@ -14,7 +14,6 @@ import Mark from "basalt:components/Mark"
 import Explorer from "basalt:components/Explorer"
 import Darkmode from "basalt:components/Darkmode"
 import SourceToggle from "basalt:components/SourceToggle"
-import EditToggle from "basalt:components/EditToggle"
 import HistoryToggle from "basalt:components/HistoryToggle"
 import NavExtra from "basalt:components/NavExtra"
 import { words } from "../layouts/words"
@@ -84,7 +83,6 @@ for (const ch of shape(root) + JSON.stringify(layout)) hash = (hash * 31 + ch.ch
         {layout.components.darkmode && <Darkmode />}
         {layout.components.source && <SourceToggle />}
         <HistoryToggle />
-        <EditToggle />
       </div>
     )
   }

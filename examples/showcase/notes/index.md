@@ -57,10 +57,6 @@ A Preact, React or plain JavaScript component, placed in a note with a tag, and 
 
 <island name="counter" start="3" ssr></island>
 
-## Edit the page you're reading
-
-⌘E turns a page into its note, to write in where it is: the block with the cursor shows its markdown, and every other block stays drawn. Locally it saves to the file; on a built site it commits to GitHub when you publish. The explorer makes, renames and moves notes, links and all. [[editing/]]
-
 ## Every version of a note
 
 The clock in the navbar shows a note's history: each commit that touched it, on a timeline, and the page as it was, with what changed marked. Try it on this page. [[history.md]]

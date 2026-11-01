@@ -22,7 +22,6 @@ showcase/
       diagrams.md
       trees.md           # this page
       … 12 more
-    editing/…
     publishing/…
     files/
       sieve.py

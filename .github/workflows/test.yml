@@ -35,4 +35,4 @@ jobs:
       - name: The test site builds
         run: node bin/basalt.mjs build test/fixtures/site
       - name: A block of every kind builds
-        run: node bin/basalt.mjs build test/fixtures/edit
+        run: node bin/basalt.mjs build test/fixtures/kinds
