@@ -1,0 +1,69 @@
+// A ```streak block (src/markdown/streak.ts): its title, the grid, and what it
+// adds up to. A day is shaded from the site's accent, --tertiary, mixed
+// toward the page's paper, so it follows the theme, light and dark. A grid
+// wider than the column shrinks to fit it, to three quarters of its size
+// (markdown/streak.ts says how wide that is), then scrolls in its block, from
+// its newest week.
+
+figure.streak {
+  --streak-0: color-mix(in srgb, var(--lightgray) 70%, var(--light));
+  --streak-1: color-mix(in srgb, var(--tertiary) 28%, var(--light));
+  --streak-2: color-mix(in srgb, var(--tertiary) 52%, var(--light));
+  --streak-3: color-mix(in srgb, var(--tertiary) 76%, var(--light));
+  --streak-4: var(--tertiary);
+
+  // the measure's width (basalt.scss), as every block of the main content
+  margin: 1.5rem 0;
+  min-width: 0;
+}
+
+.streak-title {
+  margin-bottom: 0.4rem;
+  font-family: var(--titleFont);
+  font-style: italic;
+  color: var(--darkgray);
+}
+
+.streak-scroll {
+  // reversed, it starts scrolled to its end, where the newest week is
+  display: flex;
+  flex-direction: row-reverse;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+svg.streak-grid {
+  flex: 0 1 auto;
+  display: block;
+  max-width: 100%;
+  height: auto;
+  // to the left when it fits (an auto margin is nothing when it doesn't)
+  margin-right: auto;
+
+  text {
+    font-family: var(--bodyFont);
+    font-size: 10px;
+    fill: var(--gray);
+  }
+}
+
+.streak-day {
+  fill: var(--streak-0);
+  outline: 1px solid color-mix(in srgb, var(--dark) 5%, transparent);
+  outline-offset: -1px;
+
+  @for $i from 1 through 4 {
+    &[data-level="#{$i}"] {
+      fill: var(--streak-#{$i});
+    }
+  }
+}
+
+.streak-stats,
+.streak-missing,
+.streak-bad {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--gray);
+}
