@@ -19,8 +19,7 @@
 // site's cache (cache/streaks.json), as a song is (sound.ts). Unlike a song's
 // they change daily, so every build fetches them again, and the cache is
 // there for when it can't: then the grid says the day they're as of, or, with
-// none kept, that the site couldn't reach them. Drawn in the browser
-// (browser/render.ts), where neither can be fetched, they're the build's.
+// none kept, that the site couldn't reach them.
 //
 // Drawn here as an svg; styles/streak.scss shades it from the site's colours.
 
@@ -203,13 +202,6 @@ async function fetchLeetcode(user: string, from: number, to: number): Promise<Da
   return res.ok ? leetcodeDays(await res.json()) : undefined
 }
 
-let online = true
-
-/** Whether a user's days are fetched: not from the browser, which can't (browser/render.ts) and draws the build's. */
-export function lookUpStreaks(on: boolean) {
-  online = on
-}
-
 // a long `basalt dev` fetches again after an hour
 const FRESH = 3_600_000
 const pending = new Map<string, { since: number; days: Promise<Fetched | undefined> }>()
@@ -218,7 +210,7 @@ const pending = new Map<string, { since: number; days: Promise<Fetched | undefin
 export function fetched(kind: Source, user: string, from: number, to: number): Promise<Fetched | undefined> {
   const key = `${kind}:${user.toLowerCase()}`
   const was = pending.get(key)
-  if (was && (!online || Date.now() - was.since < FRESH)) return was.days
+  if (was && Date.now() - was.since < FRESH) return was.days
   const days = fetchDays(key, kind, user, from, to).catch(() => undefined)
   pending.set(key, { since: Date.now(), days })
   return days
@@ -227,7 +219,7 @@ export function fetched(kind: Source, user: string, from: number, to: number): P
 async function fetchDays(key: string, kind: Source, user: string, from: number, to: number): Promise<Fetched | undefined> {
   const cacheFile = path.join(reg().site.work, "cache", "streaks.json")
   const cached = (): Record<string, Fetched> => (fs.existsSync(cacheFile) ? JSON.parse(fs.readFileSync(cacheFile, "utf8")) : {})
-  const days = online ? await (kind === "github" ? fetchGithub : fetchLeetcode)(user, from, to).catch(() => undefined) : undefined
+  const days = await (kind === "github" ? fetchGithub : fetchLeetcode)(user, from, to).catch(() => undefined)
   if (!days) return cached()[key]
   const found = { at: today(), days }
   fs.mkdirSync(path.dirname(cacheFile), { recursive: true })
@@ -340,9 +332,7 @@ export function remarkStreaks() {
         warn(file, s)
         const end = dayOf(on)!
         const user = s.source ? await fetched(s.source.kind, s.source.user, end - s.weeks * 7, end) : undefined
-        // in the browser, a user the build hasn't fetched: render.ts's stand-in, so the block shows its lines
-        const html = s.source && !user && !online ? '<figure class="streak"><basalt-undrawn></basalt-undrawn></figure>' : streakHtml(s, on, locale, user)
-        parent.children[index] = { type: "html", value: html } satisfies Html
+        parent.children[index] = { type: "html", value: streakHtml(s, on, locale, user) } satisfies Html
       }),
     )
   }
